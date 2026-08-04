@@ -1,23 +1,20 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import NavigationBackButton from '@/components/navigation-back-button';
 import { styles } from './consent.styles';
 
 export default function ConsentScreen() {
   const router = useRouter();
+  const [healthConsent, setHealthConsent] = useState(false);
   const [photoConsent, setPhotoConsent] = useState(false);
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Pressable
-          accessibilityLabel="서비스 안내로 돌아가기"
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
-          <Text style={styles.backIcon}>‹</Text>
-        </Pressable>
+        <View style={styles.backButton}><NavigationBackButton accessibilityLabel="서비스 안내로 돌아가기" confirmDiscard={healthConsent || photoConsent} fallbackHref="/(onboarding)/intro" /></View>
 
         <View style={styles.header}>
           <Text style={styles.title}>
@@ -27,17 +24,17 @@ export default function ConsentScreen() {
         </View>
 
         <View style={styles.consentList}>
-          <View style={styles.consentRow}>
+          <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: healthConsent }} onPress={() => setHealthConsent((current) => !current)} style={({ pressed }) => [styles.consentRow, pressed && styles.pressed]}>
             <View style={styles.rowCopy}>
               <Text style={styles.rowTitle}>
                 건강정보 수집·이용 <Text style={styles.required}>(필수)</Text>
               </Text>
               <Text style={styles.rowDescription}>불편·수면·활동 기록</Text>
             </View>
-            <View accessibilityLabel="필수 동의 완료" style={styles.checkedBox}>
-              <Text style={styles.checkmark}>✓</Text>
+            <View style={[styles.uncheckedBox, healthConsent && styles.checkedBox]}>
+              {healthConsent ? <Text style={styles.checkmark}>✓</Text> : null}
             </View>
-          </View>
+          </Pressable>
 
           <Pressable
             accessibilityRole="checkbox"
@@ -56,7 +53,7 @@ export default function ConsentScreen() {
           </Pressable>
         </View>
 
-        <Pressable accessibilityRole="button" style={styles.detailButton}>
+        <Pressable accessibilityRole="button" onPress={() => Alert.alert('건강정보 수집·이용', '불편 부위, 수면, 활동 및 피부 상태 기록을 개인화된 패턴 분석을 위해 저장합니다. 선택한 피부 사진은 별도 동의를 받은 경우에만 저장합니다.')} style={styles.detailButton}>
           <Text style={styles.detailText}>동의 상세 보기</Text>
         </Pressable>
       </ScrollView>
@@ -64,11 +61,13 @@ export default function ConsentScreen() {
       <View style={styles.footer}>
         <Pressable
           accessibilityRole="button"
+          accessibilityState={{ disabled: !healthConsent }}
+          disabled={!healthConsent}
           onPress={() => router.push('/(onboarding)/baseline')}
-          style={({ pressed }) => [styles.continueButton, pressed && styles.pressed]}>
+          style={({ pressed }) => [styles.continueButton, !healthConsent && styles.disabledButton, pressed && styles.pressed]}>
           <Text style={styles.continueText}>동의하고 계속</Text>
         </Pressable>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

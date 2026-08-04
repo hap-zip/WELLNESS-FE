@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { styles } from './onboarding-intro.styles';
 
@@ -25,7 +26,7 @@ export default function OnboardingIntroScreen() {
   const router = useRouter();
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>
@@ -63,6 +64,6 @@ export default function OnboardingIntroScreen() {
           <Text style={styles.startButtonText}>시작하기</Text>
         </Pressable>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

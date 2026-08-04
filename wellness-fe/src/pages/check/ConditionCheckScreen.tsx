@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import NavigationBackButton from '@/components/navigation-back-button';
 import { useDailyCheck } from '@/context/daily-check-context';
 
 import { styles } from './condition-check.styles';
@@ -27,21 +29,14 @@ export default function ConditionCheckScreen() {
   });
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
       <View style={styles.progressTrack}>
         <View style={styles.progressValue} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.topBar}>
-          <Pressable
-            accessibilityLabel="자동 수집 확인으로 돌아가기"
-            accessibilityRole="button"
-            hitSlop={6}
-            onPress={() => router.back()}
-            style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
-            <Text accessibilityElementsHidden style={styles.backIcon}>‹</Text>
-          </Pressable>
+          <View style={styles.backButton}><NavigationBackButton accessibilityLabel="자동 수집 확인으로 돌아가기" fallbackHref="/check/auto" /></View>
           <Pressable
             accessibilityRole="button"
             onPress={() => { skipStep('condition'); moveToNextStep(); }}
@@ -115,6 +110,6 @@ export default function ConditionCheckScreen() {
           <Text style={[styles.nextButtonText, draft.condition === null && styles.disabledNextButtonText]}>다음</Text>
         </Pressable>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
