@@ -146,3 +146,4 @@ export default function LoginRoute() {
 - [x] `login` 페이지 구현
 - [x] `signup` 페이지 구현
 - [x] `intro` 페이지 구현
+- [x] `consent` 페이지 구현
