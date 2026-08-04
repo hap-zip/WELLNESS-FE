@@ -150,3 +150,4 @@ export default function LoginRoute() {
 - [x] `baseline` 페이지 구현
 - [x] `health-connect` 페이지 구현
 - [x] `home` 페이지 구현
+- [x] `check-auto` 페이지 구현
