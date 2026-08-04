@@ -19,6 +19,7 @@ export const styles = StyleSheet.create({
   lastRecordRow: { borderBottomWidth: 0 },
   recordLabel: { color: '#4A4F58', fontSize: 14, fontWeight: '600' },
   recordValue: { color: '#17191C', fontSize: 18, fontWeight: '800' },
+  recordInput: { minWidth: 120, minHeight: 44, paddingHorizontal: 10, borderWidth: 1, borderColor: '#1257E0', borderRadius: 8, color: '#17191C', fontSize: 16, fontWeight: '700', textAlign: 'right' },
   sourceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 24, paddingTop: 12 },
   sourceIcon: { color: '#1257E0', fontSize: 13 },
   sourceText: { color: '#8B919B', fontSize: 12, fontWeight: '600' },

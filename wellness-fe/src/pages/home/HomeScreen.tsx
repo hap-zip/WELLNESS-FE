@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useRouter } from 'expo-router';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,6 +16,7 @@ const RECENT_RECORDS = [
 ] as const;
 
 export default function HomeScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [avatarPart, setAvatarPart] = useState<AvatarPart | null>(null);
 
@@ -78,7 +80,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <Pressable accessibilityRole="button" style={styles.recordCard}>
+        <Pressable accessibilityRole="button" onPress={() => router.push('/check/auto')} style={({ pressed }) => [styles.recordCard, pressed && styles.pressed]}>
           <Text style={styles.cardTitle}>오늘 상태를 아직 기록하지 않았어요</Text>
           <Text style={styles.cardDescription}>10초 체크로 시작해 볼까요?</Text>
           <Text style={styles.cardButton}>기록하기</Text>

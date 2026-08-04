@@ -2,6 +2,8 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
+import { DailyCheckProvider } from '@/context/daily-check-context';
+
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -9,5 +11,9 @@ export default function RootLayout() {
     void SplashScreen.hideAsync();
   }, []);
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <DailyCheckProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </DailyCheckProvider>
+  );
 }

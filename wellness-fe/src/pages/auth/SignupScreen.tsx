@@ -72,7 +72,7 @@ export default function SignupScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.notice}>민감정보 동의는 다음 단계에서 별도로 받아요.</Text>
-          <Pressable accessibilityRole="button" style={styles.nextButton}>
+          <Pressable accessibilityRole="button" onPress={() => router.replace('/(onboarding)/intro')} style={styles.nextButton}>
             <Text style={styles.nextButtonText}>다음</Text>
           </Pressable>
         </View>

@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { styles } from './onboarding-intro.styles';
@@ -21,6 +22,8 @@ const STEPS = [
 ] as const;
 
 export default function OnboardingIntroScreen() {
+  const router = useRouter();
+
   return (
     <View style={styles.screen}>
       <View style={styles.content}>
@@ -55,7 +58,7 @@ export default function OnboardingIntroScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="온보딩 시작하기"
-          onPress={() => undefined}
+          onPress={() => router.push('/(onboarding)/consent')}
           style={({ pressed }) => [styles.startButton, pressed && styles.pressed]}>
           <Text style={styles.startButtonText}>시작하기</Text>
         </Pressable>

@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+
+import { useDailyCheck } from '@/context/daily-check-context';
 
 import { styles } from './condition-check.styles';
 
@@ -16,9 +17,14 @@ const RECENT_TAGS = ['피곤해요', '무기력해요', '상쾌해요'] as const
 
 export default function ConditionCheckScreen() {
   const router = useRouter();
-  const [selectedCondition, setSelectedCondition] = useState<string | null>(null);
+  const { completeStep, draft, skipStep, updateDraft } = useDailyCheck();
 
   const moveToNextStep = () => router.push('/check/discomfort');
+  const toggleTag = (tag: string) => updateDraft({
+    conditionTags: draft.conditionTags.includes(tag)
+      ? draft.conditionTags.filter((item) => item !== tag)
+      : [...draft.conditionTags, tag],
+  });
 
   return (
     <View style={styles.screen}>
@@ -38,7 +44,7 @@ export default function ConditionCheckScreen() {
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            onPress={moveToNextStep}
+            onPress={() => { skipStep('condition'); moveToNextStep(); }}
             style={({ pressed }) => [styles.skipButton, pressed && styles.pressed]}>
             <Text style={styles.skipText}>건너뛰기</Text>
           </Pressable>
@@ -52,7 +58,7 @@ export default function ConditionCheckScreen() {
 
         <View accessibilityRole="radiogroup" style={styles.conditionList}>
           {CONDITIONS.map((condition) => {
-            const selected = selectedCondition === condition.id;
+            const selected = draft.condition === condition.id;
 
             return (
               <Pressable
@@ -60,7 +66,7 @@ export default function ConditionCheckScreen() {
                 accessibilityRole="radio"
                 accessibilityState={{ checked: selected }}
                 key={condition.id}
-                onPress={() => setSelectedCondition(condition.id)}
+                onPress={() => updateDraft({ condition: condition.id })}
                 style={({ pressed }) => [
                   styles.conditionCard,
                   selected && styles.selectedConditionCard,
@@ -83,11 +89,12 @@ export default function ConditionCheckScreen() {
           <View style={styles.tags}>
             {RECENT_TAGS.map((tag) => (
               <Pressable
-                accessibilityRole="button"
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: draft.conditionTags.includes(tag) }}
                 key={tag}
-                onPress={() => setSelectedCondition(tag)}
-                style={({ pressed }) => [styles.tag, selectedCondition === tag && styles.selectedTag, pressed && styles.pressed]}>
-                <Text style={[styles.tagText, selectedCondition === tag && styles.selectedTagText]}># {tag}</Text>
+                onPress={() => toggleTag(tag)}
+                style={({ pressed }) => [styles.tag, draft.conditionTags.includes(tag) && styles.selectedTag, pressed && styles.pressed]}>
+                <Text style={[styles.tagText, draft.conditionTags.includes(tag) && styles.selectedTagText]}># {tag}</Text>
               </Pressable>
             ))}
           </View>
@@ -97,15 +104,15 @@ export default function ConditionCheckScreen() {
       <View style={styles.footer}>
         <Pressable
           accessibilityRole="button"
-          accessibilityState={{ disabled: selectedCondition === null }}
-          disabled={selectedCondition === null}
-          onPress={moveToNextStep}
+          accessibilityState={{ disabled: draft.condition === null }}
+          disabled={draft.condition === null}
+          onPress={() => { completeStep('condition'); moveToNextStep(); }}
           style={({ pressed }) => [
             styles.nextButton,
-            selectedCondition === null && styles.disabledNextButton,
+            draft.condition === null && styles.disabledNextButton,
             pressed && styles.pressed,
           ]}>
-          <Text style={[styles.nextButtonText, selectedCondition === null && styles.disabledNextButtonText]}>다음</Text>
+          <Text style={[styles.nextButtonText, draft.condition === null && styles.disabledNextButtonText]}>다음</Text>
         </Pressable>
       </View>
     </View>
