@@ -145,3 +145,4 @@ export default function LoginRoute() {
 - [x] `splash` 페이지를 명세 구조로 재구현
 - [x] `login` 페이지 구현
 - [x] `signup` 페이지 구현
+- [x] `intro` 페이지 구현
