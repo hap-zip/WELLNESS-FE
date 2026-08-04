@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { styles } from './health-connect.styles';
@@ -10,6 +11,7 @@ const PROVIDERS = [
 
 export default function HealthConnectScreen() {
   const router = useRouter();
+  const [connectedProvider, setConnectedProvider] = useState<string | null>(null);
 
   return (
     <View style={styles.screen}>
@@ -36,6 +38,7 @@ export default function HealthConnectScreen() {
             <Pressable
               accessibilityRole="button"
               key={provider.name}
+              onPress={() => setConnectedProvider((current) => current === provider.name ? null : provider.name)}
               style={({ pressed }) => [
                 styles.providerRow,
                 index === PROVIDERS.length - 1 && styles.lastProviderRow,
@@ -45,7 +48,7 @@ export default function HealthConnectScreen() {
                 {provider.icon}
               </Text>
               <Text style={styles.providerName}>{provider.name}</Text>
-              <Text style={styles.connectText}>연결하기</Text>
+              <Text style={styles.connectText}>{connectedProvider === provider.name ? '연결됨' : '연결하기'}</Text>
             </Pressable>
           ))}
         </View>
@@ -54,13 +57,13 @@ export default function HealthConnectScreen() {
       <View style={styles.footer}>
         <Pressable
           accessibilityRole="button"
-          onPress={() => undefined}
+          onPress={() => router.replace('/(tabs)/home')}
           style={({ pressed }) => [styles.laterButton, pressed && styles.pressed]}>
           <Text style={styles.laterText}>나중에 연결하기</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          onPress={() => undefined}
+          onPress={() => router.replace('/(tabs)/home')}
           style={({ pressed }) => [styles.startButton, pressed && styles.pressed]}>
           <Text style={styles.startText}>시작하기</Text>
         </Pressable>

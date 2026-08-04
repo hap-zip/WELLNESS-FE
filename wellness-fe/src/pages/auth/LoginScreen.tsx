@@ -63,7 +63,7 @@ export default function LoginScreen() {
         <View style={styles.spacer} />
 
         <View style={styles.footer}>
-          <Pressable accessibilityRole="button" style={styles.guestButton}>
+          <Pressable accessibilityRole="button" onPress={() => router.replace('/(tabs)/home')} style={styles.guestButton}>
             <Text style={styles.guestText}>체험 데이터로 둘러보기</Text>
           </Pressable>
 
@@ -74,7 +74,7 @@ export default function LoginScreen() {
             </Pressable>
           </View>
 
-          <Pressable accessibilityRole="button" style={styles.loginButton}>
+          <Pressable accessibilityRole="button" onPress={() => router.replace('/(onboarding)/intro')} style={styles.loginButton}>
             <Text style={styles.loginButtonText}>로그인</Text>
           </Pressable>
         </View>

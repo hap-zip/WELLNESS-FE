@@ -5,10 +5,10 @@
 ## 현재 기준점
 
 - 기준 브랜치: `develop`
-- 현재 구현 브랜치: `feat/check-cond`
-- 기준 병합 커밋: `ccc7447 Merge pull request #43 from hap-zip/chore/handoff`
-- 구현 완료 후 다음 작업 브랜치: `feat/check-discomfort`
-- 다음 페이지: `DiscomfortCheckScreen` — 데일리 체크 3/5 불편 부위·강도
+- 현재 구현 브랜치: `feat/check-flow`
+- 기준 병합 커밋: `99b93f0 Merge pull request #44 from hap-zip/feat/check-cond`
+- 구현 완료 후 다음 작업 브랜치: `feat/records`
+- 다음 페이지: `RecordsCalendarScreen` — 기록 캘린더
 
 ## 완료된 페이지
 
@@ -22,6 +22,10 @@
 - [x] `home` — 오늘 홈
 - [x] `check-auto` — 자동 수집 확인
 - [x] `check-cond` — 오늘 컨디션
+- [x] `check-discomfort` — 불편 부위·강도·느낌
+- [x] `check-sleep` — 수면 만족도·자세·베개
+- [x] `check-skin` — 활동·피부
+- [x] `check-done` — 기록 완료
 
 각 페이지는 다음 구조를 사용합니다.
 
@@ -33,23 +37,22 @@ src/pages/<domain>/<page-name>.styles.ts
 
 ## 다음 작업
 
-### `feat/check-discomfort`
+### `feat/records`
 
 구현 대상:
 
-- 페이지 ID: `CHK-01A`
-- 페이지 이름: 불편 부위·강도
-- 라우트: `/check/discomfort`
-- 화면 파일: `src/pages/check/DiscomfortCheckScreen.tsx`
-- 스타일 파일: `src/pages/check/discomfort-check.styles.ts`
+- 페이지 ID: `LOG-01`
+- 페이지 이름: 기록 캘린더
+- 라우트: `/(tabs)/records`
+- 화면 파일: `src/pages/records/RecordsCalendarScreen.tsx`
+- 스타일 파일: `src/pages/records/records-calendar.styles.ts`
 
 HTML 기준:
 
-- 데일리 체크 3/5 진행률 60%
-- 상단 뒤로가기·건너뛰기
-- 불편한 부위 선택
-- 불편함 강도와 느낌 입력
-- 하단 `다음` CTA
+- 월별 기록 캘린더
+- 날짜별 기록 여부와 선택 상태
+- 선택 날짜의 요약 정보
+- 하단 탭의 기록 메뉴 연결
 
 ## 집에서 환경 맞추기
 

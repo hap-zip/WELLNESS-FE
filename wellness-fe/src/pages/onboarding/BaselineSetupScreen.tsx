@@ -59,7 +59,7 @@ export default function BaselineSetupScreen() {
       <View style={styles.footer}>
         <Pressable
           accessibilityRole="button"
-          onPress={() => undefined}
+          onPress={() => router.push('/(onboarding)/health-connect')}
           style={({ pressed }) => [styles.nextButton, pressed && styles.pressed]}>
           <Text style={styles.nextButtonText}>다음</Text>
         </Pressable>

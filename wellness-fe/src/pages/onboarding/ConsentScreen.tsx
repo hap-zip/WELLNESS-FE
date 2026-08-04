@@ -64,7 +64,7 @@ export default function ConsentScreen() {
       <View style={styles.footer}>
         <Pressable
           accessibilityRole="button"
-          onPress={() => undefined}
+          onPress={() => router.push('/(onboarding)/baseline')}
           style={({ pressed }) => [styles.continueButton, pressed && styles.pressed]}>
           <Text style={styles.continueText}>동의하고 계속</Text>
         </Pressable>
