@@ -5,11 +5,10 @@
 ## 현재 기준점
 
 - 기준 브랜치: `develop`
-- 원격 상태: `origin/develop`과 일치
-- 마지막 병합 커밋: `efafc59 Merge pull request #42 from hap-zip/feat/check-auto`
-- 현재 작업 트리: 깨끗함
-- 다음 작업 브랜치: `feat/check-cond`
-- 다음 페이지: `ConditionCheckScreen` — 데일리 체크 2/5 컨디션
+- 현재 구현 브랜치: `feat/check-cond`
+- 기준 병합 커밋: `ccc7447 Merge pull request #43 from hap-zip/chore/handoff`
+- 구현 완료 후 다음 작업 브랜치: `feat/check-discomfort`
+- 다음 페이지: `DiscomfortCheckScreen` — 데일리 체크 3/5 불편 부위·강도
 
 ## 완료된 페이지
 
@@ -22,6 +21,7 @@
 - [x] `health-connect` — 건강 데이터 연결
 - [x] `home` — 오늘 홈
 - [x] `check-auto` — 자동 수집 확인
+- [x] `check-cond` — 오늘 컨디션
 
 각 페이지는 다음 구조를 사용합니다.
 
@@ -33,23 +33,22 @@ src/pages/<domain>/<page-name>.styles.ts
 
 ## 다음 작업
 
-### `feat/check-cond`
+### `feat/check-discomfort`
 
 구현 대상:
 
-- 페이지 ID: `CHK-00B`
-- 페이지 이름: 오늘 컨디션
-- 라우트: `/check/condition`
-- 화면 파일: `src/pages/check/ConditionCheckScreen.tsx`
-- 스타일 파일: `src/pages/check/condition-check.styles.ts`
+- 페이지 ID: `CHK-01A`
+- 페이지 이름: 불편 부위·강도
+- 라우트: `/check/discomfort`
+- 화면 파일: `src/pages/check/DiscomfortCheckScreen.tsx`
+- 스타일 파일: `src/pages/check/discomfort-check.styles.ts`
 
 HTML 기준:
 
-- 데일리 체크 2/5 진행률 40%
+- 데일리 체크 3/5 진행률 60%
 - 상단 뒤로가기·건너뛰기
-- 5개 컨디션 라디오 카드
-- 각 카드에 제목과 부제 표시
-- 최근 자주 기록한 상태 태그 3개
+- 불편한 부위 선택
+- 불편함 강도와 느낌 입력
 - 하단 `다음` CTA
 
 ## 집에서 환경 맞추기
