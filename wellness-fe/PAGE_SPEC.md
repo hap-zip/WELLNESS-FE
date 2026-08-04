@@ -143,4 +143,5 @@ export default function LoginRoute() {
 - [ ] 페이지 명세 검토·확정
 - [x] 기존 `AUTH-01` 임시 구현 정리
 - [x] `splash` 페이지를 명세 구조로 재구현
-- [ ] `login` 페이지 구현 시작
+- [x] `login` 페이지 구현
+- [x] `signup` 페이지 구현
