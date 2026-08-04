@@ -1,7 +1,11 @@
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import NavigationBackButton from '@/components/navigation-back-button';
 import { useDailyCheck } from '@/context/daily-check-context';
+import { wellnessApi } from '@/services/wellness-api';
 
 import { styles } from './activity-skin-check.styles';
 
@@ -15,6 +19,7 @@ const SKIN_STATES = ['괜찮아요', '건조해요', '가려워요', '붉어졌�
 export default function ActivitySkinCheckScreen() {
   const router = useRouter();
   const { completeStep, draft, skipStep, updateDraft } = useDailyCheck();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const toggleSkin = (value: string) => {
     if (value === '괜찮아요') {
@@ -25,12 +30,33 @@ export default function ActivitySkinCheckScreen() {
     updateDraft({ skinStates: symptoms.includes(value) ? symptoms.filter((item) => item !== value) : [...symptoms, value] });
   };
   const canComplete = draft.activity !== null && draft.skinStates.length > 0;
+  const submit = async (skipped = false) => {
+    if ((!canComplete && !skipped) || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await wellnessApi.saveDailyCheck({
+        autoRecords: { ...draft.autoRecords, source: draft.autoSource },
+        condition: draft.condition,
+        conditionTags: draft.conditionTags,
+        discomfort: { bodyParts: draft.bodyParts, intensity: draft.intensity, feelings: draft.discomfortFeelings },
+        sleep: { satisfaction: draft.sleepSatisfaction, posture: draft.sleepPosture, pillow: draft.pillow },
+        activitySkin: skipped ? { activity: null, skinStates: [], memo: '' } : { activity: draft.activity, skinStates: draft.skinStates, memo: draft.memo },
+        skippedSteps: skipped && !draft.skippedSteps.includes('activitySkin') ? [...draft.skippedSteps, 'activitySkin'] : draft.skippedSteps,
+      });
+      if (skipped) skipStep('activitySkin'); else completeStep('activitySkin');
+      router.replace('/check/complete');
+    } catch {
+      Alert.alert('저장하지 못했어요', '네트워크 상태를 확인하고 다시 시도해 주세요.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
       <View style={styles.progressTrack}><View style={styles.progressValue} /></View>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <View style={styles.topBar}><Pressable accessibilityLabel="수면 체크로 돌아가기" accessibilityRole="button" onPress={() => router.back()} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}><Text style={styles.backIcon}>‹</Text></Pressable><Pressable accessibilityRole="button" onPress={() => { skipStep('activitySkin'); router.replace('/check/complete'); }} style={({ pressed }) => [styles.skipButton, pressed && styles.pressed]}><Text style={styles.skipText}>건너뛰기</Text></Pressable></View>
+        <View style={styles.topBar}><View style={styles.backButton}><NavigationBackButton accessibilityLabel="수면 체크로 돌아가기" fallbackHref="/check/sleep" /></View><Pressable accessibilityRole="button" disabled={isSubmitting} onPress={() => void submit(true)} style={({ pressed }) => [styles.skipButton, pressed && styles.pressed]}><Text style={styles.skipText}>건너뛰기</Text></Pressable></View>
         <Text style={styles.step}>오늘의 체크 5 / 5</Text><Text style={styles.title}>어제 활동과 피부는{`\n`}어땠나요?</Text><Text style={styles.description}>작은 변화도 쌓이면 내 몸의 패턴을 찾는 데 도움이 돼요.</Text>
 
         <Text style={styles.sectionTitle}>활동량</Text>
@@ -43,7 +69,7 @@ export default function ActivitySkinCheckScreen() {
         <TextInput accessibilityLabel="오늘의 활동과 피부 메모" maxLength={120} multiline onChangeText={(memo) => updateDraft({ memo })} placeholder="평소와 달랐던 점을 적어주세요." placeholderTextColor="#A4A9B2" style={styles.memo} textAlignVertical="top" value={draft.memo} />
         <Text style={styles.count}>{draft.memo.length} / 120</Text>
       </ScrollView>
-      <View style={styles.footer}><Pressable accessibilityRole="button" accessibilityState={{ disabled: !canComplete }} disabled={!canComplete} onPress={() => { completeStep('activitySkin'); router.replace('/check/complete'); }} style={({ pressed }) => [styles.completeButton, !canComplete && styles.disabledButton, pressed && styles.pressed]}><Text style={[styles.completeText, !canComplete && styles.disabledText]}>기록 완료</Text></Pressable></View>
-    </View>
+      <View style={styles.footer}><Pressable accessibilityRole="button" accessibilityState={{ disabled: !canComplete, busy: isSubmitting }} disabled={!canComplete || isSubmitting} onPress={() => void submit()} style={({ pressed }) => [styles.completeButton, (!canComplete || isSubmitting) && styles.disabledButton, pressed && styles.pressed]}><Text style={[styles.completeText, !canComplete && styles.disabledText]}>{isSubmitting ? '저장 중…' : '기록 완료'}</Text></Pressable></View>
+    </SafeAreaView>
   );
 }

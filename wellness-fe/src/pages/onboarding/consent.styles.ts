@@ -132,6 +132,7 @@ export const styles = StyleSheet.create({
     fontSize: 16.5,
     fontWeight: '800',
   },
+  disabledButton: { backgroundColor: '#C8CCD3' },
   pressed: {
     opacity: 0.55,
   },

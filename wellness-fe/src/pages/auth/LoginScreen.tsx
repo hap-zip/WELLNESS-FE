@@ -12,19 +12,30 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { styles } from './login.styles';
+import { authApi } from '@/services/auth-api';
 
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const canSubmit = email.trim().includes('@') && password.length >= 8;
+  const submit = async () => {
+    if (!canSubmit) return;
+    setError(''); setIsSubmitting(true);
+    try { await authApi.signIn({ email: email.trim(), password }); router.replace('/(onboarding)/intro'); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : '로그인하지 못했어요.'); }
+    finally { setIsSubmitting(false); }
+  };
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.screen}>
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20 }]}
         keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <Text style={styles.title}>
@@ -35,6 +46,7 @@ export default function LoginScreen() {
 
         <View style={styles.form}>
           <TextInput
+            accessibilityLabel="이메일"
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
@@ -45,6 +57,7 @@ export default function LoginScreen() {
             value={email}
           />
           <TextInput
+            accessibilityLabel="비밀번호"
             autoCapitalize="none"
             autoComplete="password"
             onChangeText={setPassword}
@@ -55,6 +68,7 @@ export default function LoginScreen() {
             value={password}
           />
         </View>
+        {error ? <Text accessibilityRole="alert" style={styles.errorText}>{error}</Text> : null}
 
         <Pressable accessibilityRole="button" style={styles.forgotButton}>
           <Text style={styles.forgotText}>비밀번호를 잊으셨나요?</Text>
@@ -74,8 +88,8 @@ export default function LoginScreen() {
             </Pressable>
           </View>
 
-          <Pressable accessibilityRole="button" onPress={() => router.replace('/(onboarding)/intro')} style={styles.loginButton}>
-            <Text style={styles.loginButtonText}>로그인</Text>
+          <Pressable accessibilityRole="button" accessibilityState={{ disabled: !canSubmit, busy: isSubmitting }} disabled={!canSubmit || isSubmitting} onPress={() => void submit()} style={[styles.loginButton, (!canSubmit || isSubmitting) && styles.disabledButton]}>
+            <Text style={styles.loginButtonText}>{isSubmitting ? '로그인 중…' : '로그인'}</Text>
           </Pressable>
         </View>
       </ScrollView>

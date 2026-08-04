@@ -1,8 +1,10 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useDailyCheck } from '@/context/daily-check-context';
+import { wellnessApi } from '@/services/wellness-api';
 
 import { styles } from './auto-check.styles';
 
@@ -14,19 +16,32 @@ const RECORDS = [
 
 export default function AutoCheckScreen() {
   const router = useRouter();
-  const { completeStep, draft, skipStep, updateDraft } = useDailyCheck();
+  const { completeStep, draft, resetDraft, skipStep, updateDraft } = useDailyCheck();
   const [isEditing, setIsEditing] = useState(false);
 
+  useEffect(() => {
+    if (draft.autoConfirmed) return;
+    let mounted = true;
+    void wellnessApi.getAutoHealthRecord().then((record) => {
+      if (mounted) updateDraft({ autoRecords: { sleepDuration: record.sleepDuration, bedtime: record.bedtime, steps: record.steps }, autoSource: record.source });
+    });
+    return () => { mounted = false; };
+  }, [draft.autoConfirmed, updateDraft]);
+
   const moveToCondition = () => router.push('/check/condition');
+  const closeCheck = () => Alert.alert('오늘의 체크를 그만할까요?', '입력한 내용은 저장되지 않아요.', [
+    { text: '계속 기록', style: 'cancel' },
+    { text: '나가기', style: 'destructive', onPress: () => { resetDraft(); router.dismissTo('/(tabs)/home'); } },
+  ]);
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
       <View style={styles.progressTrack}>
         <View style={styles.progressValue} />
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.topBar}>
-          <Pressable accessibilityLabel="데일리 체크 닫기" accessibilityRole="button" onPress={() => router.back()} style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}>
+          <Pressable accessibilityLabel="데일리 체크 닫기" accessibilityRole="button" hitSlop={8} onPress={closeCheck} style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}>
             <Text style={styles.closeIcon}>×</Text>
           </Pressable>
           <Pressable accessibilityRole="button" onPress={() => { skipStep('auto'); moveToCondition(); }} style={({ pressed }) => [styles.skipButton, pressed && styles.pressed]}>
@@ -56,7 +71,7 @@ export default function AutoCheckScreen() {
         </View>
         <View style={styles.sourceRow}>
           <Text style={styles.sourceIcon}>♥</Text>
-          <Text style={styles.sourceText}>Apple 건강에서 자동으로 가져왔어요</Text>
+          <Text style={styles.sourceText}>{draft.autoSource === 'apple-health' ? 'Apple 건강' : draft.autoSource === 'health-connect' ? 'Health Connect' : '직접 입력'}에서 가져왔어요</Text>
         </View>
       </ScrollView>
       <View style={styles.footer}>
@@ -67,6 +82,6 @@ export default function AutoCheckScreen() {
           <Text style={styles.confirmText}>맞아요</Text>
         </Pressable>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

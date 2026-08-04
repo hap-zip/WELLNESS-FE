@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import NavigationBackButton from '@/components/navigation-back-button';
 import { useDailyCheck } from '@/context/daily-check-context';
 
 import { styles } from './discomfort-check.styles';
@@ -17,11 +19,11 @@ export default function DiscomfortCheckScreen() {
   const canContinue = draft.bodyParts.length > 0 && draft.intensity !== null;
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
       <View style={styles.progressTrack}><View style={styles.progressValue} /></View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.topBar}>
-          <Pressable accessibilityLabel="컨디션 선택으로 돌아가기" accessibilityRole="button" onPress={() => router.back()} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}><Text style={styles.backIcon}>‹</Text></Pressable>
+          <View style={styles.backButton}><NavigationBackButton accessibilityLabel="컨디션 선택으로 돌아가기" fallbackHref="/check/condition" /></View>
           <Pressable accessibilityRole="button" onPress={() => { skipStep('discomfort'); router.push('/check/sleep'); }} style={({ pressed }) => [styles.skipButton, pressed && styles.pressed]}><Text style={styles.skipText}>건너뛰기</Text></Pressable>
         </View>
         <Text style={styles.step}>오늘의 체크 3 / 5</Text>
@@ -54,6 +56,6 @@ export default function DiscomfortCheckScreen() {
         </View>
       </ScrollView>
       <View style={styles.footer}><Pressable accessibilityRole="button" accessibilityState={{ disabled: !canContinue }} disabled={!canContinue} onPress={() => { completeStep('discomfort'); router.push('/check/sleep'); }} style={({ pressed }) => [styles.nextButton, !canContinue && styles.disabledButton, pressed && styles.pressed]}><Text style={[styles.nextText, !canContinue && styles.disabledText]}>다음</Text></Pressable></View>
-    </View>
+    </SafeAreaView>
   );
 }

@@ -1,7 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import NavigationBackButton from '@/components/navigation-back-button';
 import { styles } from './health-connect.styles';
 
 const PROVIDERS = [
@@ -14,15 +16,9 @@ export default function HealthConnectScreen() {
   const [connectedProvider, setConnectedProvider] = useState<string | null>(null);
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Pressable
-          accessibilityLabel="기본 상태 설정으로 돌아가기"
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
-          <Text style={styles.backIcon}>‹</Text>
-        </Pressable>
+        <View style={styles.backButton}><NavigationBackButton accessibilityLabel="기본 상태 설정으로 돌아가기" confirmDiscard={connectedProvider !== null} fallbackHref="/(onboarding)/baseline" /></View>
 
         <View style={styles.header}>
           <Text style={styles.title}>
@@ -68,6 +64,6 @@ export default function HealthConnectScreen() {
           <Text style={styles.startText}>시작하기</Text>
         </Pressable>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

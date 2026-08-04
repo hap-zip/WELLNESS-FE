@@ -1,9 +1,10 @@
-import { createContext, type PropsWithChildren, useContext, useMemo, useState } from 'react';
+import { createContext, type PropsWithChildren, useCallback, useContext, useMemo, useState } from 'react';
 
 export type CheckStep = 'auto' | 'condition' | 'discomfort' | 'sleep' | 'activitySkin';
 
 type DailyCheckDraft = {
   autoRecords: { sleepDuration: string; bedtime: string; steps: string };
+  autoSource: 'apple-health' | 'health-connect' | 'manual';
   autoConfirmed: boolean;
   condition: string | null;
   conditionTags: string[];
@@ -20,7 +21,8 @@ type DailyCheckDraft = {
 };
 
 const initialDraft: DailyCheckDraft = {
-  autoRecords: { sleepDuration: '5시간 42분', bedtime: '오전 1:18', steps: '4,230보' },
+  autoRecords: { sleepDuration: '', bedtime: '', steps: '' },
+  autoSource: 'manual',
   autoConfirmed: false,
   condition: null,
   conditionTags: [],
@@ -49,9 +51,9 @@ const DailyCheckContext = createContext<DailyCheckContextValue | null>(null);
 
 export function DailyCheckProvider({ children }: PropsWithChildren) {
   const [draft, setDraft] = useState<DailyCheckDraft>(initialDraft);
-  const updateDraft = (changes: Partial<DailyCheckDraft>) => setDraft((current) => ({ ...current, ...changes }));
-  const completeStep = (step: CheckStep) => setDraft((current) => ({ ...current, skippedSteps: current.skippedSteps.filter((item) => item !== step) }));
-  const skipStep = (step: CheckStep) => setDraft((current) => {
+  const updateDraft = useCallback((changes: Partial<DailyCheckDraft>) => setDraft((current) => ({ ...current, ...changes })), []);
+  const completeStep = useCallback((step: CheckStep) => setDraft((current) => ({ ...current, skippedSteps: current.skippedSteps.filter((item) => item !== step) })), []);
+  const skipStep = useCallback((step: CheckStep) => setDraft((current) => {
     const cleared: Partial<DailyCheckDraft> = step === 'auto' ? { autoConfirmed: false }
       : step === 'condition' ? { condition: null, conditionTags: [] }
         : step === 'discomfort' ? { bodyParts: [], intensity: null, discomfortFeelings: [] }
@@ -62,7 +64,8 @@ export function DailyCheckProvider({ children }: PropsWithChildren) {
       ...cleared,
       skippedSteps: current.skippedSteps.includes(step) ? current.skippedSteps : [...current.skippedSteps, step],
     };
-  });
+  }), []);
+  const resetDraft = useCallback(() => setDraft(initialDraft), []);
   const completedCount = [
     draft.autoConfirmed,
     draft.condition !== null,
@@ -75,10 +78,10 @@ export function DailyCheckProvider({ children }: PropsWithChildren) {
     completeStep,
     completedCount,
     draft,
-    resetDraft: () => setDraft(initialDraft),
+    resetDraft,
     skipStep,
     updateDraft,
-  }), [completedCount, draft]);
+  }), [completeStep, completedCount, draft, resetDraft, skipStep, updateDraft]);
 
   return <DailyCheckContext.Provider value={value}>{children}</DailyCheckContext.Provider>;
 }

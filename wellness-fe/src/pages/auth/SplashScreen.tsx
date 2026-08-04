@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Animated, Easing, Pressable, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { styles } from './splash.styles';
 
@@ -37,8 +38,13 @@ function PulseDot({ delay }: { delay: number }) {
 export default function SplashScreen() {
   const router = useRouter();
 
+  useEffect(() => {
+    const timer = setTimeout(() => router.replace('/(auth)/login'), 1800);
+    return () => clearTimeout(timer);
+  }, [router]);
+
   return (
-    <View style={styles.screen}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
       <StatusBar style="light" />
 
       <View style={styles.content}>
@@ -64,6 +70,6 @@ export default function SplashScreen() {
         style={({ pressed }) => [styles.continueButton, pressed && styles.pressed]}>
         <Text style={styles.continueText}>계속</Text>
       </Pressable>
-    </View>
+    </SafeAreaView>
   );
 }

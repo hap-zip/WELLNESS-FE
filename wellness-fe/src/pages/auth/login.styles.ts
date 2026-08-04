@@ -40,6 +40,7 @@ export const styles = StyleSheet.create({
   passwordInput: {
     marginTop: 14,
   },
+  errorText: { marginTop: 10, paddingHorizontal: 24, color: '#E03131', fontSize: 13, lineHeight: 20 },
   forgotButton: {
     alignSelf: 'flex-start',
     minHeight: 44,
@@ -103,4 +104,5 @@ export const styles = StyleSheet.create({
     fontSize: 16.5,
     fontWeight: '800',
   },
+  disabledButton: { backgroundColor: '#C8CCD3' },
 });

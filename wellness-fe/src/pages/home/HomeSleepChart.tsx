@@ -1,22 +1,26 @@
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 import { styles } from './home.styles';
 
-export default function HomeSleepChart() {
+export default function HomeSleepChart({ values }: { values: number[] }) {
+  if (values.length < 2) return null;
+  const width = 310;
+  const height = 46;
+  const min = Math.min(...values) - 0.5;
+  const max = Math.max(...values) + 0.5;
+  const points = values.map((value, index) => ({
+    x: (index / (values.length - 1)) * width,
+    y: height - ((value - min) / (max - min || 1)) * (height - 8) - 4,
+  }));
+  const line = points.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ');
+  const area = `${line} L${width} ${height} L0 ${height} Z`;
+  const last = points[points.length - 1];
+
   return (
-    <Svg height="46" viewBox="0 0 310 46" width="100%" style={styles.sleepChart}>
-      <Path
-        d="M0 28 C18 24 28 30 44 20 S68 27 86 23 S110 12 129 19 S156 31 174 20 S198 17 216 24 S240 19 258 15 S286 23 310 10 L310 46 L0 46 Z"
-        fill="#5B8DEF"
-        fillOpacity="0.12"
-      />
-      <Path
-        d="M0 28 C18 24 28 30 44 20 S68 27 86 23 S110 12 129 19 S156 31 174 20 S198 17 216 24 S240 19 258 15 S286 23 310 10"
-        fill="none"
-        stroke="#7FA6FF"
-        strokeWidth="2.4"
-      />
-      <Circle cx="310" cy="10" fill="#FFFFFF" r="3.5" />
+    <Svg height={height} viewBox={`0 0 ${width} ${height}`} width="100%" style={styles.sleepChart}>
+      <Path d={area} fill="#5B8DEF" fillOpacity={0.12} />
+      <Path d={line} fill="none" stroke="#5B8DEF" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} />
+      <Circle cx={last.x} cy={last.y} fill="#1257E0" r={3.5} />
     </Svg>
   );
 }

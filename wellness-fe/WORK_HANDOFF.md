@@ -159,6 +159,8 @@ npx tsc --noEmit
 
 ## Expo Go 범위
 
+- 프로젝트는 실물 iOS의 최신 Expo Go 호환을 위해 SDK 54를 사용
+- 홈 아바타는 `expo-gl`과 `@react-three/fiber/native` 기반 3D mesh를 사용하고 웹·오류 환경에서는 2D로 대체
 - 초기 구현은 UI와 더미 데이터 중심
 - HealthKit·Health Connect 실제 연동은 아직 하지 않음
 - 백그라운드 동기화와 원격 푸시 알림은 추후 Development Build 범위
