@@ -148,3 +148,4 @@ export default function LoginRoute() {
 - [x] `intro` 페이지 구현
 - [x] `consent` 페이지 구현
 - [x] `baseline` 페이지 구현
+- [x] `health-connect` 페이지 구현
