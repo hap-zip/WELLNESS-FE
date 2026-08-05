@@ -1,4 +1,4 @@
-import type { AssistantMessage, AssistantReply, AutoHealthRecord, BaselineProfile, BodyMapHighlight, BodyMapPart, DailyCheckSubmission, DiscoverSummary, HealthReport, HomeSummary, PatternDetail, RecordDetail, RecordsMonth, ReportOptions, RoutineCompletion, RoutineFeedback, RoutinePlan, SignalSummary, WellnessRecordSummary } from '@/domain/wellness';
+import type { AssistantMessage, AssistantReply, AutoHealthRecord, BaselineProfile, BodyMapHighlight, BodyMapPart, DailyCheckSubmission, DataConsentSettings, DiscoverSummary, HealthConnectionSettings, HealthReport, HomeSummary, NotificationSettings, PatternDetail, RecordDetail, RecordsMonth, ReportOptions, RoutineCompletion, RoutineFeedback, RoutinePlan, SignalSummary, UserProfileSummary, WellnessRecordSummary } from '@/domain/wellness';
 
 export interface WellnessApi {
   getAutoHealthRecord(): Promise<AutoHealthRecord>;
@@ -13,6 +13,14 @@ export interface WellnessApi {
   getSignalSummary(): Promise<SignalSummary>;
   createHealthReport(options: ReportOptions): Promise<HealthReport>;
   askRecordAssistant(message: string, history: AssistantMessage[]): Promise<AssistantReply>;
+  getUserProfile(): Promise<UserProfileSummary>;
+  getHealthConnection(): Promise<HealthConnectionSettings>;
+  saveHealthConnection(settings: HealthConnectionSettings): Promise<void>;
+  getNotificationSettings(): Promise<NotificationSettings>;
+  saveNotificationSettings(settings: NotificationSettings): Promise<void>;
+  getDataConsentSettings(): Promise<DataConsentSettings>;
+  saveDataConsentSettings(settings: DataConsentSettings): Promise<void>;
+  deleteAllUserData(): Promise<void>;
   saveBaseline(profile: BaselineProfile): Promise<void>;
   saveDailyCheck(payload: DailyCheckSubmission): Promise<{ recordId: string }>;
 }
@@ -60,6 +68,10 @@ const mockHomeSummary: HomeSummary = {
 let latestDailyCheck: DailyCheckSubmission | null = null;
 let latestRoutineCompletion: RoutineCompletion | null = null;
 let latestRoutineFeedback: RoutineFeedback | null = null;
+let healthConnection: HealthConnectionSettings = { provider: 'apple-health', connected: false, lastSyncedLabel: null, permissions: { sleep: true, steps: true, heartRate: false } };
+let notificationSettings: NotificationSettings = { enabled: true, dailyCheck: true, routine: true, weeklyReport: false, reminderTime: '21:30' };
+let dataConsentSettings: DataConsentSettings = { healthData: true, personalizedInsights: true, marketing: false, consentedAtLabel: '2026년 8월 1일', retentionLabel: '회원 탈퇴 시까지' };
+let userDataDeleted = false;
 
 function localDateId(date: Date) {
   const year = date.getFullYear();
@@ -103,6 +115,7 @@ const mockRecords: WellnessRecordSummary[] = [
 ];
 
 function latestRecordFor(date: string): WellnessRecordSummary | null {
+  if (userDataDeleted) return null;
   if (latestDailyCheck && date === localDateId(new Date())) {
     const intensity = latestDailyCheck.discomfort.intensity ?? 0;
     return {
@@ -184,6 +197,15 @@ function detailsFromCheck(check: DailyCheckSubmission, highlights: readonly Body
 }
 
 class MockWellnessApi implements WellnessApi {
+  async getUserProfile(): Promise<UserProfileSummary> { return { name: '김몸기록', email: 'wellness@example.com', joinedLabel: '2026년 8월부터', recordDays: userDataDeleted ? 0 : mockRecords.length + (latestDailyCheck ? 1 : 0), routineCount: userDataDeleted ? 0 : latestRoutineCompletion ? 3 : 2, healthConnected: healthConnection.connected, notificationEnabled: notificationSettings.enabled }; }
+  async getHealthConnection(): Promise<HealthConnectionSettings> { return { ...healthConnection, permissions: { ...healthConnection.permissions } }; }
+  async saveHealthConnection(settings: HealthConnectionSettings): Promise<void> { healthConnection = { ...settings, lastSyncedLabel: settings.connected ? '방금 동기화' : null, permissions: { ...settings.permissions } }; }
+  async getNotificationSettings(): Promise<NotificationSettings> { return { ...notificationSettings }; }
+  async saveNotificationSettings(settings: NotificationSettings): Promise<void> { notificationSettings = { ...settings }; }
+  async getDataConsentSettings(): Promise<DataConsentSettings> { return { ...dataConsentSettings }; }
+  async saveDataConsentSettings(settings: DataConsentSettings): Promise<void> { dataConsentSettings = { ...settings }; }
+  async deleteAllUserData(): Promise<void> { latestDailyCheck = null; latestRoutineCompletion = null; latestRoutineFeedback = null; healthConnection = { ...healthConnection, connected: false, lastSyncedLabel: null }; userDataDeleted = true; }
+
   async askRecordAssistant(message: string, _history: AssistantMessage[]): Promise<AssistantReply> {
     await new Promise((resolve) => setTimeout(resolve, 550));
     const normalized = message.replace(/\s/g, '');
@@ -271,11 +293,11 @@ class MockWellnessApi implements WellnessApi {
       endDate,
       availableDates,
       periodLabel: `${shortDate(addDays(endDate, -6))}–${shortDate(endDate)}`,
-      sleepValues: [6.2, 5.8, 7.1, 6.5, 5.6, 6.8, 6.1].map((value, index) => Math.max(4.5, value + ((seed + index) % 3 - 1) * 0.12)),
-      conditionValues: [3, 2, 4, 4, 2, 4, 3].map((value, index) => Math.max(1, Math.min(5, value + ((seed + index) % 2)))),
-      activityValues: [4.2, 5.8, 8.1, 7.4, 3.9, 9.2, 6.3].map((value, index) => value + ((seed + index) % 3) * 0.3),
+      sleepValues: userDataDeleted ? [] : [6.2, 5.8, 7.1, 6.5, 5.6, 6.8, 6.1].map((value, index) => Math.max(4.5, value + ((seed + index) % 3 - 1) * 0.12)),
+      conditionValues: userDataDeleted ? [] : [3, 2, 4, 4, 2, 4, 3].map((value, index) => Math.max(1, Math.min(5, value + ((seed + index) % 2)))),
+      activityValues: userDataDeleted ? [] : [4.2, 5.8, 8.1, 7.4, 3.9, 9.2, 6.3].map((value, index) => value + ((seed + index) % 3) * 0.3),
       labels: Array.from({ length: 7 }, (_, index) => shortDate(addDays(endDate, index - 6))),
-      patterns: DISCOVER_PATTERNS,
+      patterns: userDataDeleted ? [] : DISCOVER_PATTERNS,
     };
   }
 
@@ -301,7 +323,7 @@ class MockWellnessApi implements WellnessApi {
   }
 
   async getRecordsMonth(year: number, month: number): Promise<RecordsMonth> {
-    const records = mockRecords.filter((record) => {
+    const records = (userDataDeleted ? [] : mockRecords).filter((record) => {
       const [recordYear, recordMonth] = record.date.split('-').map(Number);
       return recordYear === year && recordMonth === month;
     });
@@ -327,6 +349,7 @@ class MockWellnessApi implements WellnessApi {
 
   async saveDailyCheck(payload: DailyCheckSubmission): Promise<{ recordId: string }> {
     latestDailyCheck = payload;
+    userDataDeleted = false;
     return { recordId: 'mock-daily-check' };
   }
 }

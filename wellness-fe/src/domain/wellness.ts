@@ -162,3 +162,8 @@ export type AssistantReply = {
   suggestions: string[];
   action?: { label: string; route: '/check/auto' | '/routine' | '/reports/setup' | '/(tabs)/records' | '/safety/signal' };
 };
+
+export type UserProfileSummary = { name: string; email: string; joinedLabel: string; recordDays: number; routineCount: number; healthConnected: boolean; notificationEnabled: boolean };
+export type HealthConnectionSettings = { provider: 'apple-health' | 'health-connect'; connected: boolean; lastSyncedLabel: string | null; permissions: { sleep: boolean; steps: boolean; heartRate: boolean } };
+export type NotificationSettings = { enabled: boolean; dailyCheck: boolean; routine: boolean; weeklyReport: boolean; reminderTime: string };
+export type DataConsentSettings = { healthData: boolean; personalizedInsights: boolean; marketing: boolean; consentedAtLabel: string; retentionLabel: string };

@@ -47,7 +47,7 @@ export default function DiscoverScreen() {
           </ScrollView>
         </View>
 
-        {isLoading ? <StatusCard><ActivityIndicator color="#1257E0" /><Text style={styles.statusText}>선택한 기간을 분석하는 중</Text></StatusCard> : error ? <StatusCard><Text style={styles.errorTitle}>발견 내용을 불러오지 못했어요</Text><Pressable onPress={() => void reload().catch(() => undefined)} style={styles.retryButton}><Text style={styles.retryText}>다시 시도</Text></Pressable></StatusCard> : data ? <>
+        {isLoading ? <StatusCard><ActivityIndicator color="#1257E0" /><Text style={styles.statusText}>선택한 기간을 분석하는 중</Text></StatusCard> : error ? <StatusCard><Text style={styles.errorTitle}>발견 내용을 불러오지 못했어요</Text><Pressable onPress={() => void reload().catch(() => undefined)} style={styles.retryButton}><Text style={styles.retryText}>다시 시도</Text></Pressable></StatusCard> : data && data.sleepValues.length > 0 ? <>
           <Text style={styles.period}>{data.periodLabel} · 모든 차트 동시 반영</Text>
           <ChartCard title="수면 시간" value={`${average(data.sleepValues).toFixed(1)}시간 평균`}><WellnessLineChart labels={data.labels} values={data.sleepValues} /></ChartCard>
           <ChartCard title="컨디션 점수" value={`${average(data.conditionValues).toFixed(1)} / 5`}><WellnessBarsChart color="#EF9A72" labels={data.labels} values={data.conditionValues} /></ChartCard>
