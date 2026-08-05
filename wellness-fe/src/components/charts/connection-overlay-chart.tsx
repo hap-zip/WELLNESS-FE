@@ -12,7 +12,7 @@ export default function ConnectionOverlayChart({ labels, metrics, onPointPress, 
     {selectedIndex!==null?<Rect fill="#EEF3FF" height={PLOT_HEIGHT-2*PADDING} opacity={.65} rx={7} width={Math.max(18,(WIDTH-2*PADDING)/labels.length)} x={xAt(selectedIndex,labels.length)-Math.max(9,(WIDTH-2*PADDING)/labels.length/2)} y={PADDING}/>:null}
     {metrics.map((metric,index)=><MetricPath delay={index*100} key={`${metric.id}-${metric.values.join(',')}`} metric={metric}/>) }
     {metrics[0]?.values.map((_,index)=>{const x=xAt(index,labels.length);return <Rect accessibilityLabel={`${labels[index]} 기록 보기`} fill="transparent" height={PLOT_HEIGHT} key={`touch-${index}`} onPress={()=>onPointPress(index)} width={Math.max(24,(WIDTH-2*PADDING)/labels.length)} x={x-Math.max(12,(WIDTH-2*PADDING)/labels.length/2)} y="0"/>})}
-    {labels.map((label,index)=>{const show=labels.length<=14||index===0||index===labels.length-1||index%Math.ceil(labels.length/7)===0;return show?<SvgText fill="#8B919B" fontSize="8.5" key={`${label}-${index}`} textAnchor="middle" x={xAt(index,labels.length)} y="180">{label}</SvgText>:null})}
+    {labels.map((label,index)=>{const show=labels.length<=14||index===0||index===labels.length-1||index%Math.ceil(labels.length/7)===0;return show?<SvgText fill="#767F78" fontSize="8.5" key={`${label}-${index}`} textAnchor="middle" x={xAt(index,labels.length)} y="180">{label}</SvgText>:null})}
   </Svg>;
 }
 function xAt(index:number,count:number){return PADDING+(count===1?(WIDTH-2*PADDING)/2:(WIDTH-2*PADDING)*index/Math.max(count-1,1))}

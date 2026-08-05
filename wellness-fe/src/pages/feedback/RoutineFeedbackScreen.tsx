@@ -7,6 +7,7 @@ import NavigationBackButton from '@/components/navigation-back-button';
 import { AppIcon, type AppIconName } from '@/components/app-icon';
 import type { RoutineEffect } from '@/domain/wellness';
 import { wellnessApi } from '@/services/wellness-api';
+import { colors } from '@/theme/tokens';
 
 import { styles } from './feedback.styles';
 
@@ -56,16 +57,16 @@ export default function RoutineFeedbackScreen() {
           <Text style={styles.title}>지금 몸은{`\n`}어떻게 느껴지나요?</Text>
           <Text style={styles.description}>이 답변은 다음 루틴의 강도와 구성을 조정하는 데 사용돼요.</Text>
           <Text style={styles.sectionTitle}>루틴 전과 비교하면</Text>
-          <View style={styles.effectRow}>{EFFECTS.map((item) => { const selected = effect === item.id; return <Pressable accessibilityRole="radio" accessibilityState={{ checked: selected }} key={item.id} onPress={() => selectEffect(item.id)} style={[styles.effectCard, selected && styles.selected]}><AppIcon color={selected ? '#FFFFFF' : '#465163'} name={item.icon} size={23}/><Text style={[styles.effectText, selected && styles.selectedText]}>{item.label}</Text></Pressable>; })}</View>
+          <View style={styles.effectRow}>{EFFECTS.map((item) => { const selected = effect === item.id; return <Pressable accessibilityRole="radio" accessibilityState={{ checked: selected }} key={item.id} onPress={() => selectEffect(item.id)} style={[styles.effectCard, selected && styles.selected]}><AppIcon color={selected ? colors.white : colors.textSecondary} name={item.icon} size={23}/><Text style={[styles.effectText, selected && styles.selectedText]}>{item.label}</Text></Pressable>; })}</View>
           {effect && effect !== 'unknown' ? <>
             <Text style={styles.sectionTitle}>지금 남아 있는 불편 강도</Text>
             <View accessibilityRole="radiogroup" style={styles.levelRow}>{[1, 2, 3, 4, 5].map((value) => <Pressable accessibilityLabel={`불편 강도 ${value}단계`} accessibilityRole="radio" accessibilityState={{ checked: level === value }} key={value} onPress={() => setLevel(value)} style={[styles.level, level === value && styles.selectedLevel]}><Text style={[styles.levelText, level === value && styles.selectedText]}>{value}</Text></Pressable>)}</View>
             <View style={styles.scaleLabels}><Text style={styles.scaleText}>거의 없음</Text><Text style={styles.scaleText}>매우 불편</Text></View>
           </> : null}
-          {effect ? <><Text style={styles.sectionTitle}>메모 <Text style={styles.optional}>(선택)</Text></Text><TextInput accessibilityLabel="루틴 효과 메모" maxLength={200} multiline onChangeText={setMemo} placeholder="어떤 점이 달라졌는지 남겨보세요." placeholderTextColor="#687180" style={styles.input} value={memo} /></> : null}
+          {effect ? <><Text style={styles.sectionTitle}>메모 <Text style={styles.optional}>(선택)</Text></Text><TextInput accessibilityLabel="루틴 효과 메모" maxLength={200} multiline onChangeText={setMemo} placeholder="어떤 점이 달라졌는지 남겨보세요." placeholderTextColor="#6E776F" style={styles.input} value={memo} /></> : null}
           {error ? <Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
         </ScrollView>
-        <View style={[styles.action, { paddingBottom: Math.max(insets.bottom, 12) }]}><Pressable accessibilityRole="button" accessibilityState={{ disabled: !canSubmit, busy: saving }} disabled={!canSubmit || saving} onPress={() => void submit()} style={[styles.button, (!canSubmit || saving) && styles.disabled]}>{saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.buttonText}>피드백 저장하기</Text>}</Pressable></View>
+        <View style={[styles.action, { paddingBottom: Math.max(insets.bottom, 12) }]}><Pressable accessibilityRole="button" accessibilityState={{ disabled: !canSubmit, busy: saving }} disabled={!canSubmit || saving} onPress={() => void submit()} style={[styles.button, (!canSubmit || saving) && styles.disabled]}>{saving ? <ActivityIndicator color={colors.white} /> : <Text style={styles.buttonText}>피드백 저장하기</Text>}</Pressable></View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

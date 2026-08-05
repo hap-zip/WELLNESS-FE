@@ -10,12 +10,12 @@ export const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 3,
-    backgroundColor: '#EEF0F3',
+    backgroundColor: '#E9EAE5',
   },
   progressValue: {
     width: '50%',
     height: '100%',
-    backgroundColor: '#1257E0',
+    backgroundColor: '#176B52',
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -25,7 +25,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backIcon: {
-    color: '#17191C',
+    color: '#18201C',
     fontSize: 34,
     fontWeight: '300',
     lineHeight: 36,
@@ -35,21 +35,21 @@ export const styles = StyleSheet.create({
     paddingTop: 20,
   },
   step: {
-    color: '#1257E0',
+    color: '#176B52',
     fontSize: 13,
     fontWeight: '700',
   },
   title: {
     marginTop: 10,
-    color: '#17191C',
+    color: '#18201C',
     fontSize: 26,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: -0.9,
     lineHeight: 36,
   },
   description: {
     marginTop: 10,
-    color: '#4A4F58',
+    color: '#46514A',
     fontSize: 14,
     lineHeight: 23,
   },
@@ -61,19 +61,19 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 2,
     paddingVertical: 14,
     borderBottomWidth: 1.5,
-    borderBottomColor: '#DEE1E6',
-    color: '#17191C',
+    borderBottomColor: '#D8DCD6',
+    color: '#18201C',
     fontSize: 16,
   },
   helperText: {
     marginTop: 8,
-    color: '#8B919B',
+    color: '#6E776F',
     fontSize: 12.5,
   },
   passwordInput: {
     marginTop: 18,
   },
-  errorText: { marginTop: 10, paddingHorizontal: 24, color: '#E03131', fontSize: 13, lineHeight: 20 },
+  errorText: { marginTop: 10, paddingHorizontal: 24, color: '#B54745', fontSize: 13, lineHeight: 20 },
   spacer: {
     flex: 1,
     minHeight: 20,
@@ -86,7 +86,7 @@ export const styles = StyleSheet.create({
   },
   notice: {
     paddingBottom: 12,
-    color: '#8B919B',
+    color: '#6E776F',
     fontSize: 12.5,
     lineHeight: 20,
     textAlign: 'center',
@@ -96,12 +96,12 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: '#17191C',
+    backgroundColor: '#176B52',
   },
   nextButtonText: {
     color: '#FFFFFF',
     fontSize: 16.5,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   disabledButton: { backgroundColor: '#C8CCD3' },
 });

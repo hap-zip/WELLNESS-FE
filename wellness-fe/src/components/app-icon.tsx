@@ -1,10 +1,10 @@
 import Svg, { Circle, Line, Path, Polyline } from 'react-native-svg';
 
-export type AppIconName = 'alert' | 'bell' | 'camera' | 'check' | 'chevron-left' | 'chevron-right' | 'close' | 'copy' | 'document' | 'download' | 'heart' | 'help' | 'image' | 'info' | 'minus' | 'person' | 'plus' | 'share' | 'trend-down' | 'trend-up';
+export type AppIconName = 'alert' | 'bell' | 'calendar' | 'camera' | 'check' | 'chevron-left' | 'chevron-right' | 'close' | 'connection' | 'copy' | 'document' | 'download' | 'heart' | 'help' | 'home' | 'image' | 'info' | 'message' | 'minus' | 'pause' | 'person' | 'play' | 'plus' | 'share' | 'trend-down' | 'trend-up';
 
 type Props = { color?: string; name: AppIconName; size?: number; strokeWidth?: number };
 
-export function AppIcon({ color = '#17191C', name, size = 24, strokeWidth = 1.8 }: Props) {
+export function AppIcon({ color = '#18201C', name, size = 24, strokeWidth = 1.8 }: Props) {
   const common = { fill: 'none', stroke: color, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, strokeWidth };
   return <Svg accessibilityElementsHidden focusable={false} height={size} importantForAccessibility="no-hide-descendants" viewBox="0 0 24 24" width={size}>
     {name === 'bell' ? <><Path {...common} d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><Path {...common} d="M10 21h4"/></> : null}
@@ -27,6 +27,12 @@ export function AppIcon({ color = '#17191C', name, size = 24, strokeWidth = 1.8 
     {name === 'copy' ? <><Path {...common} d="M8 8h12v12H8Z"/><Path {...common} d="M16 8V4H4v12h4"/></> : null}
     {name === 'share' ? <><Circle {...common} cx="18" cy="5" r="2"/><Circle {...common} cx="6" cy="12" r="2"/><Circle {...common} cx="18" cy="19" r="2"/><Line {...common} x1="8" x2="16" y1="11" y2="6"/><Line {...common} x1="8" x2="16" y1="13" y2="18"/></> : null}
     {name === 'download' ? <><Path {...common} d="M12 3v12"/><Polyline {...common} points="7 10 12 15 17 10"/><Path {...common} d="M5 20h14"/></> : null}
+    {name === 'play' ? <Path {...common} d="m8 5 10 7-10 7Z"/> : null}
+    {name === 'pause' ? <><Line {...common} x1="9" x2="9" y1="5" y2="19"/><Line {...common} x1="15" x2="15" y1="5" y2="19"/></> : null}
+    {name === 'home' ? <><Path {...common} d="m3 11 9-8 9 8"/><Path {...common} d="M5.5 9.5V21h13V9.5"/><Path {...common} d="M9.5 21v-6h5v6"/></> : null}
+    {name === 'calendar' ? <><Path {...common} d="M4 5h16v16H4Z"/><Line {...common} x1="4" x2="20" y1="9" y2="9"/><Line {...common} x1="8" x2="8" y1="3" y2="7"/><Line {...common} x1="16" x2="16" y1="3" y2="7"/></> : null}
+    {name === 'message' ? <Path {...common} d="M4 4h16v12H9l-5 4Z"/> : null}
+    {name === 'connection' ? <><Circle {...common} cx="12" cy="17" r="2.5"/><Circle {...common} cx="5" cy="7" r="2.5"/><Circle {...common} cx="19" cy="7" r="2.5"/><Line {...common} x1="6.5" x2="10.5" y1="9" y2="15"/><Line {...common} x1="17.5" x2="13.5" y1="9" y2="15"/></> : null}
   </Svg>;
 }
 

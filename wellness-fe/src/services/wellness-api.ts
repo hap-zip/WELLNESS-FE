@@ -169,7 +169,7 @@ const BODY_PART_HIGHLIGHTS: Readonly<Record<string, readonly Omit<BodyMapHighlig
 };
 
 function highlightColor(intensity: number) {
-  if (intensity >= 4) return '#E5484D';
+  if (intensity >= 4) return '#B54745';
   if (intensity >= 3) return '#EF7442';
   return '#F2A65A';
 }
@@ -201,7 +201,7 @@ function detailsFromCheck(check: DailyCheckSubmission, highlights: readonly Body
 }
 
 class MockWellnessApi implements WellnessApi {
-  async getUserProfile(): Promise<UserProfileSummary> { return { name: '김몸기록', email: 'wellness@example.com', joinedLabel: '2026년 8월부터', recordDays: userDataDeleted ? 0 : mockRecords.length + (latestDailyCheck ? 1 : 0), routineCount: userDataDeleted ? 0 : latestRoutineCompletion ? 3 : 2, healthConnected: healthConnection.connected, notificationEnabled: notificationSettings.enabled }; }
+  async getUserProfile(): Promise<UserProfileSummary> { return { name: '김몸기록', email: 'gi***@gmail.com', joinedLabel: '2026년 8월부터', recordDays: userDataDeleted ? 0 : mockRecords.length + (latestDailyCheck ? 1 : 0), routineCount: userDataDeleted ? 0 : latestRoutineCompletion ? 3 : 2, healthConnected: healthConnection.connected, notificationEnabled: notificationSettings.enabled }; }
   async getHealthConnection(): Promise<HealthConnectionSettings> { return { ...healthConnection, permissions: { ...healthConnection.permissions } }; }
   async saveHealthConnection(settings: HealthConnectionSettings): Promise<void> { healthConnection = { ...settings, lastSyncedLabel: settings.connected ? '방금 동기화' : null, permissions: { ...settings.permissions } }; }
   async getNotificationSettings(): Promise<NotificationSettings> { return { ...notificationSettings }; }
@@ -333,10 +333,10 @@ class MockWellnessApi implements WellnessApi {
       patterns: userDataDeleted ? [] : DISCOVER_PATTERNS,
       baseline: { ready: recordedDays >= 14, recordedDays, targetDays: 14, averageSleep: '6시간 48분', averageSteps: '6,120보', averageBedtime: '오전 12:14', discomfortFrequency: '주 평균 1.4회', comparison: '최근 수면 시간이 평소보다 23% 줄었어요.' },
       metrics: [
-        { id: 'sleep', label: '수면 시간', shortLabel: '수면', color: '#1257E0', unit: '시간', values: sleepValues },
-        { id: 'discomfort', label: '목 불편', shortLabel: '불편', color: '#E5484D', unit: '단계', values: discomfortValues },
+        { id: 'sleep', label: '수면 시간', shortLabel: '수면', color: '#285C4D', unit: '시간', values: sleepValues },
+        { id: 'discomfort', label: '목 불편', shortLabel: '불편', color: '#B54745', unit: '단계', values: discomfortValues },
         { id: 'posture', label: '수면 자세', shortLabel: '자세', color: '#8B5CF6', unit: '유형', values: postureValues },
-        { id: 'steps', label: '걸음 수', shortLabel: '걸음', color: '#31A36B', unit: '천 보', values: activityValues },
+        { id: 'steps', label: '걸음 수', shortLabel: '걸음', color: '#34765B', unit: '천 보', values: activityValues },
         { id: 'skin', label: '피부 상태', shortLabel: '피부', color: '#EF9A72', unit: '단계', values: skinValues },
         { id: 'routine', label: '루틴 실행', shortLabel: '루틴', color: '#F2A65A', unit: '회', values: routineValues },
       ],

@@ -1,26 +1,9 @@
 import { StyleSheet } from 'react-native';
+import { colors, layout, radius, spacing, typography } from '@/theme/tokens';
 
-export const detailStyles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#FFFFFF' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#FFFFFF' },
-  centerText: { marginTop: 10, color: '#8B919B', fontSize: 13 },
-  errorTitle: { color: '#17191C', fontSize: 18, fontWeight: '800' },
-  retryButton: { minWidth: 120, minHeight: 46, alignItems: 'center', justifyContent: 'center', marginTop: 16, borderRadius: 12, backgroundColor: '#EEF3FF' },
-  retryText: { color: '#1257E0', fontSize: 14, fontWeight: '800' },
-  topBar: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
-  topTitle: { color: '#17191C', fontSize: 16, fontWeight: '800' },
-  topSpacer: { width: 44 },
-  content: { paddingHorizontal: 24, paddingTop: 16 },
-  date: { color: '#8B919B', fontSize: 13, fontWeight: '700' },
-  condition: { marginTop: 6, color: '#17191C', fontSize: 28, lineHeight: 38, fontWeight: '800', letterSpacing: -0.8 },
-  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  tag: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 9, color: '#1257E0', backgroundColor: '#EEF3FF', fontSize: 12, fontWeight: '700' },
-  section: { marginTop: 24 },
-  sectionTitle: { color: '#17191C', fontSize: 16, fontWeight: '800' },
-  sectionBody: { marginTop: 10, paddingHorizontal: 16, borderRadius: 16, backgroundColor: '#F7F8FA' },
-  infoRow: { minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3E6EA' },
-  infoLabel: { color: '#737B88', fontSize: 13 },
-  infoValue: { flex: 1, textAlign: 'right', color: '#17191C', fontSize: 13, fontWeight: '700' },
-  memoCard: { marginTop: 24, padding: 18, borderRadius: 16, backgroundColor: '#FFF7F2' },
-  memoText: { marginTop: 10, color: '#4A4F58', fontSize: 14, lineHeight: 22 },
+export const detailStyles=StyleSheet.create({
+  screen:{flex:1,backgroundColor:colors.canvas},center:{flex:1,alignItems:'center',justifyContent:'center',padding:spacing.xl,backgroundColor:colors.canvas},centerText:{marginTop:spacing.sm,color:colors.textMuted,...typography.caption},errorTitle:{color:colors.text,...typography.sectionTitle},retryButton:{minWidth:120,minHeight:48,alignItems:'center',justifyContent:'center',marginTop:spacing.md,borderRadius:radius.md,backgroundColor:colors.primarySoft},retryText:{color:colors.primary,...typography.label},
+  topBar:{height:56,flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:spacing.sm,borderBottomWidth:1,borderBottomColor:colors.divider,backgroundColor:colors.surface},topTitle:{color:colors.text,...typography.label},topSpacer:{width:layout.minTouch},content:{width:'100%',maxWidth:layout.maxContentWidth,alignSelf:'center',paddingHorizontal:layout.horizontalPadding,paddingTop:spacing.xl},
+  date:{color:colors.primary,...typography.caption,fontWeight:'800'},condition:{marginTop:spacing.xs,color:colors.text,...typography.display},tagRow:{flexDirection:'row',flexWrap:'wrap',gap:spacing.xs,marginTop:spacing.sm},tag:{paddingHorizontal:spacing.sm,paddingVertical:spacing.xs,borderRadius:radius.md,color:colors.primary,backgroundColor:colors.primarySoft,...typography.caption,fontWeight:'700'},
+  section:{marginTop:spacing.xxl},sectionTitle:{color:colors.text,...typography.sectionTitle},sectionBody:{marginTop:spacing.xs,borderTopWidth:1,borderTopColor:colors.divider},infoRow:{minHeight:52,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:spacing.md,borderBottomWidth:1,borderBottomColor:colors.divider},infoLabel:{color:colors.textMuted,fontSize:14},infoValue:{flex:1,textAlign:'right',color:colors.text,fontSize:14,fontWeight:'700'},memoCard:{marginTop:spacing.xxl,padding:spacing.md,borderWidth:1,borderColor:colors.border,borderRadius:radius.lg,backgroundColor:colors.warningSoft},memoText:{marginTop:spacing.xs,color:colors.textSecondary,...typography.body},
 });

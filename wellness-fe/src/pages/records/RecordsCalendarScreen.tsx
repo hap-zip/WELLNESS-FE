@@ -74,7 +74,7 @@ export default function RecordsCalendarScreen() {
           </View>
 
           <View style={styles.weekRow}>{WEEKDAYS.map((weekday, index) => <Text key={weekday} style={[styles.weekday, index === 0 && styles.sunday, index === 6 && styles.saturday]}>{weekday}</Text>)}</View>
-          {isLoading ? <View style={styles.calendarLoading}><ActivityIndicator color="#1257E0" /><Text style={styles.loadingText}>기록을 불러오는 중</Text></View> : error ? <View style={styles.calendarLoading}><Text style={styles.errorText}>기록을 불러오지 못했어요.</Text><Pressable accessibilityRole="button" onPress={() => void reload().catch(() => undefined)} style={styles.retryButton}><Text style={styles.retryText}>다시 시도</Text></Pressable></View> : (
+          {isLoading ? <View style={styles.calendarLoading}><ActivityIndicator color="#285C4D" /><Text style={styles.loadingText}>기록을 불러오는 중</Text></View> : error ? <View style={styles.calendarLoading}><Text style={styles.errorText}>기록을 불러오지 못했어요.</Text><Pressable accessibilityRole="button" onPress={() => void reload().catch(() => undefined)} style={styles.retryButton}><Text style={styles.retryText}>다시 시도</Text></Pressable></View> : (
             <View style={styles.calendarGrid}>{calendarCells.map((day, index) => {
               if (day === null) return <View key={`empty-${index}`} style={styles.dayCell} />;
               const id = dateId(cursor.year, cursor.month, day);

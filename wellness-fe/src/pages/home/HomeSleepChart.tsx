@@ -1,4 +1,5 @@
 import Svg, { Circle, Path } from 'react-native-svg';
+import { colors } from '@/theme/tokens';
 
 import { styles } from './home.styles';
 
@@ -18,9 +19,9 @@ export default function HomeSleepChart({ values }: { values: number[] }) {
 
   return (
     <Svg height={height} viewBox={`0 0 ${width} ${height}`} width="100%" style={styles.sleepChart}>
-      <Path d={area} fill="#5B8DEF" fillOpacity={0.12} />
-      <Path d={line} fill="none" stroke="#5B8DEF" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} />
-      <Circle cx={last.x} cy={last.y} fill="#1257E0" r={3.5} />
+      <Path d={area} fill={colors.primary} fillOpacity={0.1} />
+      <Path d={line} fill="none" stroke={colors.primary} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} />
+      <Circle cx={last.x} cy={last.y} fill={colors.primary} r={3.5} />
     </Svg>
   );
 }

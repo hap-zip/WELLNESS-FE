@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 export const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#1257E0',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 40,
     paddingVertical: 40,
   },
@@ -17,20 +17,20 @@ export const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EAF0FE',
+    backgroundColor: '#EFF6F3',
   },
   logoMark: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 3,
-    borderColor: '#1257E0',
+    borderColor: '#176B52',
   },
   title: {
     marginTop: 24,
-    color: '#FFFFFF',
+    color: '#171A18',
     fontSize: 30,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: -1,
     lineHeight: 42,
   },
@@ -43,7 +43,7 @@ export const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#93B4F7',
+    backgroundColor: '#CFE2DA',
   },
   continueButton: {
     alignSelf: 'flex-start',
@@ -52,7 +52,7 @@ export const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   continueText: {
-    color: '#B9CEFA',
+    color: '#176B52',
     fontSize: 14,
     fontWeight: '700',
   },

@@ -44,7 +44,7 @@ export function mkBars(values: readonly number[], width: number, height: number,
   });
 }
 
-export function WellnessLineChart({ labels, values, color = '#1257E0', secondaryValues, secondaryColor = '#EF7442' }: { labels: readonly string[]; values: readonly number[]; color?: string; secondaryValues?: readonly number[]; secondaryColor?: string }) {
+export function WellnessLineChart({ labels, values, color = '#285C4D', secondaryValues, secondaryColor = '#EF7442' }: { labels: readonly string[]; values: readonly number[]; color?: string; secondaryValues?: readonly number[]; secondaryColor?: string }) {
   const width = 300;
   const plotHeight = 126;
   const totalHeight = 154;
@@ -60,7 +60,7 @@ export function WellnessLineChart({ labels, values, color = '#1257E0', secondary
       {primary.points.map((point, index) => <AppearingPoint color={color} delay={420 + index * 55} key={`${animationKey}-${index}`} point={point} />)}
       {labels.map((label, index) => {
         const x = 18 + (labels.length === 1 ? 132 : 264 * index / Math.max(labels.length - 1, 1));
-        return <SvgText fill="#8B919B" fontSize="9" key={`${label}-${index}`} textAnchor="middle" x={x} y="148">{label}</SvgText>;
+        return <SvgText fill="#767F78" fontSize="9" key={`${label}-${index}`} textAnchor="middle" x={x} y="148">{label}</SvgText>;
       })}
     </Svg>
   );
@@ -97,7 +97,7 @@ export function WellnessBarsChart({ labels, values, color = '#7EA6F8' }: { label
     <Svg accessibilityLabel="날짜별 막대 차트" height={154} viewBox="0 0 300 154" width="100%">
       {[0, 1, 2].map((row) => <Line key={row} stroke="#E9ECF1" strokeDasharray="3 5" x1="18" x2="282" y1={18 + row * 45} y2={18 + row * 45} />)}
       {bars.map((bar, index) => <RisingBar bar={bar} color={color} delay={index * 65} key={`${animationKey}-${index}`} />)}
-      {bars.map((bar, index) => <SvgText fill="#8B919B" fontSize="9" key={`label-${index}`} textAnchor="middle" x={bar.x + bar.width / 2} y="148">{labels[index] ?? ''}</SvgText>)}
+      {bars.map((bar, index) => <SvgText fill="#767F78" fontSize="9" key={`label-${index}`} textAnchor="middle" x={bar.x + bar.width / 2} y="148">{labels[index] ?? ''}</SvgText>)}
     </Svg>
   );
 }

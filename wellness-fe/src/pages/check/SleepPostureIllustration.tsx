@@ -8,7 +8,7 @@ const PILLOW = '#DDE7F6';
 const BED = '#D5DCE6';
 
 export default function SleepPostureIllustration({ posture, selected }: { posture: SleepPosture; selected: boolean }) {
-  const accent = selected ? '#1257E0' : INK;
+  const accent = selected ? '#285C4D' : INK;
 
   if (posture === '잘 모르겠어요') {
     return (

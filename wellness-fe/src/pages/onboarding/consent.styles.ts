@@ -17,7 +17,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backIcon: {
-    color: '#17191C',
+    color: '#18201C',
     fontSize: 34,
     fontWeight: '300',
     lineHeight: 36,
@@ -27,15 +27,15 @@ export const styles = StyleSheet.create({
     paddingTop: 20,
   },
   title: {
-    color: '#17191C',
+    color: '#18201C',
     fontSize: 26,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: -0.9,
     lineHeight: 36,
   },
   description: {
     marginTop: 11,
-    color: '#4A4F58',
+    color: '#46514A',
     fontSize: 14.5,
     lineHeight: 24,
   },
@@ -51,35 +51,35 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 2,
     paddingVertical: 17,
     borderTopWidth: 1,
-    borderTopColor: '#EEF0F3',
+    borderTopColor: '#E9EAE5',
   },
   optionalRow: {
     borderBottomWidth: 1,
-    borderBottomColor: '#EEF0F3',
+    borderBottomColor: '#E9EAE5',
   },
   rowCopy: {
     flex: 1,
     paddingRight: 16,
   },
   rowTitle: {
-    color: '#17191C',
+    color: '#18201C',
     fontSize: 15.5,
     fontWeight: '700',
   },
   required: {
-    color: '#1257E0',
+    color: '#285C4D',
   },
   optional: {
-    color: '#8B919B',
+    color: '#6E776F',
   },
   rowDescription: {
     marginTop: 4,
-    color: '#8B919B',
+    color: '#6E776F',
     fontSize: 13,
   },
   deleteNotice: {
     marginTop: 4,
-    color: '#E03131',
+    color: '#B54745',
     fontSize: 13,
   },
   checkedBox: {
@@ -88,13 +88,13 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
-    backgroundColor: '#17191C',
+    backgroundColor: '#176B52',
   },
   uncheckedBox: {
     width: 26,
     height: 26,
     borderWidth: 1.8,
-    borderColor: '#DEE1E6',
+    borderColor: '#D8DCD6',
     borderRadius: 8,
   },
   checkmark: {
@@ -110,7 +110,7 @@ export const styles = StyleSheet.create({
     paddingTop: 8,
   },
   detailText: {
-    color: '#8B919B',
+    color: '#6E776F',
     fontSize: 13.5,
     fontWeight: '700',
   },
@@ -125,12 +125,12 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: '#17191C',
+    backgroundColor: '#176B52',
   },
   continueText: {
     color: '#FFFFFF',
     fontSize: 16.5,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   disabledButton: { backgroundColor: '#C8CCD3' },
   pressed: {

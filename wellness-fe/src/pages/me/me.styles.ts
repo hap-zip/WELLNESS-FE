@@ -1,32 +1,3 @@
 import { StyleSheet } from 'react-native';
-import { colors, layout, radius, typography } from '../../theme/tokens';
-
-export const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.canvas },
-  content: { paddingHorizontal: layout.horizontalPadding, paddingTop: 8, paddingBottom: 36 },
-  center: { minHeight: 500, alignItems: 'center', justifyContent: 'center' },
-  eyebrow: { color: colors.primary, fontSize: 12, fontWeight: '800', letterSpacing: 0.4 },
-  pageTitle: { marginTop: 5, color: colors.text, ...typography.title },
-  profile: { flexDirection: 'row', alignItems: 'center', gap: 15, marginTop: 24, paddingVertical: 8 },
-  avatar: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center', borderRadius: 22, backgroundColor: colors.primary },
-  avatarText: { color: colors.white, fontSize: 22, fontWeight: '800' },
-  profileCopy: { flex: 1 },
-  name: { color: colors.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.3 },
-  email: { marginTop: 4, color: colors.textSecondary, fontSize: 13 },
-  joined: { marginTop: 7, color: colors.primary, fontSize: 12, fontWeight: '700' },
-  stats: { minHeight: 88, flexDirection: 'row', alignItems: 'center', marginTop: 22, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border },
-  stat: { flex: 1, alignItems: 'center' },
-  statValue: { color: colors.text, fontSize: 19, fontWeight: '800' },
-  statLabel: { marginTop: 5, color: colors.textSecondary, fontSize: 12 },
-  divider: { width: 1, height: 38, backgroundColor: colors.border },
-  sectionTitle: { marginTop: 29, marginBottom: 7, color: colors.textSecondary, fontSize: 13, fontWeight: '800' },
-  menu: { minHeight: 62, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 3, borderBottomWidth: 1, borderBottomColor: colors.border },
-  menuIcon: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, backgroundColor: colors.primarySoft },
-  menuIconText: { color: colors.primary, fontSize: 16, fontWeight: '800' },
-  menuLabel: { flex: 1, marginLeft: 13, color: colors.text, fontSize: 15, fontWeight: '700' },
-  menuValue: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
-  good: { color: colors.success },
-  chevron: { marginLeft: 8, color: colors.textMuted, fontSize: 23 },
-  pressed: { opacity: 0.58 },
-  version: { marginTop: 26, textAlign: 'center', color: colors.textMuted, fontSize: 12 },
-});
+import { colors, layout, motion, spacing, typography } from '@/theme/tokens';
+export const styles=StyleSheet.create({screen:{flex:1,backgroundColor:colors.white},content:{width:'100%',maxWidth:layout.maxContentWidth,alignSelf:'center',paddingHorizontal:layout.horizontalPadding,paddingTop:spacing.lg},center:{minHeight:500,alignItems:'center',justifyContent:'center'},pageTitle:{color:colors.text,...typography.title},profile:{flexDirection:'row',alignItems:'center',gap:spacing.sm,marginTop:spacing.xl,paddingBottom:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.divider},avatar:{width:48,height:48,alignItems:'center',justifyContent:'center',borderRadius:24,backgroundColor:colors.surfaceStrong},avatarText:{color:colors.text,fontSize:18,fontWeight:'700'},profileCopy:{flex:1},name:{color:colors.text,fontSize:19,fontWeight:'700'},email:{marginTop:3,color:colors.textMuted,fontSize:13},stats:{minHeight:82,flexDirection:'row',alignItems:'center',borderBottomWidth:1,borderBottomColor:colors.divider},stat:{flex:1,alignItems:'center'},statValue:{color:colors.text,fontSize:16,fontWeight:'700'},statLabel:{marginTop:spacing.xxs,color:colors.textMuted,fontSize:11},divider:{width:1,height:28,backgroundColor:colors.divider},section:{marginTop:spacing.xxl},sectionTitle:{marginBottom:spacing.xs,color:colors.text,...typography.sectionTitle},menuGroup:{borderTopWidth:1,borderTopColor:colors.divider},menu:{minHeight:58,flexDirection:'row',alignItems:'center',borderBottomWidth:1,borderBottomColor:colors.divider},menuLabel:{flex:1,color:colors.text,fontSize:15,fontWeight:'600'},menuValue:{marginRight:spacing.xs,color:colors.textMuted,fontSize:13},pressed:{opacity:motion.pressOpacity},version:{marginTop:spacing.xxl,textAlign:'center',color:colors.textMuted,fontSize:11}});

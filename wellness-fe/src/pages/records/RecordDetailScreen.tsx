@@ -7,6 +7,7 @@ import NavigationBackButton from '@/components/navigation-back-button';
 import type { RecordDetail } from '@/domain/wellness';
 import { useAsyncData } from '@/hooks/use-async-data';
 import { wellnessApi } from '@/services/wellness-api';
+import { colors } from '@/theme/tokens';
 
 import { detailStyles as styles } from './record-detail.styles';
 
@@ -19,7 +20,7 @@ export default function RecordDetailScreen() {
   const { data: record, error, isLoading, reload } = useAsyncData<RecordDetail | null>(loader, null);
   const [year, month, day] = date.split('-').map(Number);
 
-  if (isLoading) return <SafeAreaView edges={['top', 'bottom']} style={styles.center}><ActivityIndicator color="#1257E0" /><Text style={styles.centerText}>기록을 불러오는 중</Text></SafeAreaView>;
+  if (isLoading) return <SafeAreaView edges={['top', 'bottom']} style={styles.center}><ActivityIndicator color={colors.primary} /><Text style={styles.centerText}>기록을 불러오는 중</Text></SafeAreaView>;
   if (error) return <SafeAreaView edges={['top', 'bottom']} style={styles.center}><Text style={styles.errorTitle}>기록을 불러오지 못했어요</Text><Pressable accessibilityRole="button" onPress={() => void reload().catch(() => undefined)} style={styles.retryButton}><Text style={styles.retryText}>다시 시도</Text></Pressable></SafeAreaView>;
   if (!record) return <SafeAreaView edges={['top', 'bottom']} style={styles.center}><Text style={styles.errorTitle}>해당 날짜의 기록이 없어요</Text><Pressable accessibilityRole="button" onPress={() => router.dismissTo('/(tabs)/records')} style={styles.retryButton}><Text style={styles.retryText}>기록 캘린더로</Text></Pressable></SafeAreaView>;
 

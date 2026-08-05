@@ -2,6 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 import Body, { type ExtendedBodyPart, type Slug } from 'react-native-body-highlighter';
 
 import type { BodyMapHighlight, BodyMapPart, BodyMuscleSlug } from '@/domain/wellness';
+import { colors } from '@/theme/tokens';
 
 import { styles } from './home.styles';
 
@@ -40,9 +41,9 @@ export default function HomeAvatar({ highlights, onMarkerPress }: HomeAvatarProp
   const activeMuscles = new Set<Slug>(highlights.map((highlight) => highlight.muscle));
   const bodyData: ExtendedBodyPart[] = highlights.map((highlight) => ({
     slug: highlight.muscle,
-    color: highlight.color,
+    color: colors.danger,
     intensity: highlight.intensity,
-    styles: { fill: highlight.color, stroke: '#FFFFFF', strokeWidth: 2 },
+    styles: { fill: colors.danger, stroke: colors.surface, strokeWidth: 2 },
   }));
   const disabledParts = ALL_MUSCLES.filter((muscle) => !activeMuscles.has(muscle));
   const hasActiveTrapezius = activeMuscles.has('trapezius');
@@ -61,8 +62,8 @@ export default function HomeAvatar({ highlights, onMarkerPress }: HomeAvatarProp
           <Body
             border="none"
             data={bodyData}
-            defaultFill="#E2E8F1"
-            defaultStroke="#FFFFFF"
+            defaultFill={colors.surfaceStrong}
+            defaultStroke={colors.surface}
             defaultStrokeWidth={2}
             disabledParts={[...disabledParts]}
             gender="male"
@@ -72,15 +73,8 @@ export default function HomeAvatar({ highlights, onMarkerPress }: HomeAvatarProp
           />
           {hasActiveTrapezius ? <Pressable accessibilityLabel="어깨와 승모근 기록 보기" accessibilityRole="button" onPress={() => onMarkerPress('shoulder')} style={styles.activeTrapeziusTouchTarget} /> : null}
         </View>
-        <View accessibilityLabel="오늘의 근육 상태 요약" style={styles.bodyMapSummary}>
-          <View style={styles.bodyMapSummaryEyebrow}><View style={[styles.bodyMapStatusDot, { backgroundColor: primaryHighlight?.color ?? '#C8CED8' }]} /><Text style={styles.bodyMapSummaryEyebrowText}>오늘의 표시</Text></View>
-          <Text style={styles.bodyMapSummaryTitle}>{primaryHighlight ? MUSCLE_LABELS[primaryHighlight.muscle] : '표시 없음'}</Text>
-          <Text style={styles.bodyMapSummaryDescription}>{primaryHighlight ? '최근 기록에서 확인된 부위예요.' : '오늘 기록된 불편 부위가 없어요.'}</Text>
-          {primaryHighlight ? <View style={styles.bodyMapLevelBadge}><Text style={styles.bodyMapLevelText}>주의 {primaryHighlight.intensity}단계</Text></View> : null}
-          <View style={styles.bodyMapLegendRow}><View style={styles.bodyMapActiveLegend} /><Text style={styles.bodyMapLegendText}>기록 있음</Text></View>
-          <View style={styles.bodyMapLegendRow}><View style={styles.bodyMapInactiveLegend} /><Text style={styles.bodyMapLegendText}>기록 없음</Text></View>
-        </View>
       </View>
+      {primaryHighlight?<Text style={styles.bodyMapSelection}>{MUSCLE_LABELS[primaryHighlight.muscle]} · 불편 {primaryHighlight.intensity}단계</Text>:null}
       <Text style={styles.bodyMapHint}>{highlights.length > 0 ? '색이 표시된 근육을 눌러보세요' : '기록된 불편 부위가 없어요'}</Text>
     </View>
   );

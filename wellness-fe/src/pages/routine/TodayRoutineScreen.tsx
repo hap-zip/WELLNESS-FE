@@ -13,7 +13,7 @@ export default function TodayRoutineScreen() {
   const router = useRouter(); const insets = useSafeAreaInsets();
   const { data, error, isLoading, reload } = useAsyncData<RoutinePlan | null>(wellnessApi.getTodayRoutine, null);
   useFocusEffect(useCallback(() => { void reload().catch(() => undefined); }, [reload]));
-  if (isLoading) return <Center><ActivityIndicator color="#1257E0" /><Text style={styles.loadingText}>오늘의 루틴을 준비하는 중</Text></Center>;
+  if (isLoading) return <Center><ActivityIndicator color="#285C4D" /><Text style={styles.loadingText}>오늘의 루틴을 준비하는 중</Text></Center>;
   if (error || !data) return <Center><Text style={styles.errorTitle}>루틴을 불러오지 못했어요</Text><Pressable onPress={() => void reload().catch(() => undefined)} style={styles.retryButton}><Text style={styles.retryText}>다시 시도</Text></Pressable></Center>;
   return <SafeAreaView edges={['top']} style={styles.screen}><View style={styles.topBar}><NavigationBackButton accessibilityLabel="오늘 화면으로 돌아가기" fallbackHref="/(tabs)/home" /><Text style={styles.topTitle}>오늘의 루틴</Text><View style={styles.topSpacer} /></View><ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]} showsVerticalScrollIndicator={false}>
     <View style={styles.hero}><RoutineIllustration step={data.steps[1]} /><Text style={styles.target}>{data.targetArea}</Text><Text style={styles.title}>{data.title}</Text><Text style={styles.description}>{data.description}</Text><View style={styles.metaRow}><Text style={styles.meta}>약 {Math.ceil(data.totalSeconds / 60)}분</Text><Text style={styles.meta}>강도 {data.intensity}</Text><Text style={styles.meta}>{data.steps.length}단계</Text></View></View>

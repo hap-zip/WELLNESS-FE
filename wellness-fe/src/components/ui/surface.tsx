@@ -13,5 +13,5 @@ const styles = StyleSheet.create({
   plain: { borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   subtle: { backgroundColor: colors.surfaceSubtle },
   inverse: { backgroundColor: colors.inverse },
-  accent: { borderWidth: 1, borderColor: '#D4E1F8', backgroundColor: colors.primarySoft },
+  accent: { borderWidth: 1, borderColor: colors.primaryBorder, backgroundColor: colors.primarySoft },
 });

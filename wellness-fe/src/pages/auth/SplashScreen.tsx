@@ -45,7 +45,7 @@ export default function SplashScreen() {
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
 
       <View style={styles.content}>
         <View accessible accessibilityLabel="몸기록 로고" style={styles.logo}>

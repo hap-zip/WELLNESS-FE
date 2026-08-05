@@ -1,13 +1,26 @@
-import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
+import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppIcon, type AppIconName } from '@/components/app-icon';
+import { colors } from '@/theme/tokens';
+
+const tabs: { name: 'home'|'records'|'discover'|'chat'|'me'; title: string; icon: AppIconName }[] = [
+  { name: 'home', title: '홈', icon: 'home' },
+  { name: 'records', title: '기록', icon: 'calendar' },
+  { name: 'discover', title: '커넥션 뷰', icon: 'connection' },
+  { name: 'chat', title: '챗', icon: 'message' },
+  { name: 'me', title: '마이', icon: 'person' },
+];
 
 export default function TabsLayout() {
-  return (
-    <NativeTabs backgroundColor="#FFFFFF" tintColor="#1257E0">
-      <NativeTabs.Trigger name="home"><Icon sf={{ default: 'house', selected: 'house.fill' }} /><Label>홈</Label></NativeTabs.Trigger>
-      <NativeTabs.Trigger name="records"><Icon sf={{ default: 'calendar', selected: 'calendar.circle.fill' }} /><Label>기록</Label></NativeTabs.Trigger>
-      <NativeTabs.Trigger name="discover"><Icon sf={{ default: 'point.3.connected.trianglepath.dotted', selected: 'point.3.filled.connected.trianglepath.dotted' }} /><Label>커넥션 뷰</Label></NativeTabs.Trigger>
-      <NativeTabs.Trigger name="chat"><Icon sf={{ default: 'message', selected: 'message.fill' }} /><Label>챗</Label></NativeTabs.Trigger>
-      <NativeTabs.Trigger name="me"><Icon sf={{ default: 'person', selected: 'person.fill' }} /><Label>마이</Label></NativeTabs.Trigger>
-    </NativeTabs>
-  );
+  const insets = useSafeAreaInsets();
+  return <Tabs screenOptions={{
+    headerShown: false,
+    tabBarActiveTintColor: colors.primary,
+    tabBarInactiveTintColor: colors.text,
+    tabBarHideOnKeyboard: true,
+    tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
+    tabBarStyle: { height: 58 + insets.bottom, paddingTop: 7, paddingBottom: Math.max(insets.bottom, 7), borderTopWidth: 1, borderTopColor: colors.divider, backgroundColor: colors.white, elevation: 0, shadowOpacity: 0 },
+  }}>
+    {tabs.map(tab => <Tabs.Screen key={tab.name} name={tab.name} options={{ title: tab.title, tabBarIcon: ({ color }) => <AppIcon color={color} name={tab.icon} size={23}/> }}/>) }
+  </Tabs>;
 }

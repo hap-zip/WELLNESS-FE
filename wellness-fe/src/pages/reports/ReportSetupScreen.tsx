@@ -6,6 +6,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import NavigationBackButton from '@/components/navigation-back-button';
 import type { ReportOptions, ReportPeriod } from '@/domain/wellness';
+import { colors } from '@/theme/tokens';
 
 import { setupStyles as styles } from './report.styles';
 
@@ -40,4 +41,4 @@ export default function ReportSetupScreen() {
 }
 
 function DateField({ label, onPress, value }: { label: string; onPress: () => void; value: string }) { return <Pressable accessibilityRole="button" onPress={onPress} style={styles.dateField}><Text style={styles.dateLabel}>{label}</Text><Text style={styles.dateValue}>{value}</Text></Pressable>; }
-function Option({ description, label, value, onChange }: { description?: string; label: string; value: boolean; onChange: (value: boolean) => void }) { return <View style={styles.option}><View style={styles.optionCopy}><Text style={styles.optionLabel}>{label}</Text>{description ? <Text style={styles.optionDescription}>{description}</Text> : null}</View><Switch accessibilityLabel={label} onValueChange={onChange} trackColor={{ false: '#DDE1E7', true: '#8EB0F6' }} thumbColor={value ? '#1257E0' : '#FFF'} value={value}/></View>; }
+function Option({ description, label, value, onChange }: { description?: string; label: string; value: boolean; onChange: (value: boolean) => void }) { return <View style={styles.option}><View style={styles.optionCopy}><Text style={styles.optionLabel}>{label}</Text>{description ? <Text style={styles.optionDescription}>{description}</Text> : null}</View><Switch accessibilityLabel={label} onValueChange={onChange} trackColor={{ false: colors.border, true: colors.primaryBorder }} thumbColor={value ? colors.primary : colors.white} value={value}/></View>; }
