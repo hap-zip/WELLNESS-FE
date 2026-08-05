@@ -4,6 +4,8 @@ import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import NavigationBackButton from '@/components/navigation-back-button';
+import { AppIcon } from '@/components/app-icon';
+import { colors } from '@/theme/tokens';
 import { styles } from './consent.styles';
 
 export default function ConsentScreen() {
@@ -32,7 +34,7 @@ export default function ConsentScreen() {
               <Text style={styles.rowDescription}>불편·수면·활동 기록</Text>
             </View>
             <View style={[styles.uncheckedBox, healthConsent && styles.checkedBox]}>
-              {healthConsent ? <Text style={styles.checkmark}>✓</Text> : null}
+              {healthConsent ? <AppIcon color={colors.white} name="check" size={16} strokeWidth={2.4}/> : null}
             </View>
           </Pressable>
 
@@ -48,7 +50,7 @@ export default function ConsentScreen() {
               <Text style={styles.deleteNotice}>언제든 삭제할 수 있어요</Text>
             </View>
             <View style={[styles.uncheckedBox, photoConsent && styles.checkedBox]}>
-              {photoConsent && <Text style={styles.checkmark}>✓</Text>}
+              {photoConsent ? <AppIcon color={colors.white} name="check" size={16} strokeWidth={2.4}/> : null}
             </View>
           </Pressable>
         </View>

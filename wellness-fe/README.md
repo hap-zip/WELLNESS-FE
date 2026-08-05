@@ -9,6 +9,7 @@ Expo SDK 54와 Expo Router 기반의 React Native 웰니스 기록 앱입니다.
 - [Codex 저장소 작업 규칙](./AGENTS.md)
 - [화면 구현 체크리스트](./IMPLEMENTATION_CHECKLIST.md)
 - [페이지·라우트 명세](./PAGE_SPEC.md)
+- [최종 PDF 기능 기준 구현 점검](./FINAL_FUNCTION_AUDIT.md)
 
 새 개발 환경에서는 `CODEX_COMPANY_SETUP.md`를 먼저 읽습니다.
 

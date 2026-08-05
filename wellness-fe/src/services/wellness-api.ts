@@ -3,7 +3,7 @@ import type { AssistantMessage, AssistantReply, AutoHealthRecord, BaselineProfil
 export interface WellnessApi {
   getAutoHealthRecord(): Promise<AutoHealthRecord>;
   getHomeSummary(): Promise<HomeSummary>;
-  getDiscoverSummary(endDate: string): Promise<DiscoverSummary>;
+  getDiscoverSummary(endDate: string, periodDays?: number): Promise<DiscoverSummary>;
   getPatternDetail(patternId: string, endDate: string): Promise<PatternDetail | null>;
   getRecordDetail(date: string): Promise<RecordDetail | null>;
   getRecordsMonth(year: number, month: number): Promise<RecordsMonth>;
@@ -63,13 +63,17 @@ const mockHomeSummary: HomeSummary = {
     knee: { title: '무릎 기록', lines: [{ label: '불편 강도', value: '기록 없음' }, { label: '최근 기록', value: '없음' }] },
     calf: { title: '종아리 기록', lines: [{ label: '활동', value: '4,230보' }, { label: '불편 강도', value: '1단계' }] },
   },
+  streakDays: 6,
+  checkState: 'not-started',
+  recentPattern: { title: '수면이 짧은 날 목 불편이 높아요', description: '최근 2주 기록에서 4번 반복됐어요.' },
 };
 
 let latestDailyCheck: DailyCheckSubmission | null = null;
 let latestRoutineCompletion: RoutineCompletion | null = null;
 let latestRoutineFeedback: RoutineFeedback | null = null;
+let routineFeedbackHistory: RoutineFeedback[] = [];
 let healthConnection: HealthConnectionSettings = { provider: 'apple-health', connected: false, lastSyncedLabel: null, permissions: { sleep: true, steps: true, heartRate: false } };
-let notificationSettings: NotificationSettings = { enabled: true, dailyCheck: true, routine: true, weeklyReport: false, reminderTime: '21:30' };
+let notificationSettings: NotificationSettings = { enabled: true, osPermission: 'not-determined', dailyCheck: true, routine: true, weeklyReport: false, nextDayEffect: true, persistentSignal: true, reminderTime: '21:30' };
 let dataConsentSettings: DataConsentSettings = { healthData: true, personalizedInsights: true, marketing: false, consentedAtLabel: '2026년 8월 1일', retentionLabel: '회원 탈퇴 시까지' };
 let userDataDeleted = false;
 
@@ -134,9 +138,9 @@ function latestRecordFor(date: string): WellnessRecordSummary | null {
 }
 
 const DISCOVER_PATTERNS = [
-  { id: 'sleep-neck', title: '수면이 짧은 날 목 불편이 높아요', summary: '6시간 미만 수면 다음 날 목 불편 기록이 반복됐어요.', metric: '불편 +38%', tone: 'danger' as const },
-  { id: 'steps-condition', title: '걸음 수와 컨디션이 함께 움직여요', summary: '6천 보 이상 걸은 날 컨디션 점수가 더 높았어요.', metric: '컨디션 +21%', tone: 'primary' as const },
-  { id: 'bedtime-sleep', title: '늦은 취침이 수면 만족도에 영향을 줘요', summary: '자정 이후 잠든 날 수면 만족도가 낮게 기록됐어요.', metric: '만족도 -17%', tone: 'caution' as const },
+  { id: 'sleep-neck', title: '수면이 짧은 날 목 불편이 높아요', summary: '6시간 미만 수면 다음 날 목 불편 기록이 반복됐어요.', metric: '4번 중 4번', tone: 'danger' as const, confidence: 'repeated' as const, confidenceLabel: '반복해서 나타난 패턴' },
+  { id: 'steps-condition', title: '걸음 수와 컨디션이 함께 움직여요', summary: '6천 보 이상 걸은 날 컨디션 점수가 더 높았어요.', metric: '5번 중 3번', tone: 'primary' as const, confidence: 'possible' as const, confidenceLabel: '가능성 있는 패턴' },
+  { id: 'bedtime-sleep', title: '늦은 취침과 수면 만족도를 살펴보고 있어요', summary: '자정 이후 취침 기록이 아직 충분하지 않아요.', metric: '현재 6일 기록', tone: 'caution' as const, confidence: 'collecting' as const, confidenceLabel: '기록을 더 모으는 중' },
 ];
 
 const TODAY_ROUTINE: RoutinePlan = {
@@ -156,7 +160,7 @@ const TODAY_ROUTINE: RoutinePlan = {
   ],
 };
 
-const BODY_PART_HIGHLIGHTS: Readonly<Record<string, ReadonlyArray<Omit<BodyMapHighlight, 'color' | 'intensity'>>>> = {
+const BODY_PART_HIGHLIGHTS: Readonly<Record<string, readonly Omit<BodyMapHighlight, 'color' | 'intensity'>[]>> = {
   목: [{ part: 'neck', muscle: 'neck' }],
   어깨: [{ part: 'shoulder', muscle: 'trapezius' }, { part: 'shoulder', muscle: 'deltoids' }],
   허리: [{ part: 'hip', muscle: 'obliques' }],
@@ -204,16 +208,17 @@ class MockWellnessApi implements WellnessApi {
   async saveNotificationSettings(settings: NotificationSettings): Promise<void> { notificationSettings = { ...settings }; }
   async getDataConsentSettings(): Promise<DataConsentSettings> { return { ...dataConsentSettings }; }
   async saveDataConsentSettings(settings: DataConsentSettings): Promise<void> { dataConsentSettings = { ...settings }; }
-  async deleteAllUserData(): Promise<void> { latestDailyCheck = null; latestRoutineCompletion = null; latestRoutineFeedback = null; healthConnection = { ...healthConnection, connected: false, lastSyncedLabel: null }; userDataDeleted = true; }
+  async deleteAllUserData(): Promise<void> { latestDailyCheck = null; latestRoutineCompletion = null; latestRoutineFeedback = null; routineFeedbackHistory = []; healthConnection = { ...healthConnection, connected: false, lastSyncedLabel: null }; userDataDeleted = true; }
 
   async askRecordAssistant(message: string, _history: AssistantMessage[]): Promise<AssistantReply> {
     await new Promise((resolve) => setTimeout(resolve, 550));
     const normalized = message.replace(/\s/g, '');
     const base = { id: `assistant-${Date.now()}`, role: 'assistant' as const, createdAt: new Date().toISOString() };
-    if (/진단|병원|디스크|질병|약|치료/.test(normalized)) return { message: { ...base, text: '기록만으로 질환을 진단할 수는 없어요. 불편이 계속되거나 심해진다면 의료 전문가와 상담해 주세요. 갑작스러운 마비나 매우 심한 통증처럼 긴급한 증상이 있다면 즉시 도움을 요청하세요.' }, suggestions: ['지속된 기록 보여줘', '기록 요약 만들기'], action: { label: '지속 신호 확인', route: '/safety/signal' } };
-    if (/수면|잠|취침/.test(normalized)) return { message: { ...base, text: '최근 7일 평균 수면은 6시간 22분이에요. 수면이 6시간보다 짧았던 다음 날 목 불편이 높게 기록되는 흐름이 있었어요.' }, suggestions: ['목 불편 기록도 보여줘', '기록 요약 만들기'], action: { label: '전체 기록 보기', route: '/(tabs)/records' } };
-    if (/루틴|운동|스트레칭/.test(normalized)) return { message: { ...base, text: latestRoutineCompletion ? '오늘 목·어깨 이완 루틴을 완료했어요. 무리하지 않는 범위에서 천천히 이어가는 것이 좋아요.' : '오늘은 목과 어깨를 가볍게 이완하는 2분 루틴이 추천되어 있어요.' }, suggestions: ['왜 이 루틴을 추천했어?', '오늘 기록 도와줘'], action: { label: latestRoutineCompletion ? '루틴 다시 보기' : '루틴 시작하기', route: '/routine' } };
-    if (/목|어깨|불편|아파/.test(normalized)) return { message: { ...base, text: '최근에는 목 불편이 가장 자주 기록됐고, 강도는 평균 4단계였어요. 같은 부위가 반복되고 있으니 무리한 동작은 쉬어 주세요.' }, suggestions: ['수면과 관련 있어?', '지속된 기록 보여줘'], action: { label: '기록 캘린더 보기', route: '/(tabs)/records' } };
+    if (/타이레놀|아세트아미노펜|약이름|성분|포장사진/.test(normalized)) return { message: { ...base, text: '약 정보를 확인하려는 마음이 드셨군요. 입력한 이름과 일치할 가능성이 있는 공식 일반의약품 정보를 정리했어요. 효능과 주의사항을 확인하되, 현재 상태에 맞는 복용 여부와 용량은 약사나 의료 전문가에게 확인해 주세요.' }, officialInfo: { productName: '타이레놀정 500mg', ingredient: '아세트아미노펜 500mg', efficacy: '감기로 인한 발열 및 동통, 두통·신경통·근육통 등의 완화', cautions: ['다른 아세트아미노펜 함유 제품과 함께 복용하지 마세요.', '매일 세 잔 이상 음주한다면 복용 전 전문가와 상의하세요.', '포장·제품명·함량이 다르면 같은 제품으로 판단하지 마세요.'], sourceLabel: '식품의약품안전처 의약품안전나라·e약은요', sourceUrl: 'https://nedrug.mfds.go.kr/' }, suggestions: ['내 기록과 함께 요약해줘', '복용 전 무엇을 확인해야 해?'], action: { label: '전문가용 기록 요약', route: '/reports/setup' } };
+    if (/진단|병원|디스크|질병|치료/.test(normalized)) return { message: { ...base, text: '많이 걱정되실 수 있어요. 남긴 기록만으로 질환을 진단할 수는 없지만, 최근 7일 중 4일 같은 부위의 불편이 반복됐어요. 무리한 동작은 쉬고 기록 요약을 준비해 상담해 보세요. 갑작스러운 마비나 매우 심한 통증처럼 긴급한 증상이 있다면 즉시 도움을 요청하세요.' }, references: [{label:'반복 불편 기록',value:'최근 7일 중 4일'}], suggestions: ['지속된 기록 보여줘', '기록 요약 만들기'], action: { label: '지속 신호 확인', route: '/safety/signal' } };
+    if (/수면|잠|취침/.test(normalized)) return { message: { ...base, text: '잠의 흐름이 궁금하셨군요. 최근 7일 평균 수면은 6시간 22분이고, 6시간보다 짧았던 다음 날 목 불편이 높게 기록됐어요. 오늘은 평소 취침 준비를 조금 일찍 시작해 보세요. 피로가 지속되거나 일상에 영향을 주면 전문가와 상담해 주세요.' }, references: [{label:'최근 7일 평균 수면',value:'6시간 22분'},{label:'6시간 미만 수면',value:'3회'}], suggestions: ['목 불편 기록도 보여줘', '기록 요약 만들기'], action: { label: '전체 기록 보기', route: '/(tabs)/records' } };
+    if (/루틴|운동|스트레칭/.test(normalized)) return { message: { ...base, text: latestRoutineCompletion ? '오늘 목·어깨 이완 루틴을 완료했어요. 무리하지 않는 범위에서 천천히 이어가는 것이 좋아요.' : '오늘은 목과 어깨를 가볍게 이완하는 2분 루틴이 추천되어 있어요.' }, references: [{label:'오늘 목 불편',value:'4단계'},{label:'추천 강도',value:'가볍게'}], suggestions: ['왜 이 루틴을 추천했어?', '오늘 기록 도와줘'], action: { label: latestRoutineCompletion ? '루틴 다시 보기' : '루틴 시작하기', route: '/routine' } };
+    if (/목|어깨|불편|아파/.test(normalized)) return { message: { ...base, text: '계속 신경 쓰이셨겠어요. 최근에는 목 불편이 가장 자주 기록됐고 강도는 평균 4단계였어요. 같은 부위가 반복되고 있으니 무리한 동작은 쉬어 주세요. 불편이 심해지거나 감각 저하가 동반되면 전문가와 상담해 주세요.' }, references: [{label:'최근 목 불편',value:'평균 4단계'},{label:'반복 기록',value:'최근 7일 중 4일'}], suggestions: ['수면과 관련 있어?', '지속된 기록 보여줘'], action: { label: '기록 캘린더 보기', route: '/(tabs)/records' } };
     if (/요약|공유|리포트/.test(normalized)) return { message: { ...base, text: '기간과 포함할 항목을 선택하면 수면·활동·불편·루틴 기록을 한 장으로 정리할 수 있어요.' }, suggestions: ['최근 수면 알려줘', '목 불편 기록 알려줘'], action: { label: '기록 요약 만들기', route: '/reports/setup' } };
     if (/기록|체크/.test(normalized)) return { message: { ...base, text: latestDailyCheck ? '오늘 상태 기록이 저장되어 있어요. 목·어깨 불편, 수면, 활동 기록을 캘린더에서 확인할 수 있어요.' : '아직 오늘 상태 기록이 없어요. 불편 부위와 수면, 활동 상태를 순서대로 기록할 수 있어요.' }, suggestions: ['최근 수면 알려줘', '오늘 루틴 추천해줘'], action: { label: latestDailyCheck ? '오늘 기록 보기' : '상태 기록하기', route: latestDailyCheck ? '/(tabs)/records' : '/check/auto' } };
     return { message: { ...base, text: '저는 몸 상태를 진단하는 대신, 남긴 기록을 찾아보고 정리하는 일을 도와드려요. 수면, 불편 부위, 활동, 루틴 중 궁금한 내용을 물어보세요.' }, suggestions: ['최근 수면 알려줘', '목 불편 기록 알려줘', '오늘 루틴 추천해줘'] };
@@ -224,10 +229,20 @@ class MockWellnessApi implements WellnessApi {
   }
 
   async getHomeSummary(): Promise<HomeSummary> {
+    const betterCount = routineFeedbackHistory.filter((item) => item.effect === 'better').length;
+    const worseCount = routineFeedbackHistory.filter((item) => item.effect === 'worse').length;
+    const feedbackCount = routineFeedbackHistory.length;
+    const alternativeNeeded = feedbackCount >= 2 && worseCount >= betterCount;
+    const baseRoutine = alternativeNeeded ? { ...mockHomeSummary.routine, title: '어깨 힘 빼고 천천히 호흡하기', description: '최근 피드백을 반영해 다른 방식으로 제안해요' } : mockHomeSummary.routine;
     const routine = latestRoutineCompletion?.routineId === TODAY_ROUTINE.id
-      ? { ...mockHomeSummary.routine, description: '오늘 루틴을 완료했어요', duration: '완료' }
-      : mockHomeSummary.routine;
-    if (!latestDailyCheck) return { ...mockHomeSummary, routine };
+      ? { ...baseRoutine, description: '오늘 루틴을 완료했어요', duration: '완료' }
+      : baseRoutine;
+    const feedbackSummary = feedbackCount > 0 ? `최근 ${feedbackCount}번 중 ${betterCount}번 편해졌다고 기록했어요` : undefined;
+    const isFollowingDay = latestRoutineCompletion
+      ? localDateId(new Date(latestRoutineCompletion.completedAt)) < localDateId(new Date())
+      : false;
+    const pendingFeedback = latestRoutineCompletion && !latestRoutineFeedback && isFollowingDay ? { routineId: latestRoutineCompletion.routineId, title: '지난 루틴 효과 확인', question: '목 이완 루틴 후, 지금은 목이 어떤가요?' } : undefined;
+    if (!latestDailyCheck) return { ...mockHomeSummary, routine, pendingFeedback, routineEffectLabel: feedbackSummary };
     const bodyHighlights = highlightsFromCheck(latestDailyCheck);
     return {
       ...mockHomeSummary,
@@ -237,6 +252,9 @@ class MockWellnessApi implements WellnessApi {
       bodyHighlights,
       bodyDetails: detailsFromCheck(latestDailyCheck, bodyHighlights),
       routine,
+      pendingFeedback,
+      routineEffectLabel: feedbackSummary,
+      checkState: 'completed',
     };
   }
 
@@ -246,11 +264,13 @@ class MockWellnessApi implements WellnessApi {
 
   async saveRoutineCompletion(routineId: string, completedSeconds: number, completedSteps: number): Promise<RoutineCompletion> {
     latestRoutineCompletion = { completionId: `routine-${Date.now()}`, routineId, completedAt: new Date().toISOString(), completedSeconds, completedSteps };
+    latestRoutineFeedback = null;
     return latestRoutineCompletion;
   }
 
   async saveRoutineFeedback(feedback: RoutineFeedback): Promise<{ feedbackId: string; shouldShowSignal: boolean }> {
     latestRoutineFeedback = feedback;
+    routineFeedbackHistory.push(feedback);
     return { feedbackId: `feedback-${Date.now()}`, shouldShowSignal: feedback.effect === 'worse' || feedback.discomfortLevel >= 4 };
   }
 
@@ -260,13 +280,13 @@ class MockWellnessApi implements WellnessApi {
   }
 
   async createHealthReport(options: ReportOptions): Promise<HealthReport> {
-    const periodLabel = options.period === '7days' ? '최근 7일' : options.period === '14days' ? '최근 14일' : '최근 30일';
+    const periodLabel = options.period === '3days' ? '최근 3일' : options.period === '7days' ? '최근 7일' : options.period === '14days' ? '최근 14일' : `${options.customStartDate ?? ''}–${options.customEndDate ?? ''}`;
     const highlights = [
       ...(options.includeSleep ? [{ label: '평균 수면', value: '6시간 22분', change: '이전보다 12분 감소' }] : []),
       ...(options.includeActivity ? [{ label: '평균 걸음', value: '6,430보', change: '이전보다 8% 증가' }] : []),
       ...(options.includeDiscomfort ? [{ label: '불편 기록', value: '목 4일', change: '가장 자주 기록' }] : []),
     ];
-    return { id: `report-${Date.now()}`, periodLabel, createdAtLabel: new Date().toLocaleDateString('ko-KR'), headline: '수면이 짧은 날 목 불편이 자주 기록됐어요', highlights, discomfortAreas: options.includeDiscomfort ? ['목', '어깨'] : [], routineCount: options.includeRoutines ? (latestRoutineCompletion ? 3 : 2) : 0, note: '이 요약은 직접 기록한 생활 데이터에 기반하며 의료 진단서가 아니에요.', options };
+    return { id: `report-${Date.now()}`, userName: '김몸기록', periodLabel, createdAtLabel: new Date().toLocaleDateString('ko-KR'), headline: '수면이 짧은 날 목 불편이 자주 기록됐어요', highlights, discomfortAreas: options.includeDiscomfort ? ['목 뒤 4→3단계', '왼쪽 어깨 3단계'] : [], sleepPostures: options.includeSleep ? ['똑바로 4회', '왼쪽으로 2회'] : [], routineCount: options.includeRoutines ? (latestRoutineCompletion ? 3 : 2) : 0, feedbackSummary: latestRoutineFeedback?.effect === 'better' ? '루틴 후 한결 편해졌다고 기록했어요.' : '루틴 효과 피드백 2회가 기록됐어요.', discoveredPatterns: ['6시간 미만 수면 다음 날 목 불편 증가'], note: '이 요약은 직접 기록한 생활 데이터에 기반하며 의료 진단서가 아니에요.', options };
   }
 
   async getRecordDetail(date: string): Promise<RecordDetail | null> {
@@ -283,21 +303,46 @@ class MockWellnessApi implements WellnessApi {
       skinStates: isLatest ? currentCheck.activitySkin.skinStates : ['괜찮아요'],
       feelings: isLatest ? currentCheck.discomfort.feelings : record.bodyParts.length > 0 ? ['뻐근해요'] : [],
       conditionTags: isLatest ? currentCheck.conditionTags : record.conditionTone === 'good' ? ['상쾌해요'] : ['피곤해요'],
+      completedRoutine: latestRoutineCompletion ? { title: TODAY_ROUTINE.title, completedAt: new Date(latestRoutineCompletion.completedAt).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }) } : null,
+      nextDayFeedback: latestRoutineFeedback ? { effect: latestRoutineFeedback.effect, discomfortLevel: latestRoutineFeedback.discomfortLevel } : null,
     };
   }
 
-  async getDiscoverSummary(endDate: string): Promise<DiscoverSummary> {
-    const availableDates = Array.from({ length: 7 }, (_, index) => addDays(localDateId(new Date()), index - 6));
+  async getDiscoverSummary(endDate: string, periodDays = 14): Promise<DiscoverSummary> {
+    const days = Math.max(2, Math.min(31, periodDays));
+    const startDate = addDays(endDate, -(days - 1));
+    const availableDates = Array.from({ length: days }, (_, index) => addDays(startDate, index));
     const seed = Number(endDate.slice(-2)) || 1;
+    const sleepValues = userDataDeleted ? [] : availableDates.map((_, index) => 5.4 + ((seed + index * 7) % 19) / 10);
+    const conditionValues = userDataDeleted ? [] : availableDates.map((_, index) => 2 + ((seed + index * 3) % 4));
+    const activityValues = userDataDeleted ? [] : availableDates.map((_, index) => 3.8 + ((seed + index * 11) % 58) / 10);
+    const discomfortValues = userDataDeleted ? [] : availableDates.map((_, index) => 1 + ((seed + index * 5) % 5));
+    const postureValues = userDataDeleted ? [] : availableDates.map((_, index) => 1 + ((seed + index) % 3));
+    const skinValues = userDataDeleted ? [] : availableDates.map((_, index) => (seed + index * 2) % 3);
+    const routineValues = userDataDeleted ? [] : availableDates.map((_, index) => (seed + index) % 3 === 0 ? 1 : 0);
+    const recordedDays = userDataDeleted ? 0 : Math.min(days, 18);
     return {
+      startDate,
       endDate,
       availableDates,
-      periodLabel: `${shortDate(addDays(endDate, -6))}–${shortDate(endDate)}`,
-      sleepValues: userDataDeleted ? [] : [6.2, 5.8, 7.1, 6.5, 5.6, 6.8, 6.1].map((value, index) => Math.max(4.5, value + ((seed + index) % 3 - 1) * 0.12)),
-      conditionValues: userDataDeleted ? [] : [3, 2, 4, 4, 2, 4, 3].map((value, index) => Math.max(1, Math.min(5, value + ((seed + index) % 2)))),
-      activityValues: userDataDeleted ? [] : [4.2, 5.8, 8.1, 7.4, 3.9, 9.2, 6.3].map((value, index) => value + ((seed + index) % 3) * 0.3),
-      labels: Array.from({ length: 7 }, (_, index) => shortDate(addDays(endDate, index - 6))),
+      periodLabel: `${shortDate(startDate)}–${shortDate(endDate)}`,
+      sleepValues,
+      conditionValues,
+      activityValues,
+      labels: availableDates.map(shortDate),
       patterns: userDataDeleted ? [] : DISCOVER_PATTERNS,
+      baseline: { ready: recordedDays >= 14, recordedDays, targetDays: 14, averageSleep: '6시간 48분', averageSteps: '6,120보', averageBedtime: '오전 12:14', discomfortFrequency: '주 평균 1.4회', comparison: '최근 수면 시간이 평소보다 23% 줄었어요.' },
+      metrics: [
+        { id: 'sleep', label: '수면 시간', shortLabel: '수면', color: '#1257E0', unit: '시간', values: sleepValues },
+        { id: 'discomfort', label: '목 불편', shortLabel: '불편', color: '#E5484D', unit: '단계', values: discomfortValues },
+        { id: 'posture', label: '수면 자세', shortLabel: '자세', color: '#8B5CF6', unit: '유형', values: postureValues },
+        { id: 'steps', label: '걸음 수', shortLabel: '걸음', color: '#31A36B', unit: '천 보', values: activityValues },
+        { id: 'skin', label: '피부 상태', shortLabel: '피부', color: '#EF9A72', unit: '단계', values: skinValues },
+        { id: 'routine', label: '루틴 실행', shortLabel: '루틴', color: '#F2A65A', unit: '회', values: routineValues },
+      ],
+      dayDetails: availableDates.map((date, index) => ({ date, dateLabel: `${shortDate(date)} 기록`, sleep: `${sleepValues[index]?.toFixed(1) ?? '-'}시간`, posture: ['똑바로', '옆으로', '엎드려'][postureValues[index] - 1] ?? '기록 없음', discomfort: `목 ${discomfortValues[index] ?? '-'}단계`, steps: `${activityValues[index]?.toFixed(1) ?? '-'}천 보`, skin: skinValues[index] === 0 ? '평소와 같음' : skinValues[index] === 1 ? '건조함' : '붉어짐', routine: routineValues[index] ? '목 이완 루틴 완료' : '실행하지 않음' })),
+      lowRelations: ['현재 기록에서는 걸음 수와 목 불편 사이의 뚜렷한 연결이 보이지 않아요.'],
+      moreDataGuide: recordedDays < 14 ? `${14 - recordedDays}일을 더 기록하면 개인 기준선을 만들 수 있어요.` : '기록이 쌓일수록 패턴의 변화를 더 정확히 살펴볼 수 있어요.',
     };
   }
 
@@ -308,8 +353,8 @@ class MockWellnessApi implements WellnessApi {
     const chartData = patternId === 'steps-condition'
       ? { primary: summary.activityValues, secondary: summary.conditionValues, comparison: '걸음 수(천 보)와 컨디션 점수' }
       : patternId === 'bedtime-sleep'
-        ? { primary: [23.4, 24.2, 23.8, 24.5, 25.1, 23.6, 24.4], secondary: summary.sleepValues, comparison: '취침 시각과 수면 시간' }
-        : { primary: summary.sleepValues, secondary: [2, 4, 1, 2, 5, 1, 4], comparison: '수면 시간과 목 불편 강도' };
+        ? { primary: summary.labels.map((_,index)=>23.4+(index%5)*.35), secondary: summary.sleepValues, comparison: '취침 시각과 수면 시간' }
+        : { primary: summary.sleepValues, secondary: summary.labels.map((_,index)=>1+(index*3)%5), comparison: '수면 시간과 목 불편 강도' };
     return {
       ...pattern,
       endDate,

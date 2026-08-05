@@ -1,68 +1,41 @@
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { WellnessBarsChart, WellnessLineChart } from '@/components/charts/wellness-charts';
-import type { DiscoverPattern, DiscoverSummary } from '@/domain/wellness';
+import ConnectionOverlayChart from '@/components/charts/connection-overlay-chart';
+import { AppIcon } from '@/components/app-icon';
+import { SegmentedControl } from '@/components/ui/segmented-control';
+import type { ConnectionMetricId, DiscoverPattern, DiscoverSummary } from '@/domain/wellness';
 import { useAsyncData } from '@/hooks/use-async-data';
 import { wellnessApi } from '@/services/wellness-api';
+import { colors } from '@/theme/tokens';
+import { styles } from './connection-view.styles';
 
-import { styles } from './discover.styles';
-
-function todayId() {
-  const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+type Period = '7'|'14'|'30'|'custom';
+function dateId(date:Date){return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`}
+function daysBetween(start:Date,end:Date){return Math.max(2,Math.min(31,Math.floor((end.getTime()-start.getTime())/86400000)+1))}
+export default function DiscoverScreen(){
+  const router=useRouter();const insets=useSafeAreaInsets();const[period,setPeriod]=useState<Period>('14');const[customEnd,setCustomEnd]=useState(()=>new Date());const[customStart,setCustomStart]=useState(()=>{const d=new Date();d.setDate(d.getDate()-13);return d});const[selectedMetrics,setSelectedMetrics]=useState<ConnectionMetricId[]>(['sleep','discomfort','posture']);const[selectedIndex,setSelectedIndex]=useState<number|null>(null);const[selectionNotice,setSelectionNotice]=useState('');
+  const periodDays=period==='custom'?daysBetween(customStart,customEnd):Number(period);const endDate=period==='custom'?dateId(customEnd):dateId(new Date());const loader=useCallback(()=>wellnessApi.getDiscoverSummary(endDate,periodDays),[endDate,periodDays]);const{data,error,isLoading,reload}=useAsyncData<DiscoverSummary|null>(loader,null);
+  useEffect(()=>setSelectedIndex(null),[endDate,periodDays]);
+  const metrics=useMemo(()=>data?.metrics.filter(item=>selectedMetrics.includes(item.id))??[],[data,selectedMetrics]);
+  const toggleMetric=(id:ConnectionMetricId)=>{setSelectionNotice('');setSelectedMetrics(current=>{if(current.includes(id))return current.length===1?current:current.filter(item=>item!==id);if(current.length>=3){setSelectionNotice('비교 항목은 최대 3개까지 선택할 수 있어요.');return current}return[...current,id]})};
+  return <SafeAreaView edges={['top']} style={styles.screen}><ScrollView contentContainerStyle={[styles.content,{paddingBottom:insets.bottom+112}]} showsVerticalScrollIndicator={false}><Text style={styles.eyebrow}>내 기록의 관계</Text><Text style={styles.title}>따로 보이던 기록을{`\n`}함께 살펴봐요</Text><Text style={styles.description}>내 평소 상태와 생활 기록의 반복 흐름을 비교해요.</Text>
+    <Text style={styles.sectionLabel}>살펴볼 기간</Text><SegmentedControl onChange={setPeriod} options={[{value:'7',label:'7일'},{value:'14',label:'14일'},{value:'30',label:'30일'},{value:'custom',label:'직접'}]} value={period}/>
+    {period==='custom'?<View style={styles.customDates}><View style={styles.datePickerItem}><Text style={styles.datePickerLabel}>시작일</Text><DateTimePicker display="compact" maximumDate={customEnd} mode="date" onChange={(_,value)=>value&&setCustomStart(value)} value={customStart}/></View><View style={styles.datePickerItem}><Text style={styles.datePickerLabel}>종료일</Text><DateTimePicker display="compact" maximumDate={new Date()} minimumDate={customStart} mode="date" onChange={(_,value)=>value&&setCustomEnd(value)} value={customEnd}/></View><Text style={styles.customHint}>최대 31일까지 선택할 수 있어요.</Text></View>:null}
+    {isLoading?<ConnectionSkeleton/>:error?<Status><Text style={styles.errorTitle}>커넥션 뷰를 불러오지 못했어요</Text><Text style={styles.statusText}>선택한 기간은 유지돼요. 잠시 후 다시 시도해 주세요.</Text><Pressable accessibilityRole="button" onPress={()=>void reload().catch(()=>undefined)} style={({pressed})=>[styles.retryButton,pressed&&styles.pressed]}><Text style={styles.retryText}>다시 시도</Text></Pressable></Status>:data&&data.sleepValues.length>0?<>
+      <BaselineCard data={data}/>
+      <View style={styles.chartCard}><View style={styles.cardHeader}><View><Text style={styles.cardTitle}>기록 겹쳐보기</Text><Text style={styles.cardDescription}>{data.periodLabel} · 최대 3개 선택</Text></View><Text style={styles.selectedCount}>{selectedMetrics.length}/3</Text></View><View style={styles.metricChips}>{data.metrics.map(metric=><Pressable accessibilityRole="button" accessibilityState={{selected:selectedMetrics.includes(metric.id)}} key={metric.id} onPress={()=>toggleMetric(metric.id)} style={({pressed})=>[styles.metricChip,selectedMetrics.includes(metric.id)&&{borderColor:metric.color,backgroundColor:`${metric.color}12`},pressed&&styles.pressed]}><View style={[styles.metricDot,{backgroundColor:metric.color}]}/><Text style={styles.metricText}>{metric.shortLabel}</Text></Pressable>)}</View>{selectionNotice?<Text accessibilityLiveRegion="polite" style={styles.selectionNotice}>{selectionNotice}</Text>:null}<View style={styles.legend}>{metrics.map(metric=><View key={metric.id} style={styles.legendItem}><View style={[styles.legendLine,{backgroundColor:metric.color}]}/><Text style={styles.legendText}>{metric.label} · {metric.unit}</Text></View>)}</View><ConnectionOverlayChart labels={data.labels} metrics={metrics} onPointPress={setSelectedIndex} selectedIndex={selectedIndex}/><Text style={styles.chartHint}>그래프의 날짜를 눌러 해당 기록을 확인하세요.</Text></View>
+      <View style={styles.patternHeading}><View><Text style={styles.sectionTitle}>발견한 패턴</Text><Text style={styles.sectionDescription}>수치가 아닌 반복 상태로 알려드려요.</Text></View><Text style={styles.count}>{data.patterns.length}개</Text></View>{data.patterns.map(pattern=><PatternCard key={pattern.id} pattern={pattern} onPress={()=>router.push({pathname:'/discover/pattern/[patternId]',params:{patternId:pattern.id,endDate}})}/>) }
+      <View style={styles.lowCard}><Text style={styles.lowEyebrow}>뚜렷한 관계가 낮은 항목</Text>{data.lowRelations.map(item=><Text key={item} style={styles.lowText}>{item}</Text>)}<Text style={styles.lowNote}>관계가 없다는 것도 중요한 기록이에요.</Text></View><View style={styles.guideCard}><Text style={styles.guideTitle}>기록을 조금 더 이어가 볼까요?</Text><Text style={styles.guideText}>{data.moreDataGuide}</Text></View>
+    </>:<Status><Text style={styles.errorTitle}>아직 발견된 패턴이 없어요</Text><Text style={styles.statusText}>오늘 상태를 기록하면 생활과 몸의 변화를 함께 살펴볼 수 있어요.</Text><Pressable onPress={()=>router.push('/check/auto')} style={styles.retryButton}><Text style={styles.retryText}>첫 기록 시작</Text></Pressable></Status>}
+    </ScrollView><Modal animationType="slide" onRequestClose={()=>setSelectedIndex(null)} transparent visible={selectedIndex!==null&&!!data}><Pressable onPress={()=>setSelectedIndex(null)} style={styles.overlay}><Pressable onPress={event=>event.stopPropagation()} style={[styles.sheet,{paddingBottom:Math.max(insets.bottom,20)}]}>{selectedIndex!==null&&data?<DaySheet detail={data.dayDetails[selectedIndex]} onClose={()=>setSelectedIndex(null)}/>:null}</Pressable></Pressable></Modal></SafeAreaView>;
 }
-
-function dayLabel(dateId: string) {
-  const [, month, day] = dateId.split('-').map(Number);
-  return { day: `${day}`, weekday: ['일', '월', '화', '수', '목', '금', '토'][new Date(`${dateId}T12:00:00`).getDay()], month: `${month}월` };
-}
-
-export default function DiscoverScreen() {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const [selectedDate, setSelectedDate] = useState(todayId);
-  const loader = useCallback(() => wellnessApi.getDiscoverSummary(selectedDate), [selectedDate]);
-  const { data, error, isLoading, reload } = useAsyncData<DiscoverSummary | null>(loader, null);
-
-  return (
-    <SafeAreaView edges={['top']} style={styles.screen}>
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 112 }]} showsVerticalScrollIndicator={false}>
-        <Text style={styles.eyebrow}>나의 발견</Text>
-        <Text style={styles.title}>기록 속 흐름을{`\n`}한눈에 확인해요</Text>
-        <Text style={styles.description}>선택한 날짜까지의 최근 7일 기록을 함께 비교해요.</Text>
-
-        <View style={styles.dateCard}>
-          <Text style={styles.cardLabel}>기준 날짜</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow}>
-            {(data?.availableDates ?? Array.from({ length: 7 }, (_, index) => {
-              const date = new Date(); date.setDate(date.getDate() - 6 + index); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-            })).map((date) => {
-              const label = dayLabel(date);
-              const selected = date === selectedDate;
-              return <Pressable accessibilityLabel={`${label.month} ${label.day}일 ${label.weekday}요일`} accessibilityRole="button" accessibilityState={{ selected }} key={date} onPress={() => setSelectedDate(date)} style={({ pressed }) => [styles.dateButton, selected && styles.selectedDateButton, pressed && styles.pressed]}><Text style={[styles.weekday, selected && styles.selectedDateText]}>{label.weekday}</Text><Text style={[styles.day, selected && styles.selectedDateText]}>{label.day}</Text></Pressable>;
-            })}
-          </ScrollView>
-        </View>
-
-        {isLoading ? <StatusCard><ActivityIndicator color="#1257E0" /><Text style={styles.statusText}>선택한 기간을 분석하는 중</Text></StatusCard> : error ? <StatusCard><Text style={styles.errorTitle}>발견 내용을 불러오지 못했어요</Text><Pressable onPress={() => void reload().catch(() => undefined)} style={styles.retryButton}><Text style={styles.retryText}>다시 시도</Text></Pressable></StatusCard> : data && data.sleepValues.length > 0 ? <>
-          <Text style={styles.period}>{data.periodLabel} · 모든 차트 동시 반영</Text>
-          <ChartCard title="수면 시간" value={`${average(data.sleepValues).toFixed(1)}시간 평균`}><WellnessLineChart labels={data.labels} values={data.sleepValues} /></ChartCard>
-          <ChartCard title="컨디션 점수" value={`${average(data.conditionValues).toFixed(1)} / 5`}><WellnessBarsChart color="#EF9A72" labels={data.labels} values={data.conditionValues} /></ChartCard>
-          <ChartCard title="활동량" value={`${average(data.activityValues).toFixed(1)}천 보 평균`}><WellnessBarsChart labels={data.labels} values={data.activityValues} /></ChartCard>
-          <View style={styles.patternHeading}><View><Text style={styles.sectionTitle}>발견한 패턴</Text><Text style={styles.sectionDescription}>기록이 쌓일수록 더 정확해져요.</Text></View><Text style={styles.count}>{data.patterns.length}개</Text></View>
-          {data.patterns.map((pattern) => <PatternCard endDate={selectedDate} key={pattern.id} pattern={pattern} onPress={() => router.push({ pathname: '/discover/pattern/[patternId]', params: { patternId: pattern.id, endDate: selectedDate } })} />)}
-        </> : <StatusCard><Text style={styles.errorTitle}>분석할 기록이 아직 없어요</Text><Text style={styles.statusText}>기록을 남기면 이곳에서 패턴을 보여드릴게요.</Text></StatusCard>}
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-function average(values: readonly number[]) { return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0; }
-function StatusCard({ children }: { children: React.ReactNode }) { return <View style={styles.statusCard}>{children}</View>; }
-function ChartCard({ children, title, value }: { children: React.ReactNode; title: string; value: string }) { return <View style={styles.chartCard}><View style={styles.chartHeader}><Text style={styles.chartTitle}>{title}</Text><Text style={styles.chartValue}>{value}</Text></View>{children}</View>; }
-function PatternCard({ pattern, onPress }: { endDate: string; pattern: DiscoverPattern; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.patternCard, pressed && styles.pressed]}><View style={[styles.patternAccent, styles[`${pattern.tone}Accent`]]} /><View style={styles.patternBody}><View style={styles.patternTop}><Text style={styles.patternMetric}>{pattern.metric}</Text><Text style={styles.chevron}>›</Text></View><Text style={styles.patternTitle}>{pattern.title}</Text><Text style={styles.patternSummary}>{pattern.summary}</Text></View></Pressable>;
-}
+function BaselineCard({data}:{data:DiscoverSummary}){const b=data.baseline;return <View style={styles.baseline}><View style={styles.cardHeader}><View><Text style={styles.baselineEyebrow}>나의 평소 상태</Text><Text style={styles.baselineTitle}>{b.ready?'개인 기준선':'기준선을 알아가는 중'}</Text></View><Text style={styles.baselineCount}>{b.recordedDays}/{b.targetDays}일</Text></View>{b.ready?<><View style={styles.baselineGrid}><Base label="평균 수면" value={b.averageSleep}/><Base label="평균 걸음" value={b.averageSteps}/><Base label="평균 취침" value={b.averageBedtime}/><Base label="목 불편" value={b.discomfortFrequency}/></View><Text style={styles.comparison}>{b.comparison}</Text></>:<><View style={styles.progressTrack}><View style={[styles.progressFill,{width:`${Math.min(100,b.recordedDays/b.targetDays*100)}%`}]}/></View><Text style={styles.baselineGuide}>{data.moreDataGuide}</Text></>}</View>}
+function Base({label,value}:{label:string;value:string}){return <View style={styles.base}><Text style={styles.baseLabel}>{label}</Text><Text style={styles.baseValue}>{value}</Text></View>}
+function PatternCard({pattern,onPress}:{pattern:DiscoverPattern;onPress:()=>void}){return <Pressable accessibilityRole="button" onPress={onPress} style={({pressed})=>[styles.patternCard,pressed&&styles.pressed]}><View style={[styles.patternAccent,styles[`${pattern.tone}Accent`]]}/><View style={styles.patternBody}><View style={styles.patternTop}><Text style={styles.patternMetric}>{pattern.metric}</Text><AppIcon color={colors.textMuted} name="chevron-right" size={18}/></View><Text style={styles.confidence}>{pattern.confidenceLabel}</Text><Text style={styles.patternTitle}>{pattern.title}</Text><Text style={styles.patternSummary}>{pattern.summary}</Text></View></Pressable>}
+function DaySheet({detail,onClose}:{detail:DiscoverSummary['dayDetails'][number];onClose:()=>void}){return <><View style={styles.grabber}/><View style={styles.sheetHeader}><Text style={styles.sheetTitle}>{detail.dateLabel}</Text><Pressable accessibilityLabel="날짜 상세 닫기" accessibilityRole="button" onPress={onClose} style={styles.close}><AppIcon color={colors.textMuted} name="close" size={20}/></Pressable></View><SheetRow label="수면" value={`${detail.sleep} · ${detail.posture}`}/><SheetRow label="불편" value={detail.discomfort}/><SheetRow label="활동" value={detail.steps}/><SheetRow label="피부" value={detail.skin}/><SheetRow label="루틴" value={detail.routine}/></>}
+function SheetRow({label,value}:{label:string;value:string}){return <View style={styles.sheetRow}><Text style={styles.sheetLabel}>{label}</Text><Text style={styles.sheetValue}>{value}</Text></View>}
+function Status({children}:{children:React.ReactNode}){return <View style={styles.statusCard}>{children}</View>}
+function ConnectionSkeleton(){return <View accessibilityLabel="기록 관계를 불러오는 중" accessibilityRole="progressbar" style={styles.skeletonWrap}><View style={styles.skeletonBaseline}/><View style={styles.skeletonChart}><View style={styles.skeletonLineShort}/><View style={styles.skeletonLine}/><View style={styles.skeletonGraph}/></View></View>}

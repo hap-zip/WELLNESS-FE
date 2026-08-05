@@ -1,1 +1,32 @@
-import{StyleSheet}from'react-native';export const styles=StyleSheet.create({screen:{flex:1,backgroundColor:'#F7F8FA'},content:{padding:22},center:{minHeight:500,alignItems:'center',justifyContent:'center'},eyebrow:{color:'#1257E0',fontSize:11,fontWeight:'900',letterSpacing:1},pageTitle:{marginTop:4,color:'#17191C',fontSize:30,fontWeight:'800'},profile:{flexDirection:'row',alignItems:'center',gap:14,marginTop:20,padding:18,borderRadius:20,backgroundColor:'#FFF'},avatar:{width:58,height:58,alignItems:'center',justifyContent:'center',borderRadius:22,backgroundColor:'#1257E0'},avatarText:{color:'#FFF',fontSize:22,fontWeight:'800'},profileCopy:{flex:1},name:{color:'#17191C',fontSize:18,fontWeight:'800'},email:{marginTop:3,color:'#737B88',fontSize:11},joined:{marginTop:6,color:'#1257E0',fontSize:10.5,fontWeight:'700'},stats:{minHeight:88,flexDirection:'row',alignItems:'center',marginTop:10,borderRadius:18,backgroundColor:'#FFF'},stat:{flex:1,alignItems:'center'},statValue:{color:'#17191C',fontSize:18,fontWeight:'800'},statLabel:{marginTop:5,color:'#8B919B',fontSize:10.5},divider:{width:1,height:40,backgroundColor:'#E8EBEF'},sectionTitle:{marginTop:25,marginBottom:9,color:'#737B88',fontSize:11,fontWeight:'800'},menu:{minHeight:64,flexDirection:'row',alignItems:'center',marginBottom:7,paddingHorizontal:14,borderRadius:17,backgroundColor:'#FFF'},menuIcon:{width:36,height:36,alignItems:'center',justifyContent:'center',borderRadius:12,backgroundColor:'#EEF3FF'},menuIconText:{color:'#1257E0',fontSize:16,fontWeight:'800'},menuLabel:{flex:1,marginLeft:12,color:'#343941',fontSize:14,fontWeight:'700'},menuValue:{color:'#8B919B',fontSize:11,fontWeight:'700'},good:{color:'#31A36B'},chevron:{marginLeft:8,color:'#B2B7C0',fontSize:23},pressed:{opacity:.55},version:{marginTop:22,textAlign:'center',color:'#A4A9B2',fontSize:10}});
+import { StyleSheet } from 'react-native';
+import { colors, layout, radius, typography } from '../../theme/tokens';
+
+export const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.canvas },
+  content: { paddingHorizontal: layout.horizontalPadding, paddingTop: 8, paddingBottom: 36 },
+  center: { minHeight: 500, alignItems: 'center', justifyContent: 'center' },
+  eyebrow: { color: colors.primary, fontSize: 12, fontWeight: '800', letterSpacing: 0.4 },
+  pageTitle: { marginTop: 5, color: colors.text, ...typography.title },
+  profile: { flexDirection: 'row', alignItems: 'center', gap: 15, marginTop: 24, paddingVertical: 8 },
+  avatar: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center', borderRadius: 22, backgroundColor: colors.primary },
+  avatarText: { color: colors.white, fontSize: 22, fontWeight: '800' },
+  profileCopy: { flex: 1 },
+  name: { color: colors.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.3 },
+  email: { marginTop: 4, color: colors.textSecondary, fontSize: 13 },
+  joined: { marginTop: 7, color: colors.primary, fontSize: 12, fontWeight: '700' },
+  stats: { minHeight: 88, flexDirection: 'row', alignItems: 'center', marginTop: 22, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border },
+  stat: { flex: 1, alignItems: 'center' },
+  statValue: { color: colors.text, fontSize: 19, fontWeight: '800' },
+  statLabel: { marginTop: 5, color: colors.textSecondary, fontSize: 12 },
+  divider: { width: 1, height: 38, backgroundColor: colors.border },
+  sectionTitle: { marginTop: 29, marginBottom: 7, color: colors.textSecondary, fontSize: 13, fontWeight: '800' },
+  menu: { minHeight: 62, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 3, borderBottomWidth: 1, borderBottomColor: colors.border },
+  menuIcon: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, backgroundColor: colors.primarySoft },
+  menuIconText: { color: colors.primary, fontSize: 16, fontWeight: '800' },
+  menuLabel: { flex: 1, marginLeft: 13, color: colors.text, fontSize: 15, fontWeight: '700' },
+  menuValue: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
+  good: { color: colors.success },
+  chevron: { marginLeft: 8, color: colors.textMuted, fontSize: 23 },
+  pressed: { opacity: 0.58 },
+  version: { marginTop: 26, textAlign: 'center', color: colors.textMuted, fontSize: 12 },
+});

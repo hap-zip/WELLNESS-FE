@@ -1,6 +1,8 @@
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
-import { Alert, Pressable, StyleSheet, Text } from 'react-native';
+import { Alert, Pressable, StyleSheet } from 'react-native';
+import { AppIcon } from '@/components/app-icon';
+import { colors, motion } from '@/theme/tokens';
 
 type NavigationBackButtonProps = {
   accessibilityLabel: string;
@@ -21,13 +23,12 @@ export default function NavigationBackButton({ accessibilityLabel, confirmDiscar
 
   return (
     <Pressable accessibilityLabel={accessibilityLabel} accessibilityRole="button" hitSlop={8} onPress={onPress} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-      <Text accessibilityElementsHidden importantForAccessibility="no" style={styles.icon}>‹</Text>
+      <AppIcon color={colors.text} name="chevron-left" size={26} strokeWidth={2} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  icon: { color: '#17191C', fontSize: 36, fontWeight: '300', lineHeight: 38 },
-  pressed: { opacity: 0.55 },
+  pressed: { opacity: motion.pressOpacity },
 });

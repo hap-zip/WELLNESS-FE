@@ -10,12 +10,15 @@ type DailyCheckDraft = {
   conditionTags: string[];
   bodyParts: string[];
   intensity: number | null;
+  bodyView: 'front' | 'back';
+  bodyAreaIntensities: Record<string, number>;
   discomfortFeelings: string[];
   sleepSatisfaction: number | null;
   sleepPosture: string | null;
   pillow: string | null;
   activity: string | null;
   skinStates: string[];
+  skinPhotoUri: string | null;
   memo: string;
   skippedSteps: CheckStep[];
 };
@@ -28,12 +31,15 @@ const initialDraft: DailyCheckDraft = {
   conditionTags: [],
   bodyParts: [],
   intensity: null,
+  bodyView: 'front',
+  bodyAreaIntensities: {},
   discomfortFeelings: [],
   sleepSatisfaction: null,
   sleepPosture: null,
   pillow: null,
   activity: null,
   skinStates: [],
+  skinPhotoUri: null,
   memo: '',
   skippedSteps: [],
 };
@@ -56,9 +62,9 @@ export function DailyCheckProvider({ children }: PropsWithChildren) {
   const skipStep = useCallback((step: CheckStep) => setDraft((current) => {
     const cleared: Partial<DailyCheckDraft> = step === 'auto' ? { autoConfirmed: false }
       : step === 'condition' ? { condition: null, conditionTags: [] }
-        : step === 'discomfort' ? { bodyParts: [], intensity: null, discomfortFeelings: [] }
+        : step === 'discomfort' ? { bodyParts: [], intensity: null, bodyAreaIntensities: {}, discomfortFeelings: [] }
           : step === 'sleep' ? { sleepSatisfaction: null, sleepPosture: null, pillow: null }
-            : { activity: null, skinStates: [], memo: '' };
+            : { activity: null, skinStates: [], skinPhotoUri: null, memo: '' };
     return {
       ...current,
       ...cleared,
@@ -69,7 +75,7 @@ export function DailyCheckProvider({ children }: PropsWithChildren) {
   const completedCount = [
     draft.autoConfirmed,
     draft.condition !== null,
-    draft.bodyParts.length > 0 && draft.intensity !== null,
+    draft.bodyParts.length > 0 && draft.bodyParts.every((part) => draft.bodyAreaIntensities[part] !== undefined),
     draft.sleepSatisfaction !== null && draft.sleepPosture !== null,
     draft.activity !== null && draft.skinStates.length > 0,
   ].filter(Boolean).length;

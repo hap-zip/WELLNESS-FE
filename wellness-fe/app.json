@@ -34,6 +34,22 @@
         }
       ],
       "@react-native-community/datetimepicker"
+      ,[
+        "expo-image-picker",
+        {
+          "photosPermission": "피부 상태 사진을 기록에 추가하기 위해 사진 접근이 필요합니다.",
+          "cameraPermission": "피부 상태 사진을 촬영하기 위해 카메라 접근이 필요합니다.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "기록 요약 이미지를 사진에 저장하기 위해 접근이 필요합니다.",
+          "savePhotosPermission": "기록 요약 이미지를 사진에 저장하도록 허용해 주세요.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

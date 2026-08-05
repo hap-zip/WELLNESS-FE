@@ -1,6 +1,6 @@
 import Svg, { Circle, Ellipse, G, Line, Path, Rect } from 'react-native-svg';
 
-export type SleepPosture = '똑바로' | '왼쪽으로' | '오른쪽으로' | '엎드려서' | '잘 모르겠어요';
+export type SleepPosture = '똑바로' | '왼쪽으로' | '오른쪽으로' | '엎드려서' | '웅크려서' | '상체를 세우고' | '잘 모르겠어요';
 
 const INK = '#68778D';
 const PERSON = '#AFC5E8';
@@ -45,14 +45,18 @@ export default function SleepPostureIllustration({ posture, selected }: { postur
     );
   }
 
-  const left = posture === '왼쪽으로';
+  if (posture === '상체를 세우고') {
+    return <Svg height="72" viewBox="0 0 120 72" width="120"><Path d="M18 61h92M31 61V24h12l11 37" fill="none" stroke={BED} strokeLinecap="round" strokeWidth="4"/><Circle cx="55" cy="23" fill={PERSON} r="10"/><Path d="M55 34c15 1 25 10 28 27H52Z" fill={PERSON}/><Path d="M58 39 73 52" fill="none" stroke={accent} strokeLinecap="round" strokeWidth="3"/></Svg>;
+  }
+
+  const left = posture === '왼쪽으로' || posture === '웅크려서';
   return (
     <Svg height="72" viewBox="0 0 120 72" width="120">
       <G transform={left ? undefined : 'translate(120 0) scale(-1 1)'}>
         <Rect fill={BED} height="4" rx="2" width="104" x="8" y="61" />
         <Rect fill={PILLOW} height="17" rx="8" stroke={selected ? accent : PILLOW} width="35" x="13" y="37" />
         <Circle cx="39" cy="38" fill={PERSON} r="10" />
-        <Path d="M47 40c14-4 33 1 44 12l-8 8H47c-6-5-6-14 0-20Z" fill={PERSON} />
+        <Path d={posture === '웅크려서' ? 'M47 40c12-5 30 1 36 12l-8 8H47c-6-5-6-14 0-20Z' : 'M47 40c14-4 33 1 44 12l-8 8H47c-6-5-6-14 0-20Z'} fill={PERSON} />
         <Path d="M55 49 70 58M85 52 98 59" fill="none" stroke={accent} strokeLinecap="round" strokeWidth="3" />
       </G>
     </Svg>

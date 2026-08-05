@@ -1,5 +1,7 @@
 # 몸기록 페이지 명세
 
+> 기능의 최종 기준은 `웰니스 앱 최종 기능 및 UI 설계 명세.pdf`와 `FINAL_FUNCTION_AUDIT.md`이다. 이 문서의 기존 화면 ID와 경로는 현재 코드 추적용이며, 최종 PDF의 5탭 구조와 충돌하는 항목은 후속 개편 대상이다.
+
 화면 ID는 QA·기획 문서와 연결하기 위한 식별자이고, 실제 개발에서는 페이지의 역할이 드러나는 이름을 사용한다.
 
 ## 개발 원칙
@@ -79,7 +81,7 @@ src/pages/<domain>/<page-name>.styles.ts    # page-only StyleSheet
 
 | ID | 페이지 이름 | Expo Router 경로 | 화면 파일 | 브랜치 |
 |---|---|---|---|---|
-| CHAT-01 | 기록 도우미 | `/assistant` | `AssistantScreen` | `feat/assistant` |
+| CHAT-01 | 웰니스 챗 | `/(tabs)/chat` | `AssistantScreen` | `feat/assistant` |
 | MYP-01 | 나 | `/(tabs)/me` | `MeScreen` | `feat/me` |
 | SET-01 | 건강 데이터 설정 | `/settings/health` | `HealthSettingsScreen` | `feat/settings-health` |
 | SET-02 | 알림 설정 | `/settings/notifications` | `NotificationSettingsScreen` | `feat/notifications` |

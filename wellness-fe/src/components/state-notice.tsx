@@ -1,3 +1,16 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-export default function StateNotice({ actionLabel, description, icon='○', onAction, title, tone='neutral' }: { actionLabel?: string; description: string; icon?: string; onAction?: () => void; title: string; tone?: 'neutral'|'error'|'success' }) { return <View accessibilityRole="summary" style={styles.wrap}><View style={[styles.icon,tone==='error'&&styles.errorIcon,tone==='success'&&styles.successIcon]}><Text style={styles.iconText}>{icon}</Text></View><Text style={styles.title}>{title}</Text><Text style={styles.description}>{description}</Text>{actionLabel&&onAction?<Pressable accessibilityRole="button" onPress={onAction} style={styles.button}><Text style={styles.buttonText}>{actionLabel}</Text></Pressable>:null}</View> }
-const styles=StyleSheet.create({wrap:{alignItems:'center',justifyContent:'center',padding:24,borderRadius:20,backgroundColor:'#F7F8FA'},icon:{width:48,height:48,alignItems:'center',justifyContent:'center',borderRadius:24,backgroundColor:'#E9EDF3'},errorIcon:{backgroundColor:'#FDECEC'},successIcon:{backgroundColor:'#EAF7F0'},iconText:{color:'#536071',fontSize:20,fontWeight:'800'},title:{marginTop:13,color:'#17191C',fontSize:17,fontWeight:'800'},description:{maxWidth:280,marginTop:6,textAlign:'center',color:'#737B88',fontSize:12,lineHeight:19},button:{minWidth:120,minHeight:44,alignItems:'center',justifyContent:'center',marginTop:15,borderRadius:12,backgroundColor:'#17191C'},buttonText:{color:'#FFF',fontSize:12,fontWeight:'800'}});
+import { AppIcon, type AppIconName } from '@/components/app-icon';
+import { colors, layout, motion, radius, spacing, typography } from '@/theme/tokens';
+
+function noticeIcon(icon: string | undefined, tone: 'neutral'|'error'|'success'): AppIconName {
+  if (tone === 'error' || icon === '!') return 'alert';
+  if (tone === 'success' || icon === '✓') return 'check';
+  if (icon === '＋') return 'plus';
+  return 'info';
+}
+
+export default function StateNotice({ actionLabel, description, icon, onAction, title, tone='neutral' }: { actionLabel?: string; description: string; icon?: string; onAction?: () => void; title: string; tone?: 'neutral'|'error'|'success' }) {
+  const iconColor=tone==='error'?colors.danger:tone==='success'?colors.success:colors.textSecondary;
+  return <View accessibilityRole="summary" style={styles.wrap}><View style={[styles.icon,tone==='error'&&styles.errorIcon,tone==='success'&&styles.successIcon]}><AppIcon color={iconColor} name={noticeIcon(icon,tone)} size={24}/></View><Text style={styles.title}>{title}</Text><Text style={styles.description}>{description}</Text>{actionLabel&&onAction?<Pressable accessibilityRole="button" onPress={onAction} style={({pressed})=>[styles.button,pressed&&styles.pressed]}><Text style={styles.buttonText}>{actionLabel}</Text></Pressable>:null}</View>;
+}
+const styles=StyleSheet.create({wrap:{alignItems:'center',justifyContent:'center',padding:spacing.xl,borderRadius:radius.xl,backgroundColor:colors.surfaceSubtle},icon:{width:48,height:48,alignItems:'center',justifyContent:'center',borderRadius:24,backgroundColor:colors.surfaceStrong},errorIcon:{backgroundColor:colors.dangerSoft},successIcon:{backgroundColor:colors.successSoft},title:{marginTop:spacing.sm,color:colors.text,fontSize:17,lineHeight:24,fontWeight:'800'},description:{maxWidth:280,marginTop:spacing.xs,textAlign:'center',color:colors.textMuted,...typography.caption},button:{minWidth:120,minHeight:layout.minTouch,alignItems:'center',justifyContent:'center',marginTop:spacing.md,paddingHorizontal:spacing.md,borderRadius:radius.md,backgroundColor:colors.inverse},buttonText:{color:colors.white,fontSize:13,fontWeight:'800'},pressed:{opacity:motion.pressOpacity}});

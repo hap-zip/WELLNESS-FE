@@ -35,11 +35,15 @@ export default function RecordDetailScreen() {
         <Section title="불편 부위"><InfoRow label="부위" value={record.bodyParts.join(', ') || '없음'} /><InfoRow label="강도" value={record.intensity ? `${record.intensity}단계` : '기록 없음'} /><InfoRow label="느낌" value={record.feelings.join(', ') || '선택 안 함'} /></Section>
         <Section title="수면"><InfoRow label="수면 자세" value={record.sleepPosture} /><InfoRow label="베개 높이" value={record.pillow} /></Section>
         <Section title="활동·피부"><InfoRow label="활동량" value={record.activityLabel} /><InfoRow label="피부 상태" value={record.skinStates.join(', ') || '기록 없음'} /></Section>
+        {record.completedRoutine ? <Section title="완료한 루틴"><InfoRow label={record.completedRoutine.title} value={record.completedRoutine.completedAt} /></Section> : null}
+        {record.nextDayFeedback ? <Section title="다음 날 효과 확인"><InfoRow label="변화" value={effectLabel(record.nextDayFeedback.effect)} /><InfoRow label="남은 불편" value={`${record.nextDayFeedback.discomfortLevel}단계`} /></Section> : null}
         {record.memo ? <View style={styles.memoCard}><Text style={styles.sectionTitle}>메모</Text><Text style={styles.memoText}>{record.memo}</Text></View> : null}
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+function effectLabel(effect: 'better' | 'same' | 'worse' | 'unknown') { return effect === 'better' ? '한결 편해요' : effect === 'same' ? '비슷해요' : effect === 'worse' ? '더 불편해요' : '잘 모르겠어요'; }
 
 function Section({ children, title }: { children: React.ReactNode; title: string }) {
   return <View style={styles.section}><Text style={styles.sectionTitle}>{title}</Text><View style={styles.sectionBody}>{children}</View></View>;

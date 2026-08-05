@@ -6,56 +6,44 @@ import NavigationBackButton from '@/components/navigation-back-button';
 import { useDailyCheck } from '@/context/daily-check-context';
 
 import { styles } from './discomfort-check.styles';
+import { BODY_ZONE_LABELS, SelectableBodyMap } from './SelectableBodyMap';
 
-const BODY_PARTS = ['목', '어깨', '허리', '무릎', '손목', '기타'] as const;
 const FEELINGS = ['뻐근해요', '쑤셔요', '저려요', '당겨요', '화끈거려요'] as const;
+const INTENSITY_HELP = ['거의 느껴지지 않아요', '조금 신경 쓰여요', '움직일 때 불편해요', '일상에 영향을 줘요', '활동하기 매우 어려워요'];
 
 export default function DiscomfortCheckScreen() {
   const router = useRouter();
   const { completeStep, draft, skipStep, updateDraft } = useDailyCheck();
-
-  const toggleBodyPart = (value: string) => updateDraft({ bodyParts: draft.bodyParts.includes(value) ? draft.bodyParts.filter((item) => item !== value) : [...draft.bodyParts, value] });
+  const toggleBodyPart = (zone: { id: string }) => {
+    if (draft.bodyParts.includes(zone.id)) {
+      const nextIntensities = { ...draft.bodyAreaIntensities };
+      delete nextIntensities[zone.id];
+      const nextParts = draft.bodyParts.filter((item) => item !== zone.id);
+      updateDraft({ bodyParts: nextParts, bodyAreaIntensities: nextIntensities, intensity: Math.max(0, ...Object.values(nextIntensities)) || null });
+    } else updateDraft({ bodyParts: [...draft.bodyParts, zone.id] });
+  };
+  const setAreaIntensity = (part: string, value: number) => {
+    const next = { ...draft.bodyAreaIntensities, [part]: value };
+    updateDraft({ bodyAreaIntensities: next, intensity: Math.max(...Object.values(next)) });
+  };
   const toggleFeeling = (value: string) => updateDraft({ discomfortFeelings: draft.discomfortFeelings.includes(value) ? draft.discomfortFeelings.filter((item) => item !== value) : [...draft.discomfortFeelings, value] });
-  const canContinue = draft.bodyParts.length > 0 && draft.intensity !== null;
+  const canContinue = draft.bodyParts.length > 0 && draft.bodyParts.every((part) => draft.bodyAreaIntensities[part] !== undefined);
 
-  return (
-    <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
-      <View style={styles.progressTrack}><View style={styles.progressValue} /></View>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.topBar}>
-          <View style={styles.backButton}><NavigationBackButton accessibilityLabel="컨디션 선택으로 돌아가기" fallbackHref="/check/condition" /></View>
-          <Pressable accessibilityRole="button" onPress={() => { skipStep('discomfort'); router.push('/check/sleep'); }} style={({ pressed }) => [styles.skipButton, pressed && styles.pressed]}><Text style={styles.skipText}>건너뛰기</Text></Pressable>
-        </View>
-        <Text style={styles.step}>오늘의 체크 3 / 5</Text>
-        <Text style={styles.title}>불편한 곳이{`\n`}있나요?</Text>
-        <Text style={styles.description}>여러 부위를 선택해도 괜찮아요.</Text>
+  return <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
+    <View style={styles.progressTrack}><View style={styles.progressValue} /></View>
+    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.topBar}><View style={styles.backButton}><NavigationBackButton accessibilityLabel="수면 체크로 돌아가기" fallbackHref="/check/sleep" /></View><Pressable accessibilityRole="button" onPress={() => { skipStep('discomfort'); router.push('/check/activity-skin'); }} style={({ pressed }) => [styles.skipButton, pressed && styles.pressed]}><Text style={styles.skipText}>불편한 곳 없음</Text></Pressable></View>
+      <Text style={styles.step}>오늘의 체크 4 / 5</Text>
+      <Text style={styles.title}>불편한 곳을{`\n`}표시해 주세요</Text>
+      <Text style={styles.description}>앞·뒤와 좌우를 구분해 여러 부위를 선택할 수 있어요.</Text>
+      <Text style={styles.sectionTitle}>불편한 부위</Text>
+      <SelectableBodyMap onChangeView={(bodyView) => updateDraft({ bodyView })} onToggle={toggleBodyPart} selected={draft.bodyParts} view={draft.bodyView} />
 
-        <Text style={styles.sectionTitle}>불편한 부위</Text>
-        <View style={styles.chipGroup}>
-          {BODY_PARTS.map((part) => {
-            const selected = draft.bodyParts.includes(part);
-            return <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: selected }} key={part} onPress={() => toggleBodyPart(part)} style={({ pressed }) => [styles.chip, selected && styles.selectedChip, pressed && styles.pressed]}><Text style={[styles.chipText, selected && styles.selectedChipText]}>{part}</Text></Pressable>;
-          })}
-        </View>
+      {draft.bodyParts.length > 0 ? <><Text style={styles.sectionTitle}>부위별 불편 강도</Text><Text style={styles.sectionDescription}>선택한 곳마다 현재 느끼는 강도를 기록해 주세요.</Text>{draft.bodyParts.map((part) => { const value = draft.bodyAreaIntensities[part]; return <View key={part} style={styles.intensityBlock}><View style={styles.areaHeading}><Text style={styles.areaTitle}>{BODY_ZONE_LABELS[part] ?? part}</Text><Text style={styles.areaValue}>{value ? `${value}단계` : '선택 필요'}</Text></View><View accessibilityRole="radiogroup" style={styles.scaleRow}>{[1, 2, 3, 4, 5].map((level) => <Pressable accessibilityLabel={`${BODY_ZONE_LABELS[part] ?? part} 불편 강도 ${level}, ${INTENSITY_HELP[level - 1]}`} accessibilityRole="radio" accessibilityState={{ checked: value === level }} key={level} onPress={() => setAreaIntensity(part, level)} style={({ pressed }) => [styles.scaleButton, value === level && styles.selectedScaleButton, pressed && styles.pressed]}><Text style={[styles.scaleText, value === level && styles.selectedScaleText]}>{level}</Text></Pressable>)}</View>{value ? <Text style={styles.intensityHelp}>{INTENSITY_HELP[value - 1]}</Text> : null}</View>; })}</> : null}
 
-        <Text style={styles.sectionTitle}>불편함 강도</Text>
-        <View style={styles.scaleRow}>
-          {[1, 2, 3, 4, 5].map((value) => {
-            const selected = draft.intensity === value;
-            return <Pressable accessibilityLabel={`불편함 강도 ${value}`} accessibilityRole="radio" accessibilityState={{ checked: selected }} key={value} onPress={() => updateDraft({ intensity: value })} style={({ pressed }) => [styles.scaleButton, selected && styles.selectedScaleButton, pressed && styles.pressed]}><Text style={[styles.scaleText, selected && styles.selectedScaleText]}>{value}</Text></Pressable>;
-          })}
-        </View>
-        <View style={styles.scaleLabels}><Text style={styles.scaleLabel}>거의 없어요</Text><Text style={styles.scaleLabel}>매우 불편해요</Text></View>
-
-        <Text style={styles.sectionTitle}>어떤 느낌인가요? <Text style={styles.optional}>(선택)</Text></Text>
-        <View style={styles.chipGroup}>
-          {FEELINGS.map((feeling) => {
-            const selected = draft.discomfortFeelings.includes(feeling);
-            return <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: selected }} key={feeling} onPress={() => toggleFeeling(feeling)} style={({ pressed }) => [styles.chip, selected && styles.selectedChip, pressed && styles.pressed]}><Text style={[styles.chipText, selected && styles.selectedChipText]}>{feeling}</Text></Pressable>;
-          })}
-        </View>
-      </ScrollView>
-      <View style={styles.footer}><Pressable accessibilityRole="button" accessibilityState={{ disabled: !canContinue }} disabled={!canContinue} onPress={() => { completeStep('discomfort'); router.push('/check/sleep'); }} style={({ pressed }) => [styles.nextButton, !canContinue && styles.disabledButton, pressed && styles.pressed]}><Text style={[styles.nextText, !canContinue && styles.disabledText]}>다음</Text></Pressable></View>
-    </SafeAreaView>
-  );
+      <Text style={styles.sectionTitle}>어떤 느낌인가요? <Text style={styles.optional}>(선택)</Text></Text>
+      <View style={styles.chipGroup}>{FEELINGS.map((feeling) => { const selected = draft.discomfortFeelings.includes(feeling); return <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: selected }} key={feeling} onPress={() => toggleFeeling(feeling)} style={({ pressed }) => [styles.chip, selected && styles.selectedChip, pressed && styles.pressed]}><Text style={[styles.chipText, selected && styles.selectedChipText]}>{feeling}</Text></Pressable>; })}</View>
+    </ScrollView>
+    <View style={styles.footer}><Pressable accessibilityRole="button" accessibilityState={{ disabled: !canContinue }} disabled={!canContinue} onPress={() => { completeStep('discomfort'); router.push('/check/activity-skin'); }} style={({ pressed }) => [styles.nextButton, !canContinue && styles.disabledButton, pressed && styles.pressed]}><Text style={[styles.nextText, !canContinue && styles.disabledText]}>다음</Text></Pressable></View>
+  </SafeAreaView>;
 }

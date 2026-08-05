@@ -21,7 +21,7 @@ export default function ConditionCheckScreen() {
   const router = useRouter();
   const { completeStep, draft, skipStep, updateDraft } = useDailyCheck();
 
-  const moveToNextStep = () => router.push('/check/discomfort');
+  const moveToNextStep = () => router.push('/check/sleep');
   const toggleTag = (tag: string) => updateDraft({
     conditionTags: draft.conditionTags.includes(tag)
       ? draft.conditionTags.filter((item) => item !== tag)

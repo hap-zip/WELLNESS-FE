@@ -4,11 +4,13 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import NavigationBackButton from '@/components/navigation-back-button';
+import { AppIcon, type AppIconName } from '@/components/app-icon';
+import { colors } from '@/theme/tokens';
 import { styles } from './health-connect.styles';
 
 const PROVIDERS = [
-  { name: 'Apple 건강', icon: '♥', iconStyle: 'heart' as const },
-  { name: 'Health Connect', icon: '⌁', iconStyle: 'pulse' as const },
+  { name: 'Apple 건강', icon: 'heart' as AppIconName },
+  { name: 'Health Connect', icon: 'trend-up' as AppIconName },
 ] as const;
 
 export default function HealthConnectScreen() {
@@ -40,9 +42,7 @@ export default function HealthConnectScreen() {
                 index === PROVIDERS.length - 1 && styles.lastProviderRow,
                 pressed && styles.pressed,
               ]}>
-              <Text style={[styles.providerIcon, provider.iconStyle === 'pulse' && styles.pulseIcon]}>
-                {provider.icon}
-              </Text>
+              <View style={styles.providerIcon}><AppIcon color={colors.primary} name={provider.icon} size={24}/></View>
               <Text style={styles.providerName}>{provider.name}</Text>
               <Text style={styles.connectText}>{connectedProvider === provider.name ? '연결됨' : '연결하기'}</Text>
             </Pressable>

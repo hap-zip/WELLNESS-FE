@@ -6,6 +6,8 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import type { RecordsMonth, WellnessRecordSummary } from '@/domain/wellness';
 import { useAsyncData } from '@/hooks/use-async-data';
 import { wellnessApi } from '@/services/wellness-api';
+import { AppIcon } from '@/components/app-icon';
+import { colors } from '@/theme/tokens';
 
 import { styles } from './records-calendar.styles';
 
@@ -58,8 +60,6 @@ export default function RecordsCalendarScreen() {
         <Text style={styles.eyebrow}>나의 변화</Text>
         <Text style={styles.title}>기록</Text>
         <Text style={styles.description}>날짜를 눌러 그날의 몸 상태를 확인해 보세요.</Text>
-        <Pressable accessibilityRole="button" onPress={() => router.push('/reports/setup')} style={({ pressed }) => [styles.reportEntry, pressed && styles.pressed]}><View><Text style={styles.reportEntryTitle}>기록 요약 만들기</Text><Text style={styles.reportEntryDescription}>원하는 기간의 변화를 한 장으로 정리해요</Text></View><Text style={styles.reportEntryArrow}>›</Text></Pressable>
-
         <View style={styles.statsRow}>
           <StatCard label="기록한 날" value={`${data.stats.recordedDays}일`} />
           <StatCard label="평균 수면" value={data.stats.averageSleep} />
@@ -68,9 +68,9 @@ export default function RecordsCalendarScreen() {
 
         <View style={styles.calendarCard}>
           <View style={styles.monthHeader}>
-            <Pressable accessibilityLabel="이전 달" accessibilityRole="button" onPress={() => moveMonth(-1)} style={({ pressed }) => [styles.monthButton, pressed && styles.pressed]}><Text style={styles.monthChevron}>‹</Text></Pressable>
+            <Pressable accessibilityLabel="이전 달" accessibilityRole="button" onPress={() => moveMonth(-1)} style={({ pressed }) => [styles.monthButton, pressed && styles.pressed]}><AppIcon color={colors.text} name="chevron-left" size={22}/></Pressable>
             <Text accessibilityRole="header" style={styles.monthTitle}>{cursor.year}년 {cursor.month}월</Text>
-            <Pressable accessibilityLabel="다음 달" accessibilityRole="button" accessibilityState={{ disabled: isCurrentOrFutureMonth }} disabled={isCurrentOrFutureMonth} onPress={() => moveMonth(1)} style={({ pressed }) => [styles.monthButton, isCurrentOrFutureMonth && styles.disabledMonthButton, pressed && styles.pressed]}><Text style={[styles.monthChevron, isCurrentOrFutureMonth && styles.disabledMonthChevron]}>›</Text></Pressable>
+            <Pressable accessibilityLabel="다음 달" accessibilityRole="button" accessibilityState={{ disabled: isCurrentOrFutureMonth }} disabled={isCurrentOrFutureMonth} onPress={() => moveMonth(1)} style={({ pressed }) => [styles.monthButton, isCurrentOrFutureMonth && styles.disabledMonthButton, pressed && styles.pressed]}><AppIcon color={isCurrentOrFutureMonth?colors.textMuted:colors.text} name="chevron-right" size={22}/></Pressable>
           </View>
 
           <View style={styles.weekRow}>{WEEKDAYS.map((weekday, index) => <Text key={weekday} style={[styles.weekday, index === 0 && styles.sunday, index === 6 && styles.saturday]}>{weekday}</Text>)}</View>
@@ -87,6 +87,7 @@ export default function RecordsCalendarScreen() {
         </View>
 
         <RecordDetail date={selectedDate} onOpenDetail={() => router.push({ pathname: '/records/[date]', params: { date: selectedDate } })} onRecord={() => router.push('/check/auto')} record={selectedRecord} />
+        <Pressable accessibilityRole="button" onPress={() => router.push('/reports/setup')} style={({ pressed }) => [styles.reportEntry, pressed && styles.pressed]}><View><Text style={styles.reportEntryTitle}>기록 요약 만들기</Text><Text style={styles.reportEntryDescription}>선택한 기간의 변화를 전문가에게 보여줄 수 있게 정리해요</Text></View><AppIcon color={colors.white} name="chevron-right" size={20}/></Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -99,7 +100,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 function RecordDetail({ date, onOpenDetail, onRecord, record }: { date: string; onOpenDetail: () => void; onRecord: () => void; record: WellnessRecordSummary | null }) {
   const [, month, day] = date.split('-').map(Number);
   if (!record) return <View style={styles.emptyDetail}><Text style={styles.detailDate}>{month}월 {day}일</Text><Text style={styles.emptyTitle}>아직 기록이 없어요</Text><Text style={styles.emptyDescription}>오늘의 상태를 남기면 변화 흐름을 확인할 수 있어요.</Text><Pressable accessibilityRole="button" onPress={onRecord} style={({ pressed }) => [styles.recordButton, pressed && styles.pressed]}><Text style={styles.recordButtonText}>상태 기록하기</Text></Pressable></View>;
-  return <View style={styles.detailCard}><View style={styles.detailHeader}><View><Text style={styles.detailDate}>{month}월 {day}일</Text><Text style={styles.detailCondition}>{record.condition}</Text></View><View style={[styles.conditionBadge, record.conditionTone === 'danger' ? styles.dangerBadge : record.conditionTone === 'caution' ? styles.cautionBadge : styles.goodBadge]}><Text style={styles.conditionBadgeText}>{record.bodyParts.length > 0 ? `${record.bodyParts.join(', ')} ${record.intensity ?? '-'}단계` : '불편 없음'}</Text></View></View><View style={styles.detailDivider} /><DetailRow label="수면" value={record.sleepDuration} /><DetailRow label="걸음 수" value={record.steps} /><DetailRow label="불편 부위" value={record.bodyParts.join(', ') || '없음'} />{record.memo ? <View style={styles.memoBox}><Text style={styles.memoLabel}>메모</Text><Text style={styles.memoText}>{record.memo}</Text></View> : null}<Pressable accessibilityRole="button" onPress={onOpenDetail} style={({ pressed }) => [styles.detailButton, pressed && styles.pressed]}><Text style={styles.detailButtonText}>전체 기록 보기</Text><Text style={styles.detailButtonChevron}>›</Text></Pressable></View>;
+  return <View style={styles.detailCard}><View style={styles.detailHeader}><View><Text style={styles.detailDate}>{month}월 {day}일</Text><Text style={styles.detailCondition}>{record.condition}</Text></View><View style={[styles.conditionBadge, record.conditionTone === 'danger' ? styles.dangerBadge : record.conditionTone === 'caution' ? styles.cautionBadge : styles.goodBadge]}><Text style={styles.conditionBadgeText}>{record.bodyParts.length > 0 ? `${record.bodyParts.join(', ')} ${record.intensity ?? '-'}단계` : '불편 없음'}</Text></View></View><View style={styles.detailDivider} /><DetailRow label="수면" value={record.sleepDuration} /><DetailRow label="걸음 수" value={record.steps} /><DetailRow label="불편 부위" value={record.bodyParts.join(', ') || '없음'} />{record.memo ? <View style={styles.memoBox}><Text style={styles.memoLabel}>메모</Text><Text style={styles.memoText}>{record.memo}</Text></View> : null}<Pressable accessibilityRole="button" onPress={onOpenDetail} style={({ pressed }) => [styles.detailButton, pressed && styles.pressed]}><Text style={styles.detailButtonText}>전체 기록 보기</Text><AppIcon color={colors.primary} name="chevron-right" size={17}/></Pressable></View>;
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {

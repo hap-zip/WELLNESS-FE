@@ -4,7 +4,9 @@ import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-nativ
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useDailyCheck } from '@/context/daily-check-context';
+import { AppIcon } from '@/components/app-icon';
 import { wellnessApi } from '@/services/wellness-api';
+import { colors } from '@/theme/tokens';
 
 import { styles } from './auto-check.styles';
 
@@ -42,7 +44,7 @@ export default function AutoCheckScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.topBar}>
           <Pressable accessibilityLabel="데일리 체크 닫기" accessibilityRole="button" hitSlop={8} onPress={closeCheck} style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}>
-            <Text style={styles.closeIcon}>×</Text>
+            <AppIcon color={colors.text} name="close" size={23}/>
           </Pressable>
           <Pressable accessibilityRole="button" onPress={() => { skipStep('auto'); moveToCondition(); }} style={({ pressed }) => [styles.skipButton, pressed && styles.pressed]}>
             <Text style={styles.skipText}>건너뛰기</Text>
@@ -70,7 +72,7 @@ export default function AutoCheckScreen() {
           ))}
         </View>
         <View style={styles.sourceRow}>
-          <Text style={styles.sourceIcon}>♥</Text>
+          <AppIcon color={colors.primary} name="heart" size={18}/>
           <Text style={styles.sourceText}>{draft.autoSource === 'apple-health' ? 'Apple 건강' : draft.autoSource === 'health-connect' ? 'Health Connect' : '직접 입력'}에서 가져왔어요</Text>
         </View>
       </ScrollView>
