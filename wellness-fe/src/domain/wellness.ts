@@ -142,3 +142,10 @@ export type RoutineCompletion = {
   completedSeconds: number;
   completedSteps: number;
 };
+
+export type RoutineEffect = 'better' | 'same' | 'worse';
+export type RoutineFeedback = { routineId: string; effect: RoutineEffect; discomfortLevel: number; memo: string };
+export type SignalSummary = { title: string; description: string; durationLabel: string; occurrences: number; evidence: string[]; guidance: string[] };
+export type ReportPeriod = '7days' | '14days' | '30days';
+export type ReportOptions = { period: ReportPeriod; includeSleep: boolean; includeActivity: boolean; includeDiscomfort: boolean; includeRoutines: boolean };
+export type HealthReport = { id: string; periodLabel: string; createdAtLabel: string; headline: string; highlights: Array<{ label: string; value: string; change: string }>; discomfortAreas: string[]; routineCount: number; note: string; options: ReportOptions };

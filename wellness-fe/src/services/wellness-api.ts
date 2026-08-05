@@ -1,4 +1,4 @@
-import type { AutoHealthRecord, BaselineProfile, BodyMapHighlight, BodyMapPart, DailyCheckSubmission, DiscoverSummary, HomeSummary, PatternDetail, RecordDetail, RecordsMonth, RoutineCompletion, RoutinePlan, WellnessRecordSummary } from '@/domain/wellness';
+import type { AutoHealthRecord, BaselineProfile, BodyMapHighlight, BodyMapPart, DailyCheckSubmission, DiscoverSummary, HealthReport, HomeSummary, PatternDetail, RecordDetail, RecordsMonth, ReportOptions, RoutineCompletion, RoutineFeedback, RoutinePlan, SignalSummary, WellnessRecordSummary } from '@/domain/wellness';
 
 export interface WellnessApi {
   getAutoHealthRecord(): Promise<AutoHealthRecord>;
@@ -9,6 +9,9 @@ export interface WellnessApi {
   getRecordsMonth(year: number, month: number): Promise<RecordsMonth>;
   getTodayRoutine(): Promise<RoutinePlan>;
   saveRoutineCompletion(routineId: string, completedSeconds: number, completedSteps: number): Promise<RoutineCompletion>;
+  saveRoutineFeedback(feedback: RoutineFeedback): Promise<{ feedbackId: string; shouldShowSignal: boolean }>;
+  getSignalSummary(): Promise<SignalSummary>;
+  createHealthReport(options: ReportOptions): Promise<HealthReport>;
   saveBaseline(profile: BaselineProfile): Promise<void>;
   saveDailyCheck(payload: DailyCheckSubmission): Promise<{ recordId: string }>;
 }
@@ -55,6 +58,7 @@ const mockHomeSummary: HomeSummary = {
 
 let latestDailyCheck: DailyCheckSubmission | null = null;
 let latestRoutineCompletion: RoutineCompletion | null = null;
+let latestRoutineFeedback: RoutineFeedback | null = null;
 
 function localDateId(date: Date) {
   const year = date.getFullYear();
@@ -207,6 +211,26 @@ class MockWellnessApi implements WellnessApi {
   async saveRoutineCompletion(routineId: string, completedSeconds: number, completedSteps: number): Promise<RoutineCompletion> {
     latestRoutineCompletion = { completionId: `routine-${Date.now()}`, routineId, completedAt: new Date().toISOString(), completedSeconds, completedSteps };
     return latestRoutineCompletion;
+  }
+
+  async saveRoutineFeedback(feedback: RoutineFeedback): Promise<{ feedbackId: string; shouldShowSignal: boolean }> {
+    latestRoutineFeedback = feedback;
+    return { feedbackId: `feedback-${Date.now()}`, shouldShowSignal: feedback.effect === 'worse' || feedback.discomfortLevel >= 4 };
+  }
+
+  async getSignalSummary(): Promise<SignalSummary> {
+    const level = latestRoutineFeedback?.discomfortLevel ?? 4;
+    return { title: '목 불편이 계속 기록되고 있어요', description: `최근 기록과 루틴 피드백에서 ${level}단계 안팎의 불편이 반복됐어요.`, durationLabel: '최근 7일 중 4일', occurrences: 4, evidence: ['같은 부위의 불편이 반복됨', '휴식·루틴 후에도 불편 유지', '수면이 짧은 날 강도가 높아짐'], guidance: ['무리한 동작은 잠시 쉬어 주세요.', '증상이 지속되거나 심해지면 의료 전문가와 상담하세요.', '갑작스러운 마비·심한 통증 등 응급 증상이 있으면 즉시 도움을 요청하세요.'] };
+  }
+
+  async createHealthReport(options: ReportOptions): Promise<HealthReport> {
+    const periodLabel = options.period === '7days' ? '최근 7일' : options.period === '14days' ? '최근 14일' : '최근 30일';
+    const highlights = [
+      ...(options.includeSleep ? [{ label: '평균 수면', value: '6시간 22분', change: '이전보다 12분 감소' }] : []),
+      ...(options.includeActivity ? [{ label: '평균 걸음', value: '6,430보', change: '이전보다 8% 증가' }] : []),
+      ...(options.includeDiscomfort ? [{ label: '불편 기록', value: '목 4일', change: '가장 자주 기록' }] : []),
+    ];
+    return { id: `report-${Date.now()}`, periodLabel, createdAtLabel: new Date().toLocaleDateString('ko-KR'), headline: '수면이 짧은 날 목 불편이 자주 기록됐어요', highlights, discomfortAreas: options.includeDiscomfort ? ['목', '어깨'] : [], routineCount: options.includeRoutines ? (latestRoutineCompletion ? 3 : 2) : 0, note: '이 요약은 직접 기록한 생활 데이터에 기반하며 의료 진단서가 아니에요.', options };
   }
 
   async getRecordDetail(date: string): Promise<RecordDetail | null> {

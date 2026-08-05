@@ -58,6 +58,7 @@ export default function RecordsCalendarScreen() {
         <Text style={styles.eyebrow}>나의 변화</Text>
         <Text style={styles.title}>기록</Text>
         <Text style={styles.description}>날짜를 눌러 그날의 몸 상태를 확인해 보세요.</Text>
+        <Pressable accessibilityRole="button" onPress={() => router.push('/reports/setup')} style={({ pressed }) => [styles.reportEntry, pressed && styles.pressed]}><View><Text style={styles.reportEntryTitle}>기록 요약 만들기</Text><Text style={styles.reportEntryDescription}>원하는 기간의 변화를 한 장으로 정리해요</Text></View><Text style={styles.reportEntryArrow}>›</Text></Pressable>
 
         <View style={styles.statsRow}>
           <StatCard label="기록한 날" value={`${data.stats.recordedDays}일`} />
