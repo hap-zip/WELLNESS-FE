@@ -1,4 +1,4 @@
-import type { AutoHealthRecord, BaselineProfile, BodyMapHighlight, BodyMapPart, DailyCheckSubmission, DiscoverSummary, HealthReport, HomeSummary, PatternDetail, RecordDetail, RecordsMonth, ReportOptions, RoutineCompletion, RoutineFeedback, RoutinePlan, SignalSummary, WellnessRecordSummary } from '@/domain/wellness';
+import type { AssistantMessage, AssistantReply, AutoHealthRecord, BaselineProfile, BodyMapHighlight, BodyMapPart, DailyCheckSubmission, DiscoverSummary, HealthReport, HomeSummary, PatternDetail, RecordDetail, RecordsMonth, ReportOptions, RoutineCompletion, RoutineFeedback, RoutinePlan, SignalSummary, WellnessRecordSummary } from '@/domain/wellness';
 
 export interface WellnessApi {
   getAutoHealthRecord(): Promise<AutoHealthRecord>;
@@ -12,6 +12,7 @@ export interface WellnessApi {
   saveRoutineFeedback(feedback: RoutineFeedback): Promise<{ feedbackId: string; shouldShowSignal: boolean }>;
   getSignalSummary(): Promise<SignalSummary>;
   createHealthReport(options: ReportOptions): Promise<HealthReport>;
+  askRecordAssistant(message: string, history: AssistantMessage[]): Promise<AssistantReply>;
   saveBaseline(profile: BaselineProfile): Promise<void>;
   saveDailyCheck(payload: DailyCheckSubmission): Promise<{ recordId: string }>;
 }
@@ -183,6 +184,19 @@ function detailsFromCheck(check: DailyCheckSubmission, highlights: readonly Body
 }
 
 class MockWellnessApi implements WellnessApi {
+  async askRecordAssistant(message: string, _history: AssistantMessage[]): Promise<AssistantReply> {
+    await new Promise((resolve) => setTimeout(resolve, 550));
+    const normalized = message.replace(/\s/g, '');
+    const base = { id: `assistant-${Date.now()}`, role: 'assistant' as const, createdAt: new Date().toISOString() };
+    if (/진단|병원|디스크|질병|약|치료/.test(normalized)) return { message: { ...base, text: '기록만으로 질환을 진단할 수는 없어요. 불편이 계속되거나 심해진다면 의료 전문가와 상담해 주세요. 갑작스러운 마비나 매우 심한 통증처럼 긴급한 증상이 있다면 즉시 도움을 요청하세요.' }, suggestions: ['지속된 기록 보여줘', '기록 요약 만들기'], action: { label: '지속 신호 확인', route: '/safety/signal' } };
+    if (/수면|잠|취침/.test(normalized)) return { message: { ...base, text: '최근 7일 평균 수면은 6시간 22분이에요. 수면이 6시간보다 짧았던 다음 날 목 불편이 높게 기록되는 흐름이 있었어요.' }, suggestions: ['목 불편 기록도 보여줘', '기록 요약 만들기'], action: { label: '전체 기록 보기', route: '/(tabs)/records' } };
+    if (/루틴|운동|스트레칭/.test(normalized)) return { message: { ...base, text: latestRoutineCompletion ? '오늘 목·어깨 이완 루틴을 완료했어요. 무리하지 않는 범위에서 천천히 이어가는 것이 좋아요.' : '오늘은 목과 어깨를 가볍게 이완하는 2분 루틴이 추천되어 있어요.' }, suggestions: ['왜 이 루틴을 추천했어?', '오늘 기록 도와줘'], action: { label: latestRoutineCompletion ? '루틴 다시 보기' : '루틴 시작하기', route: '/routine' } };
+    if (/목|어깨|불편|아파/.test(normalized)) return { message: { ...base, text: '최근에는 목 불편이 가장 자주 기록됐고, 강도는 평균 4단계였어요. 같은 부위가 반복되고 있으니 무리한 동작은 쉬어 주세요.' }, suggestions: ['수면과 관련 있어?', '지속된 기록 보여줘'], action: { label: '기록 캘린더 보기', route: '/(tabs)/records' } };
+    if (/요약|공유|리포트/.test(normalized)) return { message: { ...base, text: '기간과 포함할 항목을 선택하면 수면·활동·불편·루틴 기록을 한 장으로 정리할 수 있어요.' }, suggestions: ['최근 수면 알려줘', '목 불편 기록 알려줘'], action: { label: '기록 요약 만들기', route: '/reports/setup' } };
+    if (/기록|체크/.test(normalized)) return { message: { ...base, text: latestDailyCheck ? '오늘 상태 기록이 저장되어 있어요. 목·어깨 불편, 수면, 활동 기록을 캘린더에서 확인할 수 있어요.' : '아직 오늘 상태 기록이 없어요. 불편 부위와 수면, 활동 상태를 순서대로 기록할 수 있어요.' }, suggestions: ['최근 수면 알려줘', '오늘 루틴 추천해줘'], action: { label: latestDailyCheck ? '오늘 기록 보기' : '상태 기록하기', route: latestDailyCheck ? '/(tabs)/records' : '/check/auto' } };
+    return { message: { ...base, text: '저는 몸 상태를 진단하는 대신, 남긴 기록을 찾아보고 정리하는 일을 도와드려요. 수면, 불편 부위, 활동, 루틴 중 궁금한 내용을 물어보세요.' }, suggestions: ['최근 수면 알려줘', '목 불편 기록 알려줘', '오늘 루틴 추천해줘'] };
+  }
+
   async getAutoHealthRecord(): Promise<AutoHealthRecord> {
     return { sleepDuration: '5시간 42분', bedtime: '오전 1:18', steps: '4,230보', source: 'apple-health' };
   }

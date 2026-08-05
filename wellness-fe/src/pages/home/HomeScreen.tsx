@@ -4,6 +4,7 @@ import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { BodyMapPart, HomeSummary } from '@/domain/wellness';
+import { ChatbotIcon } from '@/components/chatbot-icon';
 import { useAsyncData } from '@/hooks/use-async-data';
 import { wellnessApi } from '@/services/wellness-api';
 
@@ -127,9 +128,9 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      <Pressable accessibilityRole="button" style={styles.helperButton}>
-        <Text style={styles.helperIcon}>▱</Text>
-        <Text style={styles.helperText}>기록 도우미</Text>
+      <Pressable accessibilityRole="button" onPress={() => router.push('/assistant')} style={({ pressed }) => [styles.helperButton, pressed && styles.pressed]}>
+        <View style={styles.helperIcon}><ChatbotIcon size={20} /></View>
+        <Text style={styles.helperText}>몸기록 AI</Text>
       </Pressable>
 
       <Modal animationType="slide" transparent visible={detailPart !== null} onRequestClose={() => setDetailPart(null)}>

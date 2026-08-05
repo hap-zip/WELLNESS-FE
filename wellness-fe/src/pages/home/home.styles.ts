@@ -416,10 +416,7 @@ export const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
   },
-  helperIcon: {
-    color: '#FFFFFF',
-    fontSize: 20,
-  },
+  helperIcon: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
   helperText: {
     color: '#FFFFFF',
     fontSize: 14,

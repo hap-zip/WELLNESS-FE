@@ -149,3 +149,16 @@ export type SignalSummary = { title: string; description: string; durationLabel:
 export type ReportPeriod = '7days' | '14days' | '30days';
 export type ReportOptions = { period: ReportPeriod; includeSleep: boolean; includeActivity: boolean; includeDiscomfort: boolean; includeRoutines: boolean };
 export type HealthReport = { id: string; periodLabel: string; createdAtLabel: string; headline: string; highlights: Array<{ label: string; value: string; change: string }>; discomfortAreas: string[]; routineCount: number; note: string; options: ReportOptions };
+
+export type AssistantMessage = {
+  id: string;
+  role: 'assistant' | 'user';
+  text: string;
+  createdAt: string;
+};
+
+export type AssistantReply = {
+  message: AssistantMessage;
+  suggestions: string[];
+  action?: { label: string; route: '/check/auto' | '/routine' | '/reports/setup' | '/(tabs)/records' | '/safety/signal' };
+};
