@@ -1,0 +1,26 @@
+import { StyleSheet } from 'react-native';
+
+export const detailStyles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#FFFFFF' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#FFFFFF' },
+  centerText: { marginTop: 10, color: '#8B919B', fontSize: 13 },
+  errorTitle: { color: '#17191C', fontSize: 18, fontWeight: '800' },
+  retryButton: { minWidth: 120, minHeight: 46, alignItems: 'center', justifyContent: 'center', marginTop: 16, borderRadius: 12, backgroundColor: '#EEF3FF' },
+  retryText: { color: '#1257E0', fontSize: 14, fontWeight: '800' },
+  topBar: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 },
+  topTitle: { color: '#17191C', fontSize: 16, fontWeight: '800' },
+  topSpacer: { width: 44 },
+  content: { paddingHorizontal: 24, paddingTop: 16 },
+  date: { color: '#8B919B', fontSize: 13, fontWeight: '700' },
+  condition: { marginTop: 6, color: '#17191C', fontSize: 28, lineHeight: 38, fontWeight: '800', letterSpacing: -0.8 },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  tag: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 9, color: '#1257E0', backgroundColor: '#EEF3FF', fontSize: 12, fontWeight: '700' },
+  section: { marginTop: 24 },
+  sectionTitle: { color: '#17191C', fontSize: 16, fontWeight: '800' },
+  sectionBody: { marginTop: 10, paddingHorizontal: 16, borderRadius: 16, backgroundColor: '#F7F8FA' },
+  infoRow: { minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3E6EA' },
+  infoLabel: { color: '#737B88', fontSize: 13 },
+  infoValue: { flex: 1, textAlign: 'right', color: '#17191C', fontSize: 13, fontWeight: '700' },
+  memoCard: { marginTop: 24, padding: 18, borderRadius: 16, backgroundColor: '#FFF7F2' },
+  memoText: { marginTop: 10, color: '#4A4F58', fontSize: 14, lineHeight: 22 },
+});

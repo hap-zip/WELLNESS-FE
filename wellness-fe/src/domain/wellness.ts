@@ -52,3 +52,65 @@ export type DailyCheckSubmission = {
   activitySkin: { activity: string | null; skinStates: string[]; memo: string };
   skippedSteps: string[];
 };
+
+export type WellnessRecordSummary = {
+  id: string;
+  date: string;
+  condition: string;
+  conditionTone: 'good' | 'caution' | 'danger';
+  sleepDuration: string;
+  steps: string;
+  bodyParts: string[];
+  intensity: number | null;
+  memo: string;
+};
+
+export type RecordsMonth = {
+  year: number;
+  month: number;
+  records: WellnessRecordSummary[];
+  stats: {
+    recordedDays: number;
+    averageSleep: string;
+    discomfortDays: number;
+  };
+};
+
+export type RecordDetail = WellnessRecordSummary & {
+  bedtime: string;
+  sleepPosture: string;
+  pillow: string;
+  activityLabel: string;
+  skinStates: string[];
+  feelings: string[];
+  conditionTags: string[];
+};
+
+export type DiscoverPattern = {
+  id: string;
+  title: string;
+  summary: string;
+  metric: string;
+  tone: 'primary' | 'caution' | 'danger';
+};
+
+export type DiscoverSummary = {
+  endDate: string;
+  availableDates: string[];
+  periodLabel: string;
+  sleepValues: number[];
+  conditionValues: number[];
+  activityValues: number[];
+  labels: string[];
+  patterns: DiscoverPattern[];
+};
+
+export type PatternDetail = DiscoverPattern & {
+  endDate: string;
+  evidence: string[];
+  comparisonLabel: string;
+  primaryValues: number[];
+  secondaryValues: number[];
+  labels: string[];
+  suggestion: string;
+};

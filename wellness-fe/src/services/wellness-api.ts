@@ -1,8 +1,12 @@
-import type { AutoHealthRecord, BaselineProfile, BodyMapHighlight, BodyMapPart, DailyCheckSubmission, HomeSummary } from '@/domain/wellness';
+import type { AutoHealthRecord, BaselineProfile, BodyMapHighlight, BodyMapPart, DailyCheckSubmission, DiscoverSummary, HomeSummary, PatternDetail, RecordDetail, RecordsMonth, WellnessRecordSummary } from '@/domain/wellness';
 
 export interface WellnessApi {
   getAutoHealthRecord(): Promise<AutoHealthRecord>;
   getHomeSummary(): Promise<HomeSummary>;
+  getDiscoverSummary(endDate: string): Promise<DiscoverSummary>;
+  getPatternDetail(patternId: string, endDate: string): Promise<PatternDetail | null>;
+  getRecordDetail(date: string): Promise<RecordDetail | null>;
+  getRecordsMonth(year: number, month: number): Promise<RecordsMonth>;
   saveBaseline(profile: BaselineProfile): Promise<void>;
   saveDailyCheck(payload: DailyCheckSubmission): Promise<{ recordId: string }>;
 }
@@ -48,6 +52,71 @@ const mockHomeSummary: HomeSummary = {
 };
 
 let latestDailyCheck: DailyCheckSubmission | null = null;
+
+function localDateId(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function relativeDate(daysAgo: number) {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() - daysAgo);
+  return date;
+}
+
+function addDays(dateId: string, delta: number) {
+  const [year, month, day] = dateId.split('-').map(Number);
+  const date = new Date(year, month - 1, day, 12);
+  date.setDate(date.getDate() + delta);
+  return localDateId(date);
+}
+
+function shortDate(dateId: string) {
+  const [, month, day] = dateId.split('-').map(Number);
+  return `${month}/${day}`;
+}
+
+const CONDITION_LABELS: Readonly<Record<string, string>> = {
+  great: '매우 좋아요',
+  good: '좋아요',
+  okay: '보통이에요',
+  bad: '별로예요',
+  awful: '많이 안 좋아요',
+};
+
+const mockRecords: WellnessRecordSummary[] = [
+  { id: 'mock-today', date: localDateId(relativeDate(0)), condition: '꽤 불편해요', conditionTone: 'danger', sleepDuration: '5시간 42분', steps: '4,230보', bodyParts: ['목'], intensity: 4, memo: '오후부터 목이 뻐근했어요.' },
+  { id: 'mock-day-1', date: localDateId(relativeDate(1)), condition: '조금 피곤해요', conditionTone: 'caution', sleepDuration: '6시간 10분', steps: '6,840보', bodyParts: ['어깨'], intensity: 2, memo: '' },
+  { id: 'mock-day-3', date: localDateId(relativeDate(3)), condition: '괜찮아요', conditionTone: 'good', sleepDuration: '7시간 21분', steps: '8,120보', bodyParts: [], intensity: null, memo: '가벼운 산책을 했어요.' },
+  { id: 'mock-day-6', date: localDateId(relativeDate(6)), condition: '조금 불편해요', conditionTone: 'caution', sleepDuration: '6시간 35분', steps: '5,510보', bodyParts: ['허리'], intensity: 3, memo: '' },
+];
+
+function latestRecordFor(date: string): WellnessRecordSummary | null {
+  if (latestDailyCheck && date === localDateId(new Date())) {
+    const intensity = latestDailyCheck.discomfort.intensity ?? 0;
+    return {
+      id: 'latest-daily-check',
+      date,
+      condition: latestDailyCheck.condition ? CONDITION_LABELS[latestDailyCheck.condition] ?? latestDailyCheck.condition : '기록 완료',
+      conditionTone: intensity >= 4 ? 'danger' : intensity >= 2 ? 'caution' : 'good',
+      sleepDuration: latestDailyCheck.autoRecords.sleepDuration || '기록 없음',
+      steps: latestDailyCheck.autoRecords.steps || '기록 없음',
+      bodyParts: latestDailyCheck.discomfort.bodyParts,
+      intensity: latestDailyCheck.discomfort.intensity,
+      memo: latestDailyCheck.activitySkin.memo,
+    };
+  }
+  return mockRecords.find((record) => record.date === date) ?? null;
+}
+
+const DISCOVER_PATTERNS = [
+  { id: 'sleep-neck', title: '수면이 짧은 날 목 불편이 높아요', summary: '6시간 미만 수면 다음 날 목 불편 기록이 반복됐어요.', metric: '불편 +38%', tone: 'danger' as const },
+  { id: 'steps-condition', title: '걸음 수와 컨디션이 함께 움직여요', summary: '6천 보 이상 걸은 날 컨디션 점수가 더 높았어요.', metric: '컨디션 +21%', tone: 'primary' as const },
+  { id: 'bedtime-sleep', title: '늦은 취침이 수면 만족도에 영향을 줘요', summary: '자정 이후 잠든 날 수면 만족도가 낮게 기록됐어요.', metric: '만족도 -17%', tone: 'caution' as const },
+];
 
 const BODY_PART_HIGHLIGHTS: Readonly<Record<string, ReadonlyArray<Omit<BodyMapHighlight, 'color' | 'intensity'>>>> = {
   목: [{ part: 'neck', muscle: 'neck' }],
@@ -104,6 +173,80 @@ class MockWellnessApi implements WellnessApi {
         : '오늘 기록된 불편 부위가 없어요',
       bodyHighlights,
       bodyDetails: detailsFromCheck(latestDailyCheck, bodyHighlights),
+    };
+  }
+
+  async getRecordDetail(date: string): Promise<RecordDetail | null> {
+    const record = latestRecordFor(date);
+    if (!record) return null;
+    const currentCheck = latestDailyCheck;
+    const isLatest = currentCheck !== null && date === localDateId(new Date());
+    return {
+      ...record,
+      bedtime: isLatest ? currentCheck.autoRecords.bedtime || '기록 없음' : '오전 12:18',
+      sleepPosture: isLatest ? currentCheck.sleep.posture ?? '기록 없음' : '똑바로',
+      pillow: isLatest ? currentCheck.sleep.pillow ?? '기록 없음' : '적당했어요',
+      activityLabel: isLatest ? currentCheck.activitySkin.activity ?? '기록 없음' : '가볍게 움직였어요',
+      skinStates: isLatest ? currentCheck.activitySkin.skinStates : ['괜찮아요'],
+      feelings: isLatest ? currentCheck.discomfort.feelings : record.bodyParts.length > 0 ? ['뻐근해요'] : [],
+      conditionTags: isLatest ? currentCheck.conditionTags : record.conditionTone === 'good' ? ['상쾌해요'] : ['피곤해요'],
+    };
+  }
+
+  async getDiscoverSummary(endDate: string): Promise<DiscoverSummary> {
+    const availableDates = Array.from({ length: 7 }, (_, index) => addDays(localDateId(new Date()), index - 6));
+    const seed = Number(endDate.slice(-2)) || 1;
+    return {
+      endDate,
+      availableDates,
+      periodLabel: `${shortDate(addDays(endDate, -6))}–${shortDate(endDate)}`,
+      sleepValues: [6.2, 5.8, 7.1, 6.5, 5.6, 6.8, 6.1].map((value, index) => Math.max(4.5, value + ((seed + index) % 3 - 1) * 0.12)),
+      conditionValues: [3, 2, 4, 4, 2, 4, 3].map((value, index) => Math.max(1, Math.min(5, value + ((seed + index) % 2)))),
+      activityValues: [4.2, 5.8, 8.1, 7.4, 3.9, 9.2, 6.3].map((value, index) => value + ((seed + index) % 3) * 0.3),
+      labels: Array.from({ length: 7 }, (_, index) => shortDate(addDays(endDate, index - 6))),
+      patterns: DISCOVER_PATTERNS,
+    };
+  }
+
+  async getPatternDetail(patternId: string, endDate: string): Promise<PatternDetail | null> {
+    const pattern = DISCOVER_PATTERNS.find((item) => item.id === patternId);
+    if (!pattern) return null;
+    const summary = await this.getDiscoverSummary(endDate);
+    const chartData = patternId === 'steps-condition'
+      ? { primary: summary.activityValues, secondary: summary.conditionValues, comparison: '걸음 수(천 보)와 컨디션 점수' }
+      : patternId === 'bedtime-sleep'
+        ? { primary: [23.4, 24.2, 23.8, 24.5, 25.1, 23.6, 24.4], secondary: summary.sleepValues, comparison: '취침 시각과 수면 시간' }
+        : { primary: summary.sleepValues, secondary: [2, 4, 1, 2, 5, 1, 4], comparison: '수면 시간과 목 불편 강도' };
+    return {
+      ...pattern,
+      endDate,
+      evidence: patternId === 'sleep-neck' ? ['수면 6시간 미만인 날 3회', '다음 날 목 불편 평균 4.1단계', '최근 2주 중 5일 반복'] : patternId === 'steps-condition' ? ['6천 보 이상 걸은 날 4회', '해당 날짜 컨디션 평균 4.0점', '활동이 적은 날보다 21% 높음'] : ['자정 이후 취침 4회', '해당 날짜 수면 만족도 평균 2.8점', '평소보다 17% 낮음'],
+      comparisonLabel: chartData.comparison,
+      primaryValues: chartData.primary,
+      secondaryValues: chartData.secondary,
+      labels: summary.labels,
+      suggestion: patternId === 'sleep-neck' ? '오늘은 평소보다 30분 일찍 누워 목 주변 긴장을 줄여보세요.' : patternId === 'steps-condition' ? '무리하지 않는 선에서 10분 산책으로 활동 흐름을 이어가 보세요.' : '취침 준비 알림을 활용해 자정 전에 눕는 흐름을 만들어 보세요.',
+    };
+  }
+
+  async getRecordsMonth(year: number, month: number): Promise<RecordsMonth> {
+    const records = mockRecords.filter((record) => {
+      const [recordYear, recordMonth] = record.date.split('-').map(Number);
+      return recordYear === year && recordMonth === month;
+    });
+    const latestRecord = latestRecordFor(localDateId(new Date()));
+    const mergedRecords = latestRecord && year === new Date().getFullYear() && month === new Date().getMonth() + 1
+      ? [latestRecord, ...records.filter((record) => record.date !== latestRecord.date)]
+      : records;
+    return {
+      year,
+      month,
+      records: mergedRecords,
+      stats: {
+        recordedDays: mergedRecords.length,
+        averageSleep: mergedRecords.length > 0 ? '6시간 27분' : '-',
+        discomfortDays: mergedRecords.filter((record) => record.bodyParts.length > 0).length,
+      },
     };
   }
 

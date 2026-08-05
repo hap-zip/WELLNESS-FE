@@ -30,7 +30,7 @@ export default function HomeScreen() {
   const { data: home, isLoading, reload } = useAsyncData(wellnessApi.getHomeSummary, EMPTY_HOME);
 
   useFocusEffect(useCallback(() => {
-    void reload();
+    void reload().catch(() => undefined);
   }, [reload]));
 
   const sheet = home.bodyDetails[detailPart ?? 'neck'];

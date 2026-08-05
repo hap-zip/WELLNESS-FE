@@ -1,4 +1,16 @@
-# Welcome to your Expo app 👋
+# 몸기록 Wellness FE
+
+Expo SDK 54와 Expo Router 기반의 React Native 웰니스 기록 앱입니다.
+
+## 개발 문서
+
+- [회사 Codex 연결 및 재개 가이드](./CODEX_COMPANY_SETUP.md)
+- [현재 구현 상태와 다음 작업 인계서](./WORK_HANDOFF.md)
+- [Codex 저장소 작업 규칙](./AGENTS.md)
+- [화면 구현 체크리스트](./IMPLEMENTATION_CHECKLIST.md)
+- [페이지·라우트 명세](./PAGE_SPEC.md)
+
+새 개발 환경에서는 `CODEX_COMPANY_SETUP.md`를 먼저 읽습니다.
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
@@ -7,7 +19,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 1. Install dependencies
 
    ```bash
-   npm install
+   npm ci
    ```
 
 2. Start the app

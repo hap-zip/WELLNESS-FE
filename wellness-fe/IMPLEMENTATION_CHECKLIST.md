@@ -16,7 +16,7 @@
 - Expo: `^54.0.36`
 - Expo Router: `~6.0.24`
 - React Native: `0.81.5`
-- 현재 작업 브랜치: `feat/check-flow`
+- 현재 기준 브랜치: `develop`
 - TypeScript strict 설정 사용
 - 인증·온보딩·홈·데일리 체크 1–2단계 화면이 구현됨
 - 데일리 체크 1–5단계와 기록 완료 화면이 구현됨
@@ -53,12 +53,12 @@
 
 ### 1단계 — 기반 구축
 
-- [ ] `src/theme/tokens.ts` 생성: colors, typography, spacing, radius, shadows
+- [x] `src/theme/tokens.ts` 생성: colors, typography, spacing, radius, shadows
 - [ ] Pretendard 폰트 적용 방법 결정 및 폰트 파일 추가
 - [ ] 공통 `Screen`, `Header`, `FixedCTA`, `BottomTabs`, `Pill`, `Card`, `IconButton` 구현
 - [ ] 공통 Pressable 피드백 구현: 눌림 시 opacity 약 0.55
-- [ ] Safe Area와 390pt 기준 레이아웃 확인
-- [ ] 기본 템플릿 탭을 몸기록 하단 탭으로 교체
+- [x] Safe Area와 390pt 기준 레이아웃 확인
+- [x] 기본 템플릿 탭을 몸기록 하단 탭으로 교체
 
 ### 2단계 — 인증·온보딩
 
@@ -73,8 +73,8 @@
 ### 3단계 — 홈·데일리 체크
 
 - [x] `HOME-01` 오늘 홈
-- [x] Expo GL 기반 3D 웰니스 아바타, 부위 선택, 회전 및 2D fallback
-- [ ] 홈 인사이트·기록 유도·루틴·최근 기록 카드
+- [x] API 연동형 SVG 전신 근육 바디맵과 활성 부위 선택
+- [x] 홈 인사이트·기록 유도·루틴·최근 기록 카드
 - [x] `CHK-00` 자동수집 데이터 화면
 - [x] `CHK-00B` 컨디션 선택
 - [x] `CHK-01A` 불편 부위·강도·느낌
@@ -84,12 +84,12 @@
 
 ### 4단계 — 기록·발견
 
-- [ ] `LOG-01` 기록 캘린더
-- [ ] `LOG-02` 날짜별 상세
-- [ ] `CON-01` 발견 화면
-- [ ] `CON-02` 패턴 상세
-- [ ] 직접 SVG 차트 함수 `mkLine`, `mkBars` 구현
-- [ ] 날짜 선택 시 모든 차트 동시 갱신
+- [x] `LOG-01` 기록 캘린더
+- [x] `LOG-02` 날짜별 상세
+- [x] `CON-01` 발견 화면
+- [x] `CON-02` 패턴 상세
+- [x] 직접 SVG 차트 함수 `mkLine`, `mkBars` 구현
+- [x] 날짜 선택 시 모든 차트 동시 갱신
 
 ### 5단계 — 루틴·공유·설정
 

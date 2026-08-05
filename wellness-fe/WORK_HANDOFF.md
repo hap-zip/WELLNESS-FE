@@ -1,167 +1,151 @@
-# 몸기록 작업 인계서
+# 몸기록 개발 인계서
 
-회사에서 작업을 중단하고 집의 MacBook Codex에서 이어서 작업할 때 사용하는 문서입니다.
+회사와 개인 개발 환경의 Codex가 동일한 기준으로 작업을 이어가기 위한 저장소 기준 문서입니다. 마지막 갱신일은 2026-08-05입니다.
 
 ## 현재 기준점
 
 - 기준 브랜치: `develop`
-- 현재 구현 브랜치: `feat/check-flow`
-- 기준 병합 커밋: `99b93f0 Merge pull request #44 from hap-zip/feat/check-cond`
-- 구현 완료 후 다음 작업 브랜치: `feat/records`
-- 다음 페이지: `RecordsCalendarScreen` — 기록 캘린더
+- 현재 기준 커밋: `9e77610 Merge pull request #46 from hap-zip/feat/native-ui`
+- 완료된 기능 브랜치: `feat/native-ui`
+- Expo SDK: `^54.0.36`
+- Expo Router: `~6.0.24`
+- React Native: `0.81.5`
+- Node 기준: `.nvmrc`의 `24.15.0`
+- 패키지 설치: `npm ci`
 
-## 완료된 페이지
+문서보다 Git 이력이 최신이면 Git 상태를 우선하고 이 문서를 함께 갱신합니다.
 
-- [x] `splash` — 스플래시
-- [x] `login` — 로그인
-- [x] `signup` — 회원가입
-- [x] `intro` — 서비스 안내
-- [x] `consent` — 민감정보 동의
-- [x] `baseline` — 기본 상태 설정
-- [x] `health-connect` — 건강 데이터 연결
-- [x] `home` — 오늘 홈
-- [x] `check-auto` — 자동 수집 확인
-- [x] `check-cond` — 오늘 컨디션
-- [x] `check-discomfort` — 불편 부위·강도·느낌
-- [x] `check-sleep` — 수면 만족도·자세·베개
-- [x] `check-skin` — 활동·피부
-- [x] `check-done` — 기록 완료
+## 구현 완료 범위
 
-각 페이지는 다음 구조를 사용합니다.
+- 인증: 스플래시, 로그인, 회원가입과 입력 검증·로딩 상태
+- 온보딩: 서비스 소개, 민감정보 동의, 기본 상태 설정, 건강 데이터 연결 안내
+- 네이티브 시간 선택: 취침·기상·알림 시간
+- Safe Area와 공통 뒤로가기 UX
+- 네이티브 하단 탭: 오늘, 기록, 발견, 나
+- 오늘 홈: 상태 요약, 인사이트, 루틴, 수면 차트, 최근 기록
+- 데일리 체크 전 과정
+  - 자동 건강 기록 확인
+  - 컨디션
+  - 불편 부위·강도·느낌
+  - 수면 만족도·자세·베개
+  - 활동량·피부·메모
+  - 기록 완료
+- 수면 자세별 SVG 일러스트 선택 카드
+- SVG 전신 근육 바디맵
+  - `react-native-body-highlighter` 기반 근육별 실제 SVG 경로
+  - 기록된 근육만 색상 표시·터치 가능
+  - 기록 강도에 따라 노랑·주황·빨강 표시
+  - 기록 완료 후 홈 재포커스 시 최신 바디맵 조회
+  - 활성 근육 상세 바텀시트
+- 도메인·서비스·비동기 조회 계층 분리
+- 기록 캘린더 (`LOG-01`)
+  - 실제 월별 날짜 계산과 이전·다음 달 이동
+  - 기록 상태 점과 날짜 선택
+  - 월간 기록일·평균 수면·불편일 통계
+  - 선택 날짜 요약 및 기록 없는 날짜의 CTA
+  - 로딩·오류·빈 상태와 홈 기록 데이터 재조회
+- 날짜별 기록 상세 (`LOG-02`)
+  - 자동 기록, 불편 부위·강도·느낌, 수면, 활동·피부, 메모 표시
+  - 캘린더 선택 날짜와 상세 라우트 연결
+  - 로딩·오류·기록 없음 상태와 안전한 뒤로가기
+- 발견 (`CON-01`, `CON-02`)
+  - 기준 날짜 선택 시 수면·컨디션·활동 차트 동시 갱신
+  - 직접 SVG 경로·막대 계산 함수 `mkLine`, `mkBars`
+  - 발견 패턴 목록과 근거·비교 차트·생활 제안 상세
+
+## 데이터 흐름
 
 ```text
-src/app/<route>.tsx
-src/pages/<domain>/<PageName>Screen.tsx
-src/pages/<domain>/<page-name>.styles.ts
+DailyCheckContext
+  → ActivitySkinCheckScreen.submit()
+  → wellnessApi.saveDailyCheck(payload)
+  → MockWellnessApi의 실행 중 메모리 저장
+  → HomeScreen 포커스 시 getHomeSummary() 재조회
+  → bodyParts를 bodyHighlights의 muscle slug로 변환
+  → HomeAvatar의 SVG 경로 색상·터치 상태 갱신
 ```
 
-## 다음 작업
+주요 파일:
 
-### `feat/records`
+- `src/context/daily-check-context.tsx` — 작성 중인 체크 데이터
+- `src/domain/wellness.ts` — API 교체를 위한 도메인 타입
+- `src/services/wellness-api.ts` — 목업 저장소와 바디맵 매핑
+- `src/hooks/use-async-data.ts` — 비동기 조회 및 재조회
+- `src/pages/home/HomeAvatar.tsx` — SVG 전신 근육 바디맵
+- `src/pages/home/HomeScreen.tsx` — 홈 조회와 포커스 갱신
+- `src/pages/check/SleepPostureIllustration.tsx` — 수면 자세 벡터
 
-구현 대상:
+현재 기록 부위 매핑:
 
-- 페이지 ID: `LOG-01`
-- 페이지 이름: 기록 캘린더
-- 라우트: `/(tabs)/records`
-- 화면 파일: `src/pages/records/RecordsCalendarScreen.tsx`
-- 스타일 파일: `src/pages/records/records-calendar.styles.ts`
+| 기록 값 | SVG 근육 |
+| --- | --- |
+| 목 | `neck` |
+| 어깨 | `trapezius`, `deltoids` |
+| 허리 | `obliques` |
+| 무릎 | `knees` |
+| 손목 | `forearm` |
+| 기타 | 바디맵 표시 없음 |
 
-HTML 기준:
+## 아직 목업인 부분
 
-- 월별 기록 캘린더
-- 날짜별 기록 여부와 선택 상태
-- 선택 날짜의 요약 정보
-- 하단 탭의 기록 메뉴 연결
+- `MockWellnessApi` 데이터는 앱 프로세스를 종료하면 초기화됩니다.
+- 인증 요청은 실제 서버와 연결되지 않았습니다.
+- HealthKit·Health Connect 실제 권한과 동기화는 구현하지 않았습니다.
+- 나 탭은 준비 화면이며 실제 화면 구현이 필요합니다.
+- 루틴 실행, 기록 도우미, 알림, 리포트, 설정은 미구현입니다.
+- 홈 일부 문구와 날짜는 목업 데이터입니다.
+- 허리는 현재 정면 `obliques`로 임시 매핑되어 있습니다. 후면 바디맵 도입 시 `lower-back`으로 교체해야 합니다.
+- 바디맵 오른쪽 요약은 첫 번째 활성 근육을 대표 상태로 표시합니다. 복수 부위 UX를 추가로 설계해야 합니다.
 
-## 집에서 환경 맞추기
+## 다음 개발 우선순위
 
-### 1. 저장소 받기
+1. `RTN-01` 오늘의 루틴과 `RTN-02` 실행 타이머 구현
+2. 목업 저장소를 영속 저장 또는 실제 HTTP API 구현체로 교체
+3. 전면·후면 바디맵 전환과 좌우 부위 구분
+4. 복수 활성 근육 요약 UX 정리
+5. 나, 설정, 리포트 화면 구현
+6. 실제 기기 스크린샷 기반 390×844pt 시각 회귀 확인
 
-```bash
-git clone <저장소주소>
-cd wellness-fe
-git switch develop
-git pull
-```
+## 작업 원칙
 
-이미 clone되어 있다면:
-
-```bash
-git switch develop
-git pull
-```
-
-### 2. Node 버전 맞추기
-
-저장소의 `.nvmrc`는 `24.15.0`입니다.
-
-```bash
-nvm install
-nvm use
-node --version
-```
-
-출력은 `v24.15.0`이어야 합니다.
-
-### 3. 의존성 설치
-
-`package-lock.json`을 기준으로 설치합니다.
-
-```bash
-npm ci
-```
-
-### 4. Expo 실행
-
-```bash
-npx expo start
-```
-
-Expo Go에서 QR을 열거나 웹으로 확인합니다.
-
-## 다음 브랜치 생성
-
-브랜치는 항상 최신 `develop`에서 직접 생성합니다.
-
-```bash
-git switch develop
-git pull
-git switch -c feat/check-cond
-```
-
-작업 완료 후:
-
-```bash
-git add .
-git commit -m "feat: 컨디션 체크 페이지 구현"
-git push -u origin feat/check-cond
-```
+- HTML/WebView 복사 대신 React Native 네이티브 컴포넌트를 사용합니다.
+- 모든 화면에 Safe Area, 접근성 라벨, 최소 44pt 터치 영역을 적용합니다.
+- 입력에는 검증과 로딩·실패 상태를 제공합니다.
+- UI에서 서비스 구현체를 직접 하드코딩하지 않고 도메인/API 계약을 통과시킵니다.
+- API 응답을 목업하더라도 교체 가능한 저장소 구조를 유지합니다.
+- 뒤로가기는 history가 없을 때의 fallback과 입력 손실 확인을 제공합니다.
+- 진단이나 치료로 오해될 표현을 추가하지 않습니다.
+- Expo 코드를 쓰기 전에 SDK 54 버전 문서를 확인합니다.
 
 ## 검증 명령
 
-현재 프로젝트 전체 타입 검사에는 기존 템플릿 오류가 남아 있습니다.
-
 ```bash
 npx tsc --noEmit
+git diff --check
+npx expo export --platform ios --output-dir /tmp/wellness-ios-dist
+npx expo-doctor
 ```
 
-현재 알려진 기존 오류:
+현재 `feat/native-ui` 병합 전 검증 결과:
 
-- `src/components/animated-icon.web.tsx`의 CSS 모듈 선언 누락
-- `src/constants/theme.ts`의 `global.css` side-effect import 선언 누락
+- TypeScript 검사 통과
+- `git diff --check` 통과
+- iOS Expo 번들 생성 통과
 
-새 페이지 구현 후에는 검사 결과에 새 파일 오류가 추가되지 않았는지 확인합니다.
+## 새 작업 시작 절차
 
-## 원본 디자인 파일
+```bash
+git switch develop
+git pull --ff-only origin develop
+npm ci
+git switch -c feat/<작업명>
+```
 
-원본 파일은 현재 회사 PC 외부 경로에 있습니다. 집에서도 필요하면 별도로 복사합니다.
+Codex에 첫 요청으로 다음 문장을 사용합니다.
 
-- `CODEX_몸기록_Expo_구현요청서.pdf`
-- `README.md`
-- `Wellness App.dc.html`
+```text
+AGENTS.md와 WORK_HANDOFF.md를 전부 읽고 현재 Git 상태를 확인해.
+구현 현황과 다음 우선순위를 요약한 뒤 <작업명>을 실제 사용 가능한 수준으로 구현하고 검증해.
+```
 
-프로젝트 내부 기준 문서는 다음과 같습니다.
-
-- `PAGE_SPEC.md` — 페이지명·라우트·파일명·브랜치 명세
-- `IMPLEMENTATION_CHECKLIST.md` — 전체 구현 체크리스트
-
-## PR 작성 규칙
-
-커밋·푸시가 끝나면 아래 형식으로 PR 상세내용을 작성합니다.
-
-- 제목: `<type>: 한국어 설명`
-- 작업 내용
-- 관련 이슈
-- 리뷰·실행 확인 체크리스트
-- 리뷰어 요청사항
-- 스크린샷
-
-## Expo Go 범위
-
-- 프로젝트는 실물 iOS의 최신 Expo Go 호환을 위해 SDK 54를 사용
-- 홈 아바타는 `expo-gl`과 `@react-three/fiber/native` 기반 3D mesh를 사용하고 웹·오류 환경에서는 2D로 대체
-- 초기 구현은 UI와 더미 데이터 중심
-- HealthKit·Health Connect 실제 연동은 아직 하지 않음
-- 백그라운드 동기화와 원격 푸시 알림은 추후 Development Build 범위
-- 홈 차트와 바디맵은 `react-native-svg` 기반
+작업 후 문서의 기준 커밋·완료 범위·남은 작업을 반드시 갱신합니다.
