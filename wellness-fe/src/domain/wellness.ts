@@ -114,3 +114,31 @@ export type PatternDetail = DiscoverPattern & {
   labels: string[];
   suggestion: string;
 };
+
+export type RoutineStep = {
+  id: string;
+  title: string;
+  instruction: string;
+  durationSeconds: number;
+  side?: 'left' | 'right' | 'center';
+};
+
+export type RoutinePlan = {
+  id: string;
+  title: string;
+  description: string;
+  reason: string;
+  intensity: '가볍게' | '보통';
+  targetArea: string;
+  totalSeconds: number;
+  caution: string;
+  steps: RoutineStep[];
+};
+
+export type RoutineCompletion = {
+  completionId: string;
+  routineId: string;
+  completedAt: string;
+  completedSeconds: number;
+  completedSteps: number;
+};

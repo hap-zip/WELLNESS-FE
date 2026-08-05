@@ -83,7 +83,7 @@ export default function HomeScreen() {
           <Text style={styles.cardButton}>기록하기</Text>
         </Pressable>
 
-        <Pressable accessibilityRole="button" style={styles.routineCard}>
+        <Pressable accessibilityRole="button" onPress={() => router.push('/routine')} style={({ pressed }) => [styles.routineCard, pressed && styles.pressed]}>
           <View style={styles.routineThumb}>
             <Text style={styles.routineFigure}>↗</Text>
           </View>
@@ -148,7 +148,7 @@ export default function HomeScreen() {
               <Pressable onPress={() => setDetailPart(null)} style={({ pressed }) => [styles.sheetSecondaryButton, pressed && styles.pressed]}>
                 <Text style={styles.sheetSecondaryText}>관련 기록 보기</Text>
               </Pressable>
-              <Pressable style={styles.sheetPrimaryButton}>
+              <Pressable onPress={() => { setDetailPart(null); router.push('/routine'); }} style={styles.sheetPrimaryButton}>
                 <Text style={styles.sheetPrimaryText}>1분 루틴 시작</Text>
               </Pressable>
             </View>

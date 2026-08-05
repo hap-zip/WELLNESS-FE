@@ -1,4 +1,4 @@
-import type { AutoHealthRecord, BaselineProfile, BodyMapHighlight, BodyMapPart, DailyCheckSubmission, DiscoverSummary, HomeSummary, PatternDetail, RecordDetail, RecordsMonth, WellnessRecordSummary } from '@/domain/wellness';
+import type { AutoHealthRecord, BaselineProfile, BodyMapHighlight, BodyMapPart, DailyCheckSubmission, DiscoverSummary, HomeSummary, PatternDetail, RecordDetail, RecordsMonth, RoutineCompletion, RoutinePlan, WellnessRecordSummary } from '@/domain/wellness';
 
 export interface WellnessApi {
   getAutoHealthRecord(): Promise<AutoHealthRecord>;
@@ -7,6 +7,8 @@ export interface WellnessApi {
   getPatternDetail(patternId: string, endDate: string): Promise<PatternDetail | null>;
   getRecordDetail(date: string): Promise<RecordDetail | null>;
   getRecordsMonth(year: number, month: number): Promise<RecordsMonth>;
+  getTodayRoutine(): Promise<RoutinePlan>;
+  saveRoutineCompletion(routineId: string, completedSeconds: number, completedSteps: number): Promise<RoutineCompletion>;
   saveBaseline(profile: BaselineProfile): Promise<void>;
   saveDailyCheck(payload: DailyCheckSubmission): Promise<{ recordId: string }>;
 }
@@ -52,6 +54,7 @@ const mockHomeSummary: HomeSummary = {
 };
 
 let latestDailyCheck: DailyCheckSubmission | null = null;
+let latestRoutineCompletion: RoutineCompletion | null = null;
 
 function localDateId(date: Date) {
   const year = date.getFullYear();
@@ -118,6 +121,23 @@ const DISCOVER_PATTERNS = [
   { id: 'bedtime-sleep', title: '늦은 취침이 수면 만족도에 영향을 줘요', summary: '자정 이후 잠든 날 수면 만족도가 낮게 기록됐어요.', metric: '만족도 -17%', tone: 'caution' as const },
 ];
 
+const TODAY_ROUTINE: RoutinePlan = {
+  id: 'neck-release-01',
+  title: '목 주변 가볍게 이완하기',
+  description: '호흡을 이어가며 목과 어깨의 긴장을 천천히 풀어요.',
+  reason: '최근 목 불편과 짧은 수면 기록을 바탕으로 추천했어요.',
+  intensity: '가볍게',
+  targetArea: '목 · 어깨',
+  totalSeconds: 120,
+  caution: '통증이나 어지러움이 느껴지면 즉시 멈추고 편한 자세로 돌아오세요.',
+  steps: [
+    { id: 'breath', title: '자세 잡고 호흡하기', instruction: '등을 편하게 세우고 어깨 힘을 뺀 채 천천히 숨을 쉬어요.', durationSeconds: 30, side: 'center' },
+    { id: 'left', title: '오른쪽 목 늘리기', instruction: '오른손을 머리 위에 가볍게 올리고 오른쪽으로 기울여요.', durationSeconds: 30, side: 'right' },
+    { id: 'right', title: '왼쪽 목 늘리기', instruction: '왼손을 머리 위에 가볍게 올리고 왼쪽으로 기울여요.', durationSeconds: 30, side: 'left' },
+    { id: 'roll', title: '어깨 천천히 돌리기', instruction: '양쪽 어깨를 귀 쪽으로 올렸다가 뒤로 크게 원을 그려요.', durationSeconds: 30, side: 'center' },
+  ],
+};
+
 const BODY_PART_HIGHLIGHTS: Readonly<Record<string, ReadonlyArray<Omit<BodyMapHighlight, 'color' | 'intensity'>>>> = {
   목: [{ part: 'neck', muscle: 'neck' }],
   어깨: [{ part: 'shoulder', muscle: 'trapezius' }, { part: 'shoulder', muscle: 'deltoids' }],
@@ -164,7 +184,10 @@ class MockWellnessApi implements WellnessApi {
   }
 
   async getHomeSummary(): Promise<HomeSummary> {
-    if (!latestDailyCheck) return mockHomeSummary;
+    const routine = latestRoutineCompletion?.routineId === TODAY_ROUTINE.id
+      ? { ...mockHomeSummary.routine, description: '오늘 루틴을 완료했어요', duration: '완료' }
+      : mockHomeSummary.routine;
+    if (!latestDailyCheck) return { ...mockHomeSummary, routine };
     const bodyHighlights = highlightsFromCheck(latestDailyCheck);
     return {
       ...mockHomeSummary,
@@ -173,7 +196,17 @@ class MockWellnessApi implements WellnessApi {
         : '오늘 기록된 불편 부위가 없어요',
       bodyHighlights,
       bodyDetails: detailsFromCheck(latestDailyCheck, bodyHighlights),
+      routine,
     };
+  }
+
+  async getTodayRoutine(): Promise<RoutinePlan> {
+    return TODAY_ROUTINE;
+  }
+
+  async saveRoutineCompletion(routineId: string, completedSeconds: number, completedSteps: number): Promise<RoutineCompletion> {
+    latestRoutineCompletion = { completionId: `routine-${Date.now()}`, routineId, completedAt: new Date().toISOString(), completedSeconds, completedSteps };
+    return latestRoutineCompletion;
   }
 
   async getRecordDetail(date: string): Promise<RecordDetail | null> {
