@@ -1,75 +1,53 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, Pressable, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BrandWordmark } from '@/components/ui/auth-flow';
+import { useAuth } from '@/context/auth-context';
+
 import { styles } from './splash.styles';
-
-function PulseDot({ delay }: { delay: number }) {
-  const opacity = useRef(new Animated.Value(0.35)).current;
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.delay(delay),
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 600,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0.35,
-          duration: 600,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-
-    animation.start();
-    return () => animation.stop();
-  }, [delay, opacity]);
-
-  return <Animated.View style={[styles.dot, { opacity }]} />;
-}
 
 export default function SplashScreen() {
   const router = useRouter();
+  const { isRestoring, session } = useAuth();
+  const contentOpacity = useRef(new Animated.Value(0)).current;
+  const contentY = useRef(new Animated.Value(12)).current;
+  const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const timer = setTimeout(() => router.replace('/(auth)/login'), 1800);
+    let active = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) => {
+      if (!active || reduceMotion) {
+        contentOpacity.setValue(1);
+        contentY.setValue(0);
+        progress.setValue(1);
+        return;
+      }
+      Animated.parallel([
+        Animated.timing(contentOpacity, { duration: 280, easing: Easing.out(Easing.cubic), toValue: 1, useNativeDriver: true }),
+        Animated.timing(contentY, { duration: 320, easing: Easing.out(Easing.cubic), toValue: 0, useNativeDriver: true }),
+        Animated.timing(progress, { duration: 700, easing: Easing.out(Easing.cubic), toValue: 1, useNativeDriver: true }),
+      ]).start();
+    });
+    return () => { active = false; };
+  }, [contentOpacity, contentY, progress]);
+
+  useEffect(() => {
+    if (isRestoring) return;
+    const target = !session ? '/(auth)/login' : session.onboardingComplete === false ? '/(onboarding)/intro' : '/(tabs)/home';
+    const timer = setTimeout(() => router.replace(target), 720);
     return () => clearTimeout(timer);
-  }, [router]);
+  }, [isRestoring, router, session]);
 
-  return (
-    <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
-      <StatusBar style="dark" />
-
-      <View style={styles.content}>
-        <View accessible accessibilityLabel="몸기록 로고" style={styles.logo}>
-          <View style={styles.logoMark} />
-        </View>
-
-        <Text style={styles.title}>
-          놓치고 있던 내 기록을{`\n`}차분하게 연결해요
-        </Text>
-
-        <View accessibilityLabel="로딩 중" style={styles.dots}>
-          <PulseDot delay={0} />
-          <PulseDot delay={200} />
-          <PulseDot delay={400} />
-        </View>
-      </View>
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="계속"
-        onPress={() => router.replace('/(auth)/login')}
-        style={({ pressed }) => [styles.continueButton, pressed && styles.pressed]}>
-        <Text style={styles.continueText}>계속</Text>
-      </Pressable>
-    </SafeAreaView>
-  );
+  return <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
+    <StatusBar style="light"/>
+    <View style={styles.top}><BrandWordmark inverse/></View>
+    <Animated.View style={[styles.content, { opacity: contentOpacity, transform: [{ translateY: contentY }] }]}>
+      <Text accessibilityRole="header" style={styles.title}>오늘의 몸을 남기고,{`\n`}내 변화를 읽어요.</Text>
+      <Text style={styles.description}>수면, 활동, 불편함을 한곳에 기록하는 가장 개인적인 웰니스 장부</Text>
+    </Animated.View>
+    <View accessibilityLabel="앱을 준비하는 중" accessibilityRole="progressbar" style={styles.progressTrack}><Animated.View style={[styles.progressValue, { transform: [{ scaleX: progress }] }]}/></View>
+  </SafeAreaView>;
 }

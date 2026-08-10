@@ -37,13 +37,13 @@ export function SelectableBodyMap({ selected, view, onChangeView, onToggle }: { 
     <View accessibilityRole="tablist" style={styles.tabs}>{(['front', 'back'] as const).map((item) => { const active = view === item; return <Pressable accessibilityRole="tab" accessibilityState={{ selected: active }} key={item} onPress={() => onChangeView(item)} style={[styles.tab, active && styles.activeTab]}><Text style={[styles.tabText, active && styles.activeTabText]}>{item === 'front' ? '앞면' : '뒷면'}</Text></Pressable>; })}</View>
     <View accessibilityLabel={`${view === 'front' ? '앞면' : '뒷면'} 신체 부위 선택`} style={styles.map}>
       <Svg height={448} viewBox="0 0 290 448" width="100%">
-        <Circle cx="145" cy="40" fill="#DCE3EC" r="28" />
-        <Path d="M115 77 Q145 64 175 77 L193 126 180 252 110 252 97 126Z" fill="#DCE3EC" />
-        <Path d="M98 94 68 116 42 226 64 234 100 140Z" fill="#DCE3EC" />
-        <Path d="M192 94 222 116 248 226 226 234 190 140Z" fill="#DCE3EC" />
-        <Path d="M112 244 86 286 82 430 116 430 143 264Z" fill="#DCE3EC" />
-        <Path d="M178 244 204 286 208 430 174 430 147 264Z" fill="#DCE3EC" />
-        <Path d="M145 74V252M106 137h78M112 190h66M145 264 116 430M145 264l29 166" fill="none" stroke="#F8FAFC" strokeWidth="4" />
+        <Circle cx="145" cy="40" fill={colors.surfaceStrong} r="28" />
+        <Path d="M115 77 Q145 64 175 77 L193 126 180 252 110 252 97 126Z" fill={colors.surfaceStrong} />
+        <Path d="M98 94 68 116 42 226 64 234 100 140Z" fill={colors.surfaceStrong} />
+        <Path d="M192 94 222 116 248 226 226 234 190 140Z" fill={colors.surfaceStrong} />
+        <Path d="M112 244 86 286 82 430 116 430 143 264Z" fill={colors.surfaceStrong} />
+        <Path d="M178 244 204 286 208 430 174 430 147 264Z" fill={colors.surfaceStrong} />
+        <Path d="M145 74V252M106 137h78M112 190h66M145 264 116 430M145 264l29 166" fill="none" stroke={colors.surface} strokeWidth="4" />
       </Svg>
       {zones.map((zone) => { const active = selected.includes(zone.id); return <Pressable accessibilityLabel={`${zone.label}${active ? ', 선택됨' : ''}`} accessibilityRole="checkbox" accessibilityState={{ checked: active }} hitSlop={3} key={zone.id} onPress={() => onToggle(zone)} style={[styles.zone, { left: zone.left, top: zone.top, width: zone.width, height: zone.height }, active && styles.selectedZone]}><Text style={styles.zoneText}>{active ? '선택됨' : ''}</Text></Pressable>; })}
     </View>
@@ -52,14 +52,14 @@ export function SelectableBodyMap({ selected, view, onChangeView, onToggle }: { 
 }
 
 const styles = StyleSheet.create({
-  tabs: { flexDirection: 'row', padding: 4, borderRadius: radius.md, backgroundColor: colors.surfaceStrong },
+  tabs: { flexDirection: 'row', marginTop: spacing.md, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.divider },
   tab: { flex: 1, minHeight: layout.minTouch, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm },
-  activeTab: { backgroundColor: colors.surface },
+  activeTab: { borderBottomWidth: 2, borderBottomColor: colors.body },
   tabText: { color: colors.textMuted, fontSize: 14, fontWeight: '700' },
-  activeTabText: { color: colors.primary },
+  activeTabText: { color: colors.text },
   map: { position: 'relative', width: 290, height: 448, alignSelf: 'center', marginTop: spacing.sm },
   zone: { position: 'absolute', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent', borderRadius: radius.md },
-  selectedZone: { borderWidth: 2, borderColor: colors.danger, backgroundColor: 'rgba(201,54,62,0.28)' },
-  zoneText: { color: colors.danger, fontSize: 10, fontWeight: '800' },
+  selectedZone: { borderWidth: 1, borderColor: colors.body, backgroundColor: colors.bodySoft },
+  zoneText: { color: colors.body, fontSize: 10, fontWeight:'700' },
   help: { color: colors.textMuted, fontSize: 12, lineHeight: 18, textAlign: 'center' },
 });

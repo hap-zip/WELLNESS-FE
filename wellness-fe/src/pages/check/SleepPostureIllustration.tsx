@@ -1,19 +1,20 @@
 import Svg, { Circle, Ellipse, G, Line, Path, Rect } from 'react-native-svg';
+import { colors } from '@/theme/tokens';
 
 export type SleepPosture = '똑바로' | '왼쪽으로' | '오른쪽으로' | '엎드려서' | '웅크려서' | '상체를 세우고' | '잘 모르겠어요';
 
-const INK = '#68778D';
-const PERSON = '#AFC5E8';
-const PILLOW = '#DDE7F6';
-const BED = '#D5DCE6';
+const INK = colors.textMuted;
+const PERSON = colors.illustrationSkin;
+const PILLOW = colors.surfaceStrong;
+const BED = colors.border;
 
 export default function SleepPostureIllustration({ posture, selected }: { posture: SleepPosture; selected: boolean }) {
-  const accent = selected ? '#285C4D' : INK;
+  const accent = selected ? colors.data : INK;
 
   if (posture === '잘 모르겠어요') {
     return (
       <Svg height="72" viewBox="0 0 120 72" width="120">
-        <Ellipse cx="60" cy="60" fill="#EEF2F7" rx="48" ry="6" />
+        <Ellipse cx="60" cy="60" fill={colors.surfaceSubtle} rx="48" ry="6" />
         <Circle cx="60" cy="31" fill={PILLOW} r="22" />
         <Path d="M52 24c1-7 15-8 17 0 2 9-9 9-9 16" fill="none" stroke={accent} strokeLinecap="round" strokeWidth="4" />
         <Circle cx="60" cy="48" fill={accent} r="2.5" />

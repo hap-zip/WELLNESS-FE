@@ -3,8 +3,8 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollVie
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import NavigationBackButton from '@/components/navigation-back-button';
 import { AppIcon, type AppIconName } from '@/components/app-icon';
+import { PageHeader } from '@/components/ui/page-header';
 import type { RoutineEffect } from '@/domain/wellness';
 import { wellnessApi } from '@/services/wellness-api';
 import { colors } from '@/theme/tokens';
@@ -51,22 +51,22 @@ export default function RoutineFeedbackScreen() {
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-        <View style={styles.topBar}><NavigationBackButton accessibilityLabel="루틴 완료로 돌아가기" fallbackHref="/(tabs)/home" /><Text style={styles.topTitle}>효과 피드백</Text><View style={styles.spacer} /></View>
-        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]} keyboardShouldPersistTaps="handled">
-          <Text style={styles.eyebrow}>루틴 후 체크</Text>
-          <Text style={styles.title}>지금 몸은{`\n`}어떻게 느껴지나요?</Text>
-          <Text style={styles.description}>이 답변은 다음 루틴의 강도와 구성을 조정하는 데 사용돼요.</Text>
-          <Text style={styles.sectionTitle}>루틴 전과 비교하면</Text>
-          <View style={styles.effectRow}>{EFFECTS.map((item) => { const selected = effect === item.id; return <Pressable accessibilityRole="radio" accessibilityState={{ checked: selected }} key={item.id} onPress={() => selectEffect(item.id)} style={[styles.effectCard, selected && styles.selected]}><AppIcon color={selected ? colors.white : colors.textSecondary} name={item.icon} size={23}/><Text style={[styles.effectText, selected && styles.selectedText]}>{item.label}</Text></Pressable>; })}</View>
+        <PageHeader backLabel="루틴 완료로 돌아가기" fallbackHref="/(tabs)/home" title="루틴 후 느낌" />
+        <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
+          <Text style={styles.eyebrow}>방금 전과 비교해요</Text>
+          <Text accessibilityRole="header" style={styles.title}>지금 몸은 어떻게 느껴지나요?</Text>
+          <Text style={styles.description}>남긴 느낌은 다음 루틴의 강도와 동작을 조정할 때 참고해요.</Text>
+          <Text accessibilityRole="header" style={styles.sectionTitle}>루틴 전보다</Text>
+          <View accessibilityRole="radiogroup" style={styles.effectRow}>{EFFECTS.map((item) => { const selected = effect === item.id; return <Pressable accessibilityRole="radio" accessibilityState={{ checked: selected }} key={item.id} onPress={() => selectEffect(item.id)} style={({ pressed }) => [styles.effectCard, selected && styles.selected, pressed && styles.pressed]}><AppIcon color={selected ? colors.recovery : colors.textSecondary} name={item.icon} size={22}/><Text style={[styles.effectText, selected && styles.selectedText]}>{item.label}</Text></Pressable>; })}</View>
           {effect && effect !== 'unknown' ? <>
-            <Text style={styles.sectionTitle}>지금 남아 있는 불편 강도</Text>
-            <View accessibilityRole="radiogroup" style={styles.levelRow}>{[1, 2, 3, 4, 5].map((value) => <Pressable accessibilityLabel={`불편 강도 ${value}단계`} accessibilityRole="radio" accessibilityState={{ checked: level === value }} key={value} onPress={() => setLevel(value)} style={[styles.level, level === value && styles.selectedLevel]}><Text style={[styles.levelText, level === value && styles.selectedText]}>{value}</Text></Pressable>)}</View>
+            <Text accessibilityRole="header" style={styles.sectionTitle}>지금 남아 있는 불편 정도</Text>
+            <View accessibilityRole="radiogroup" style={styles.levelRow}>{[1, 2, 3, 4, 5].map((value) => <Pressable accessibilityLabel={`불편 강도 ${value}단계`} accessibilityRole="radio" accessibilityState={{ checked: level === value }} key={value} onPress={() => setLevel(value)} style={({ pressed }) => [styles.level, level === value && styles.selectedLevel, pressed && styles.pressed]}><Text style={[styles.levelText, level === value && styles.selectedLevelText]}>{value}</Text></Pressable>)}</View>
             <View style={styles.scaleLabels}><Text style={styles.scaleText}>거의 없음</Text><Text style={styles.scaleText}>매우 불편</Text></View>
           </> : null}
-          {effect ? <><Text style={styles.sectionTitle}>메모 <Text style={styles.optional}>(선택)</Text></Text><TextInput accessibilityLabel="루틴 효과 메모" maxLength={200} multiline onChangeText={setMemo} placeholder="어떤 점이 달라졌는지 남겨보세요." placeholderTextColor="#6E776F" style={styles.input} value={memo} /></> : null}
+          {effect ? <><Text accessibilityRole="header" style={styles.sectionTitle}>달라진 점 <Text style={styles.optional}>(선택)</Text></Text><TextInput accessibilityLabel="루틴 후 달라진 점" maxLength={200} multiline onChangeText={setMemo} placeholder="편해졌거나 불편했던 점을 남겨보세요." placeholderTextColor={colors.textMuted} style={styles.input} value={memo} /><Text accessibilityLabel={`${memo.length}자 입력됨, 최대 200자`} style={styles.memoCount}>{memo.length}/200</Text></> : null}
           {error ? <Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
         </ScrollView>
-        <View style={[styles.action, { paddingBottom: Math.max(insets.bottom, 12) }]}><Pressable accessibilityRole="button" accessibilityState={{ disabled: !canSubmit, busy: saving }} disabled={!canSubmit || saving} onPress={() => void submit()} style={[styles.button, (!canSubmit || saving) && styles.disabled]}>{saving ? <ActivityIndicator color={colors.white} /> : <Text style={styles.buttonText}>피드백 저장하기</Text>}</Pressable></View>
+        <View style={[styles.action, { paddingBottom: Math.max(insets.bottom, 12) }]}><Pressable accessibilityRole="button" accessibilityState={{ disabled: !canSubmit, busy: saving }} disabled={!canSubmit || saving} onPress={() => void submit()} style={({ pressed }) => [styles.button, (!canSubmit || saving) && styles.disabled, pressed && styles.pressed]}>{saving ? <ActivityIndicator color={colors.white} /> : <Text style={styles.buttonText}>느낌 저장하기</Text>}</Pressable></View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

@@ -7,6 +7,8 @@ import { useDailyCheck } from '@/context/daily-check-context';
 
 import { styles } from './discomfort-check.styles';
 import { BODY_ZONE_LABELS, SelectableBodyMap } from './SelectableBodyMap';
+import { CheckIntro, CheckProgress } from '@/components/ui/check-screen-header';
+import { toMonthDayLabel } from '@/utils/date';
 
 const FEELINGS = ['뻐근해요', '쑤셔요', '저려요', '당겨요', '화끈거려요'] as const;
 const INTENSITY_HELP = ['거의 느껴지지 않아요', '조금 신경 쓰여요', '움직일 때 불편해요', '일상에 영향을 줘요', '활동하기 매우 어려워요'];
@@ -14,6 +16,7 @@ const INTENSITY_HELP = ['거의 느껴지지 않아요', '조금 신경 쓰여�
 export default function DiscomfortCheckScreen() {
   const router = useRouter();
   const { completeStep, draft, skipStep, updateDraft } = useDailyCheck();
+  const dateLabel = toMonthDayLabel(draft.targetDate);
   const toggleBodyPart = (zone: { id: string }) => {
     if (draft.bodyParts.includes(zone.id)) {
       const nextIntensities = { ...draft.bodyAreaIntensities };
@@ -30,12 +33,10 @@ export default function DiscomfortCheckScreen() {
   const canContinue = draft.bodyParts.length > 0 && draft.bodyParts.every((part) => draft.bodyAreaIntensities[part] !== undefined);
 
   return <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
-    <View style={styles.progressTrack}><View style={styles.progressValue} /></View>
+    <CheckProgress step={4} />
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.topBar}><View style={styles.backButton}><NavigationBackButton accessibilityLabel="수면 체크로 돌아가기" fallbackHref="/check/sleep" /></View><Pressable accessibilityRole="button" onPress={() => { skipStep('discomfort'); router.push('/check/activity-skin'); }} style={({ pressed }) => [styles.skipButton, pressed && styles.pressed]}><Text style={styles.skipText}>불편한 곳 없음</Text></Pressable></View>
-      <Text style={styles.step}>오늘의 체크 4 / 5</Text>
-      <Text style={styles.title}>불편한 곳을{`\n`}표시해 주세요</Text>
-      <Text style={styles.description}>앞·뒤와 좌우를 구분해 여러 부위를 선택할 수 있어요.</Text>
+      <CheckIntro description="앞·뒤와 좌우를 구분해 여러 부위를 선택할 수 있어요." inset={false} step={4} title={`${dateLabel} 불편한 곳을\n표시해 주세요`} />
       <Text style={styles.sectionTitle}>불편한 부위</Text>
       <SelectableBodyMap onChangeView={(bodyView) => updateDraft({ bodyView })} onToggle={toggleBodyPart} selected={draft.bodyParts} view={draft.bodyView} />
 

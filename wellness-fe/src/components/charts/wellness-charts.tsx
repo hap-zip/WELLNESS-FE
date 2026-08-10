@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import Svg, { Circle, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
 import Animated, { Easing, useAnimatedProps, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
+import { colors } from '@/theme/tokens';
 
 type ChartPoint = { x: number; y: number; value: number };
 type ChartBar = ChartPoint & { width: number; height: number };
@@ -44,7 +45,7 @@ export function mkBars(values: readonly number[], width: number, height: number,
   });
 }
 
-export function WellnessLineChart({ labels, values, color = '#285C4D', secondaryValues, secondaryColor = '#EF7442' }: { labels: readonly string[]; values: readonly number[]; color?: string; secondaryValues?: readonly number[]; secondaryColor?: string }) {
+export function WellnessLineChart({ labels, values, color = colors.primary, secondaryValues, secondaryColor = colors.danger }: { labels: readonly string[]; values: readonly number[]; color?: string; secondaryValues?: readonly number[]; secondaryColor?: string }) {
   const width = 300;
   const plotHeight = 126;
   const totalHeight = 154;
@@ -54,13 +55,13 @@ export function WellnessLineChart({ labels, values, color = '#285C4D', secondary
 
   return (
     <Svg accessibilityLabel="날짜별 추이 선 차트" height={totalHeight} viewBox={`0 0 ${width} ${totalHeight}`} width="100%">
-      {[0, 1, 2].map((row) => <Line key={row} stroke="#E9ECF1" strokeDasharray="3 5" x1="18" x2="282" y1={18 + row * 45} y2={18 + row * 45} />)}
+      {[0, 1, 2].map((row) => <Line key={row} stroke={colors.divider} strokeDasharray="3 5" x1="18" x2="282" y1={18 + row * 45} y2={18 + row * 45} />)}
       {secondary?.path ? <DrawingPath color={secondaryColor} delay={90} key={`secondary-${animationKey}`} line={secondary} strokeWidth={2.5} /> : null}
       {primary.path ? <DrawingPath color={color} key={`primary-${animationKey}`} line={primary} strokeWidth={3} /> : null}
       {primary.points.map((point, index) => <AppearingPoint color={color} delay={420 + index * 55} key={`${animationKey}-${index}`} point={point} />)}
       {labels.map((label, index) => {
         const x = 18 + (labels.length === 1 ? 132 : 264 * index / Math.max(labels.length - 1, 1));
-        return <SvgText fill="#767F78" fontSize="9" key={`${label}-${index}`} textAnchor="middle" x={x} y="148">{label}</SvgText>;
+        return <SvgText fill={colors.textMuted} fontSize="9" key={`${label}-${index}`} textAnchor="middle" x={x} y="148">{label}</SvgText>;
       })}
     </Svg>
   );
@@ -85,19 +86,19 @@ function AppearingPoint({ color, delay, point }: { color: string; delay: number;
     if (!reduceMotion) progress.value = withDelay(delay, withTiming(1, { duration: 260, easing: EASE_OUT }));
   }, [delay, progress, reduceMotion]);
   const animatedProps = useAnimatedProps(() => ({ opacity: progress.value, r: 3.5 * progress.value }));
-  return <AnimatedCircle animatedProps={animatedProps} cx={point.x} cy={point.y} fill="#FFFFFF" stroke={color} strokeWidth={2} />;
+  return <AnimatedCircle animatedProps={animatedProps} cx={point.x} cy={point.y} fill={colors.white} stroke={color} strokeWidth={2} />;
 }
 
-export function WellnessBarsChart({ labels, values, color = '#7EA6F8' }: { labels: readonly string[]; values: readonly number[]; color?: string }) {
+export function WellnessBarsChart({ labels, values, color = colors.data }: { labels: readonly string[]; values: readonly number[]; color?: string }) {
   const width = 300;
   const plotHeight = 126;
   const bars = mkBars(values, width, plotHeight, 18, 9);
   const animationKey = values.join(',');
   return (
     <Svg accessibilityLabel="날짜별 막대 차트" height={154} viewBox="0 0 300 154" width="100%">
-      {[0, 1, 2].map((row) => <Line key={row} stroke="#E9ECF1" strokeDasharray="3 5" x1="18" x2="282" y1={18 + row * 45} y2={18 + row * 45} />)}
+      {[0, 1, 2].map((row) => <Line key={row} stroke={colors.divider} strokeDasharray="3 5" x1="18" x2="282" y1={18 + row * 45} y2={18 + row * 45} />)}
       {bars.map((bar, index) => <RisingBar bar={bar} color={color} delay={index * 65} key={`${animationKey}-${index}`} />)}
-      {bars.map((bar, index) => <SvgText fill="#767F78" fontSize="9" key={`label-${index}`} textAnchor="middle" x={bar.x + bar.width / 2} y="148">{labels[index] ?? ''}</SvgText>)}
+      {bars.map((bar, index) => <SvgText fill={colors.textMuted} fontSize="9" key={`label-${index}`} textAnchor="middle" x={bar.x + bar.width / 2} y="148">{labels[index] ?? ''}</SvgText>)}
     </Svg>
   );
 }

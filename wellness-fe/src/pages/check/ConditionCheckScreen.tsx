@@ -2,8 +2,9 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import NavigationBackButton from '@/components/navigation-back-button';
 import { useDailyCheck } from '@/context/daily-check-context';
+import { CheckScreenHeader } from '@/components/ui/check-screen-header';
+import { toMonthDayLabel } from '@/utils/date';
 
 import { styles } from './condition-check.styles';
 
@@ -20,6 +21,7 @@ const RECENT_TAGS = ['피곤해요', '무기력해요', '상쾌해요'] as const
 export default function ConditionCheckScreen() {
   const router = useRouter();
   const { completeStep, draft, skipStep, updateDraft } = useDailyCheck();
+  const dateLabel = toMonthDayLabel(draft.targetDate);
 
   const moveToNextStep = () => router.push('/check/sleep');
   const toggleTag = (tag: string) => updateDraft({
@@ -30,26 +32,15 @@ export default function ConditionCheckScreen() {
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
-      <View style={styles.progressTrack}>
-        <View style={styles.progressValue} />
-      </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.topBar}>
-          <View style={styles.backButton}><NavigationBackButton accessibilityLabel="자동 수집 확인으로 돌아가기" fallbackHref="/check/auto" /></View>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => { skipStep('condition'); moveToNextStep(); }}
-            style={({ pressed }) => [styles.skipButton, pressed && styles.pressed]}>
-            <Text style={styles.skipText}>건너뛰기</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.header}>
-          <Text style={styles.step}>오늘의 체크 2 / 5</Text>
-          <Text style={styles.title}>오늘 컨디션은{`\n`}어떠세요?</Text>
-          <Text style={styles.description}>지금 느껴지는 상태와 가장 가까운 항목을 골라주세요.</Text>
-        </View>
+        <CheckScreenHeader
+          backLabel="자동 수집 확인으로 돌아가기"
+          description="지금 느껴지는 상태와 가장 가까운 항목을 골라주세요."
+          fallbackHref="/check/auto"
+          onSkip={() => { skipStep('condition'); moveToNextStep(); }}
+          step={2}
+          title={`${dateLabel} 컨디션은\n어떠셨나요?`}
+        />
 
         <View accessibilityRole="radiogroup" style={styles.conditionList}>
           {CONDITIONS.map((condition) => {
@@ -67,12 +58,10 @@ export default function ConditionCheckScreen() {
                   selected && styles.selectedConditionCard,
                   pressed && styles.pressed,
                 ]}>
-                <View style={[styles.radio, selected && styles.selectedRadio]}>
-                  {selected ? <View style={styles.radioDot} /> : null}
-                </View>
+                <View style={[styles.radio, selected && styles.selectedRadio]}>{selected ? <View style={styles.radioDot}/> : null}</View>
                 <View style={styles.conditionCopy}>
-                  <Text style={styles.conditionTitle}>{condition.title}</Text>
-                  <Text style={styles.conditionDescription}>{condition.description}</Text>
+                  <Text style={[styles.conditionTitle, selected && styles.selectedConditionTitle]}>{condition.title}</Text>
+                  <Text style={[styles.conditionDescription, selected && styles.selectedConditionDescription]}>{condition.description}</Text>
                 </View>
               </Pressable>
             );
@@ -89,7 +78,7 @@ export default function ConditionCheckScreen() {
                 key={tag}
                 onPress={() => toggleTag(tag)}
                 style={({ pressed }) => [styles.tag, draft.conditionTags.includes(tag) && styles.selectedTag, pressed && styles.pressed]}>
-                <Text style={[styles.tagText, draft.conditionTags.includes(tag) && styles.selectedTagText]}># {tag}</Text>
+                <Text style={[styles.tagText, draft.conditionTags.includes(tag) && styles.selectedTagText]}>{tag}</Text>
               </Pressable>
             ))}
           </View>

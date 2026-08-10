@@ -1,8 +1,11 @@
 import { createContext, type PropsWithChildren, useCallback, useContext, useMemo, useState } from 'react';
+import type { DailyCheckSubmission } from '@/domain/wellness';
 
 export type CheckStep = 'auto' | 'condition' | 'discomfort' | 'sleep' | 'activitySkin';
 
 type DailyCheckDraft = {
+  targetDate: string | null;
+  mode: 'create' | 'edit';
   autoRecords: { sleepDuration: string; bedtime: string; steps: string };
   autoSource: 'apple-health' | 'health-connect' | 'manual';
   autoConfirmed: boolean;
@@ -24,6 +27,8 @@ type DailyCheckDraft = {
 };
 
 const initialDraft: DailyCheckDraft = {
+  targetDate: null,
+  mode: 'create',
   autoRecords: { sleepDuration: '', bedtime: '', steps: '' },
   autoSource: 'manual',
   autoConfirmed: false,
@@ -49,6 +54,7 @@ type DailyCheckContextValue = {
   completedCount: number;
   draft: DailyCheckDraft;
   resetDraft: () => void;
+  startDraft: (date: string, mode: 'create' | 'edit', submission?: DailyCheckSubmission | null) => void;
   skipStep: (step: CheckStep) => void;
   updateDraft: (changes: Partial<DailyCheckDraft>) => void;
 };
@@ -72,6 +78,34 @@ export function DailyCheckProvider({ children }: PropsWithChildren) {
     };
   }), []);
   const resetDraft = useCallback(() => setDraft(initialDraft), []);
+  const startDraft = useCallback((date: string, mode: 'create' | 'edit', submission?: DailyCheckSubmission | null) => {
+    if (!submission) {
+      setDraft({ ...initialDraft, targetDate: date, mode });
+      return;
+    }
+    setDraft({
+      targetDate: date,
+      mode,
+      autoRecords: { sleepDuration: submission.autoRecords.sleepDuration, bedtime: submission.autoRecords.bedtime, steps: submission.autoRecords.steps },
+      autoSource: submission.autoRecords.source,
+      autoConfirmed: true,
+      condition: submission.condition,
+      conditionTags: [...submission.conditionTags],
+      bodyParts: [...submission.discomfort.bodyParts],
+      intensity: submission.discomfort.intensity,
+      bodyView: submission.discomfort.areas[0]?.view ?? 'front',
+      bodyAreaIntensities: Object.fromEntries(submission.discomfort.areas.map((area) => [area.id, area.intensity])),
+      discomfortFeelings: [...submission.discomfort.feelings],
+      sleepSatisfaction: submission.sleep.satisfaction,
+      sleepPosture: submission.sleep.posture,
+      pillow: submission.sleep.pillow,
+      activity: submission.activitySkin.activity,
+      skinStates: [...submission.activitySkin.skinStates],
+      skinPhotoUri: submission.activitySkin.photoUri,
+      memo: submission.activitySkin.memo,
+      skippedSteps: submission.skippedSteps.filter((step): step is CheckStep => ['auto', 'condition', 'discomfort', 'sleep', 'activitySkin'].includes(step)),
+    });
+  }, []);
   const completedCount = [
     draft.autoConfirmed,
     draft.condition !== null,
@@ -85,9 +119,10 @@ export function DailyCheckProvider({ children }: PropsWithChildren) {
     completedCount,
     draft,
     resetDraft,
+    startDraft,
     skipStep,
     updateDraft,
-  }), [completeStep, completedCount, draft, resetDraft, skipStep, updateDraft]);
+  }), [completeStep, completedCount, draft, resetDraft, skipStep, startDraft, updateDraft]);
 
   return <DailyCheckContext.Provider value={value}>{children}</DailyCheckContext.Provider>;
 }

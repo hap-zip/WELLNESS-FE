@@ -1,3 +1,33 @@
 import { StyleSheet } from 'react-native';
-import { colors, layout, radius, spacing, typography } from '@/theme/tokens';
-export const styles=StyleSheet.create({screen:{flex:1,backgroundColor:colors.canvas},flex:{flex:1},topBar:{height:56,flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:spacing.sm,borderBottomWidth:1,borderBottomColor:colors.divider,backgroundColor:colors.surface},topTitle:{color:colors.text,...typography.label},spacer:{width:layout.minTouch},content:{width:'100%',maxWidth:layout.maxContentWidth,alignSelf:'center',padding:layout.horizontalPadding},eyebrow:{color:colors.primary,...typography.caption,fontWeight:'700'},title:{marginTop:spacing.xs,color:colors.text,...typography.display},description:{marginTop:spacing.xs,color:colors.textSecondary,...typography.body},sectionTitle:{marginTop:spacing.xxl,marginBottom:spacing.sm,color:colors.text,...typography.sectionTitle},effectRow:{borderBottomWidth:1,borderBottomColor:colors.divider},effectCard:{minHeight:64,alignItems:'center',justifyContent:'center',borderTopWidth:1,borderTopColor:colors.divider,backgroundColor:colors.surface},selected:{borderTopColor:colors.primary,backgroundColor:colors.primarySoft},effectIcon:{color:colors.textSecondary,fontSize:20},effectText:{marginTop:spacing.xxs,color:colors.textSecondary,fontSize:13,fontWeight:'700'},selectedText:{color:colors.primary},levelRow:{flexDirection:'row',justifyContent:'space-between'},level:{width:52,height:52,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:colors.border,borderRadius:radius.md,backgroundColor:colors.surface},selectedLevel:{borderColor:colors.primary,backgroundColor:colors.primary},levelText:{color:colors.textSecondary,fontSize:16,fontWeight:'700'},scaleLabels:{flexDirection:'row',justifyContent:'space-between',marginTop:spacing.xs},scaleText:{color:colors.textMuted,...typography.caption},optional:{color:colors.textMuted,fontWeight:'500'},input:{minHeight:112,padding:spacing.md,borderWidth:1,borderColor:colors.border,borderRadius:radius.md,backgroundColor:colors.surface,color:colors.text,fontSize:15,lineHeight:22,textAlignVertical:'top'},error:{marginTop:spacing.sm,color:colors.danger,fontSize:13},action:{position:'absolute',right:0,bottom:0,left:0,paddingHorizontal:layout.compactHorizontalPadding,paddingTop:spacing.sm,borderTopWidth:1,borderTopColor:colors.divider,backgroundColor:colors.surface},button:{minHeight:56,alignItems:'center',justifyContent:'center',borderRadius:radius.md,backgroundColor:colors.primary},disabled:{opacity:.38},buttonText:{color:colors.white,fontSize:15,fontWeight:'700'}});
+import { colors, layout, motion, radius, spacing, typography } from '@/theme/tokens';
+
+export const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.canvas },
+  flex: { flex: 1 },
+  content: { width: '100%', maxWidth: layout.maxContentWidth, alignSelf: 'center', padding: layout.horizontalPadding },
+  eyebrow: { color: colors.recovery, ...typography.caption, fontWeight:'700' },
+  title: { maxWidth: 440, marginTop: spacing.xs, color: colors.text, ...typography.display },
+  description: { maxWidth: 440, marginTop: spacing.xs, color: colors.textSecondary, ...typography.body },
+  sectionTitle: { marginTop: spacing.xxl, marginBottom: spacing.sm, color: colors.text, ...typography.sectionTitle },
+  effectRow: { overflow: 'hidden', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
+  effectCard: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider },
+  selected: { backgroundColor: colors.recoverySoft },
+  effectText: { flex: 1, flexShrink: 1, color: colors.textSecondary, ...typography.label },
+  selectedText: { color: colors.recovery },
+  levelRow: { flexDirection: 'row',overflow:'hidden',justifyContent: 'space-between',borderWidth:1,borderColor:colors.border,borderRadius:radius.md },
+  level: { flex: 1, minHeight: 52, alignItems: 'center', justifyContent: 'center',borderRightWidth:1,borderRightColor:colors.divider },
+  selectedLevel: { borderColor: colors.recovery, backgroundColor: colors.recovery },
+  selectedLevelText: { color: colors.white },
+  levelText: { color: colors.textSecondary, fontSize: 16, fontWeight:'700' },
+  scaleLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.xs },
+  scaleText: { color: colors.textMuted, ...typography.caption },
+  optional: { color: colors.textMuted, fontWeight: '500' },
+  input: { minHeight: 112, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface, color: colors.text, ...typography.body, textAlignVertical: 'top' },
+  memoCount: { marginTop: spacing.xxs, color: colors.textMuted, textAlign: 'right', ...typography.caption },
+  error: { marginTop: spacing.sm, color: colors.danger, ...typography.caption },
+  action: { position: 'absolute', right: 0, bottom: 0, left: 0, paddingHorizontal: layout.horizontalPadding, paddingTop: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider, backgroundColor: colors.surface },
+  button: { minHeight: layout.ctaHeight, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.primary },
+  disabled: { opacity: 0.38 },
+  buttonText: { color: colors.white, fontSize: 16, fontWeight:'700' },
+  pressed: { opacity: motion.pressOpacity },
+});

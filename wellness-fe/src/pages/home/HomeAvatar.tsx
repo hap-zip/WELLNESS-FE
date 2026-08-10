@@ -41,9 +41,9 @@ export default function HomeAvatar({ highlights, onMarkerPress }: HomeAvatarProp
   const activeMuscles = new Set<Slug>(highlights.map((highlight) => highlight.muscle));
   const bodyData: ExtendedBodyPart[] = highlights.map((highlight) => ({
     slug: highlight.muscle,
-    color: colors.danger,
+    color: colors.body,
     intensity: highlight.intensity,
-    styles: { fill: colors.danger, stroke: colors.surface, strokeWidth: 2 },
+    styles: { fill: colors.body, stroke: colors.surface, strokeWidth: 2 },
   }));
   const disabledParts = ALL_MUSCLES.filter((muscle) => !activeMuscles.has(muscle));
   const hasActiveTrapezius = activeMuscles.has('trapezius');

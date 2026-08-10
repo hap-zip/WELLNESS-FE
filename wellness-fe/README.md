@@ -4,6 +4,10 @@ Expo SDK 54와 Expo Router 기반의 React Native 웰니스 기록 앱입니다.
 
 ## 개발 문서
 
+- [V3 전면 재설계 기준](./REDESIGN_V3.md)
+- [V3 디자인 시스템](./DESIGN_SYSTEM.md)
+- [문서 우선순위와 역할](./DOCUMENT_AUTHORITY.md)
+- [WWIT 전체 UI 벤치마크](./WWIT_UI_BENCHMARK.md)
 - [제품 완성 마스터 로드맵](./MASTER_ROADMAP.md)
 - [다음 개발 실행 계획](./NEXT_STEPS.md)
 - [서비스 전체 API 목록](./API_SPEC.md)

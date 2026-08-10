@@ -3,7 +3,8 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import NavigationBackButton from '@/components/navigation-back-button';
+import { PageHeader } from '@/components/ui/page-header';
+import { AppIcon } from '@/components/app-icon';
 import type { RecordDetail } from '@/domain/wellness';
 import { useAsyncData } from '@/hooks/use-async-data';
 import { wellnessApi } from '@/services/wellness-api';
@@ -26,7 +27,7 @@ export default function RecordDetailScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
-      <View style={styles.topBar}><NavigationBackButton accessibilityLabel="기록 캘린더로 돌아가기" fallbackHref="/(tabs)/records" /><Text style={styles.topTitle}>날짜별 기록</Text><View style={styles.topSpacer} /></View>
+      <PageHeader backLabel="기록 캘린더로 돌아가기" fallbackHref="/(tabs)/records" title="날짜별 기록" />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 36 }]} showsVerticalScrollIndicator={false}>
         <Text style={styles.date}>{year}년 {month}월 {day}일</Text>
         <Text style={styles.condition}>{record.condition}</Text>
@@ -39,6 +40,7 @@ export default function RecordDetailScreen() {
         {record.completedRoutine ? <Section title="완료한 루틴"><InfoRow label={record.completedRoutine.title} value={record.completedRoutine.completedAt} /></Section> : null}
         {record.nextDayFeedback ? <Section title="다음 날 효과 확인"><InfoRow label="변화" value={effectLabel(record.nextDayFeedback.effect)} /><InfoRow label="남은 불편" value={`${record.nextDayFeedback.discomfortLevel}단계`} /></Section> : null}
         {record.memo ? <View style={styles.memoCard}><Text style={styles.sectionTitle}>메모</Text><Text style={styles.memoText}>{record.memo}</Text></View> : null}
+        <Pressable accessibilityRole="button" onPress={() => router.push('/reports/setup')} style={({ pressed }) => [styles.reportEntry, pressed && styles.pressed]}><View style={styles.reportCopy}><Text style={styles.reportTitle}>이 기록을 요약에 포함하기</Text><Text style={styles.reportDescription}>선택한 기간의 변화를 전문가에게 보여줄 수 있게 정리해요.</Text></View><AppIcon color={colors.primary} name="chevron-right" size={19}/></Pressable>
       </ScrollView>
     </SafeAreaView>
   );

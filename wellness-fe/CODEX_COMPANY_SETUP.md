@@ -91,8 +91,9 @@ codex --ask-for-approval never "현재 저장소에서 읽은 지침과 필수 �
 
 응답에 다음 내용이 포함되어야 합니다.
 
-- Expo SDK 54 버전 문서 확인
+- Expo SDK 57 버전 문서 확인과 현재 SDK 54 호환성 분리 검증
 - `WORK_HANDOFF.md` 우선 확인
+- `REDESIGN_V3.md`를 유일한 UI 기준으로 사용
 - 네이티브 컨트롤, Safe Area, 접근성, API 교체형 구조
 - TypeScript, diff, iOS export 검증
 

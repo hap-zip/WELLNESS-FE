@@ -1,6 +1,8 @@
 # 몸기록 페이지 명세
 
-> 기능의 최종 기준은 `웰니스 앱 최종 기능 및 UI 설계 명세.pdf`와 `FINAL_FUNCTION_AUDIT.md`이다. 이 문서의 기존 화면 ID와 경로는 현재 코드 추적용이며, 최종 PDF의 5탭 구조와 충돌하는 항목은 후속 개편 대상이다.
+> 2026-08-06: 전 출시 라우트의 코드·상태·탐색 경로 재점검을 완료했다. 실제 기기 크기, 화면 읽기, 최대 글자 크기와 최종 PDF 캡처 비교 결과는 `RELEASE_QA.md`에서 관리한다.
+
+> 기능의 최종 기준은 `웰니스 앱 최종 기능 및 UI 설계 명세.pdf`와 `FINAL_FUNCTION_AUDIT.md`다. 화면 ID와 경로는 코드 추적용이며 시각 구조의 기준이 아니다. UI는 모든 페이지에서 `REDESIGN_V3.md`를 따른다.
 
 화면 ID는 QA·기획 문서와 연결하기 위한 식별자이고, 실제 개발에서는 페이지의 역할이 드러나는 이름을 사용한다.
 
@@ -46,8 +48,8 @@ src/pages/<domain>/<page-name>.styles.ts    # page-only StyleSheet
 | HOME-01 | 오늘 홈 | `/(tabs)/home` | `HomeScreen` | `feat/home` |
 | CHK-00 | 수면·걸음 자동수집 확인 | `/check/auto` | `AutoCheckScreen` | `feat/check-auto` |
 | CHK-00B | 오늘 컨디션 | `/check/condition` | `ConditionCheckScreen` | `feat/check-cond` |
-| CHK-01A | 불편 부위·강도 | `/check/discomfort` | `DiscomfortCheckScreen` | `feat/check-discomfort` |
 | CHK-01B | 수면 자세·만족도 | `/check/sleep` | `SleepCheckScreen` | `feat/check-sleep` |
+| CHK-01A | 불편 부위·강도 | `/check/discomfort` | `DiscomfortCheckScreen` | `feat/check-discomfort` |
 | CHK-01C | 활동·피부 | `/check/activity-skin` | `ActivitySkinCheckScreen` | `feat/check-skin` |
 | CHK-02 | 기록 완료 | `/check/complete` | `CheckCompleteScreen` | `feat/check-done` |
 | LOG-01 | 기록 캘린더 | `/(tabs)/records` | `RecordsCalendarScreen` | `feat/records` |
@@ -57,15 +59,15 @@ src/pages/<domain>/<page-name>.styles.ts    # page-only StyleSheet
 
 | ID | 페이지 이름 | Expo Router 경로 | 화면 파일 | 브랜치 |
 |---|---|---|---|---|
-| CON-01 | 발견 홈 | `/(tabs)/discover` | `DiscoverScreen` | `feat/discover` |
+| CON-01 | 커넥션 뷰 | `/(tabs)/discover` | `DiscoverScreen` | `feat/discover` |
 | CON-02 | 패턴 상세 | `/discover/pattern/[patternId]` | `PatternDetailScreen` | `feat/pattern` |
 
 ### 루틴·피드백
 
 | ID | 페이지 이름 | Expo Router 경로 | 화면 파일 | 브랜치 |
 |---|---|---|---|---|
-| RTN-01 | 오늘의 루틴 | `/routine` | `RoutineIntroScreen` | `feat/routine` |
-| RTN-02 | 루틴 실행 | `/routine/run` | `RoutineRunScreen` | `feat/routine-run` |
+| RTN-01 | 오늘의 루틴 | `/routine` | `TodayRoutineScreen` | `feat/routine` |
+| RTN-02 | 루틴 실행 | `/routine/session` | `RoutineSessionScreen` | `feat/routine-run` |
 | RTN-03 | 루틴 완료 | `/routine/complete` | `RoutineCompleteScreen` | `feat/routine-done` |
 | FDB-01 | 루틴 효과 피드백 | `/routine/feedback` | `RoutineFeedbackScreen` | `feat/feedback` |
 
@@ -82,11 +84,13 @@ src/pages/<domain>/<page-name>.styles.ts    # page-only StyleSheet
 | ID | 페이지 이름 | Expo Router 경로 | 화면 파일 | 브랜치 |
 |---|---|---|---|---|
 | CHAT-01 | 웰니스 챗 | `/(tabs)/chat` | `AssistantScreen` | `feat/assistant` |
-| MYP-01 | 나 | `/(tabs)/me` | `MeScreen` | `feat/me` |
+| MYP-01 | 마이 | `/(tabs)/me` | `MeScreen` | `feat/me` |
 | SET-01 | 건강 데이터 설정 | `/settings/health` | `HealthSettingsScreen` | `feat/settings-health` |
 | SET-02 | 알림 설정 | `/settings/notifications` | `NotificationSettingsScreen` | `feat/notifications` |
 | SET-03 | 동의·데이터 관리 | `/settings/data` | `DataSettingsScreen` | `feat/settings-data` |
-| EMP-01 | 빈 상태·예외 안내 | `/empty-states` | `EmptyStatesScreen` | `feat/empty` |
+| SET-04 | 계정 관리 | `/settings/account` | `AccountSettingsScreen` | `feat/settings-account` |
+| SET-05 | 서비스 정보·문의 | `/settings/info` | `ServiceInfoScreen` | `feat/settings-info` |
+| EMP-01 | 빈 상태·예외 안내(개발 확인용) | `/empty-states` | `EmptyStatesScreen` | `feat/empty` |
 
 ## 페이지 파일 예시
 
@@ -111,12 +115,12 @@ export default function LoginRoute() {
 ## 페이지 구현 체크리스트
 
 - [ ] 페이지 이름과 역할 확정
-- [ ] HTML의 해당 페이지 섹션 확인
+- [ ] 기능 명세와 V3 화면 역할 확인
 - [ ] 라우트 파일 생성
 - [ ] 페이지 화면 파일 생성
 - [ ] 페이지 전용 스타일 파일 생성
 - [ ] 필요한 공통 컴포넌트만 분리
-- [ ] HTML과 동일한 텍스트·순서·색상·간격 구현
+- [ ] 기존 JSX를 참고하지 않고 V3 시선 흐름과 컴포지션 구현
 - [ ] 페이지의 이동·뒤로가기·CTA 동작 구현
 - [ ] 접근성 라벨 및 44px 터치 영역 확인
 - [ ] Expo Go에서 실제 렌더링 확인

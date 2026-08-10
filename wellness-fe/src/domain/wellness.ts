@@ -12,7 +12,6 @@ export type BodyMuscleSlug = 'abs' | 'biceps' | 'calves' | 'chest' | 'deltoids' 
 export type BodyMapHighlight = {
   part: BodyMapPart;
   muscle: BodyMuscleSlug;
-  color: string;
   intensity: 1 | 2 | 3;
 };
 
@@ -49,6 +48,7 @@ export type BaselineProfile = {
 };
 
 export type DailyCheckSubmission = {
+  date: string;
   autoRecords: AutoHealthRecord;
   condition: string | null;
   conditionTags: string[];
@@ -104,7 +104,7 @@ export type DiscoverPattern = {
 };
 
 export type ConnectionMetricId = 'sleep' | 'discomfort' | 'posture' | 'steps' | 'skin' | 'routine';
-export type ConnectionMetric = { id: ConnectionMetricId; label: string; shortLabel: string; color: string; unit: string; values: number[] };
+export type ConnectionMetric = { id: ConnectionMetricId; label: string; shortLabel: string; unit: string; values: number[] };
 export type ConnectionDayDetail = { date: string; dateLabel: string; sleep: string; posture: string; discomfort: string; steps: string; skin: string; routine: string };
 export type PersonalBaseline = { ready: boolean; recordedDays: number; targetDays: number; averageSleep: string; averageSteps: string; averageBedtime: string; discomfortFrequency: string; comparison: string };
 
@@ -118,6 +118,7 @@ export type DiscoverSummary = {
   activityValues: number[];
   labels: string[];
   patterns: DiscoverPattern[];
+  analysisReadiness: { ready: boolean; recordedDays: number; requiredDays: number };
   baseline: PersonalBaseline;
   metrics: ConnectionMetric[];
   dayDetails: ConnectionDayDetail[];

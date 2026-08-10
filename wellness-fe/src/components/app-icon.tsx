@@ -1,10 +1,11 @@
 import Svg, { Circle, Line, Path, Polyline } from 'react-native-svg';
+import { colors } from '@/theme/tokens';
 
-export type AppIconName = 'alert' | 'bell' | 'calendar' | 'camera' | 'check' | 'chevron-left' | 'chevron-right' | 'close' | 'connection' | 'copy' | 'document' | 'download' | 'heart' | 'help' | 'home' | 'image' | 'info' | 'message' | 'minus' | 'pause' | 'person' | 'play' | 'plus' | 'share' | 'trend-down' | 'trend-up';
+export type AppIconName = 'alert' | 'arrow-up' | 'arrow-up-right' | 'bell' | 'calendar' | 'camera' | 'check' | 'chevron-left' | 'chevron-right' | 'close' | 'connection' | 'copy' | 'document' | 'download' | 'eye' | 'eye-off' | 'heart' | 'help' | 'home' | 'image' | 'info' | 'lock' | 'message' | 'minus' | 'pause' | 'person' | 'play' | 'plus' | 'share' | 'trend-down' | 'trend-up';
 
 type Props = { color?: string; name: AppIconName; size?: number; strokeWidth?: number };
 
-export function AppIcon({ color = '#18201C', name, size = 24, strokeWidth = 1.8 }: Props) {
+export function AppIcon({ color = colors.text, name, size = 24, strokeWidth = 1.8 }: Props) {
   const common = { fill: 'none', stroke: color, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, strokeWidth };
   return <Svg accessibilityElementsHidden focusable={false} height={size} importantForAccessibility="no-hide-descendants" viewBox="0 0 24 24" width={size}>
     {name === 'bell' ? <><Path {...common} d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><Path {...common} d="M10 21h4"/></> : null}
@@ -18,8 +19,13 @@ export function AppIcon({ color = '#18201C', name, size = 24, strokeWidth = 1.8 
     {name === 'close' ? <><Line {...common} x1="5" x2="19" y1="5" y2="19"/><Line {...common} x1="19" x2="5" y1="5" y2="19"/></> : null}
     {name === 'chevron-left' ? <Polyline {...common} points="15 5 8 12 15 19"/> : null}
     {name === 'chevron-right' ? <Polyline {...common} points="9 5 16 12 9 19"/> : null}
+    {name === 'arrow-up' ? <><Line {...common} x1="12" x2="12" y1="19" y2="5"/><Polyline {...common} points="6 11 12 5 18 11"/></> : null}
+    {name === 'arrow-up-right' ? <><Line {...common} x1="6" x2="18" y1="18" y2="6"/><Polyline {...common} points="9 6 18 6 18 15"/></> : null}
     {name === 'plus' ? <><Line {...common} x1="12" x2="12" y1="5" y2="19"/><Line {...common} x1="5" x2="19" y1="12" y2="12"/></> : null}
     {name === 'info' ? <><Circle {...common} cx="12" cy="12" r="9"/><Line {...common} x1="12" x2="12" y1="11" y2="17"/><Circle cx="12" cy="7.5" fill={color} r="1"/></> : null}
+    {name === 'lock' ? <><Path {...common} d="M7 10V7a5 5 0 0 1 10 0v3"/><Path {...common} d="M5 10h14v11H5Z"/><Line {...common} x1="12" x2="12" y1="14" y2="17"/></> : null}
+    {name === 'eye' ? <><Path {...common} d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><Circle {...common} cx="12" cy="12" r="2.5"/></> : null}
+    {name === 'eye-off' ? <><Path {...common} d="M3 3l18 18"/><Path {...common} d="M10.6 6.1A10.8 10.8 0 0 1 12 6c6 0 9.5 6 9.5 6a16 16 0 0 1-2.3 3"/><Path {...common} d="M6.3 6.3C3.8 8 2.5 12 2.5 12s3.5 6 9.5 6a9.9 9.9 0 0 0 3.4-.6"/></> : null}
     {name === 'alert' ? <><Path {...common} d="M10.2 4.1 2.8 18a2 2 0 0 0 1.8 2.9h14.8a2 2 0 0 0 1.8-2.9L13.8 4.1a2 2 0 0 0-3.6 0Z"/><Line {...common} x1="12" x2="12" y1="9" y2="14"/><Circle cx="12" cy="17.5" fill={color} r="1"/></> : null}
     {name === 'document' ? <><Path {...common} d="M6 3h8l4 4v14H6Z"/><Polyline {...common} points="14 3 14 8 18 8"/><Line {...common} x1="9" x2="15" y1="13" y2="13"/><Line {...common} x1="9" x2="15" y1="17" y2="17"/></> : null}
     {name === 'camera' ? <><Path {...common} d="M4 7h3l2-3h6l2 3h3v13H4Z"/><Circle {...common} cx="12" cy="13" r="4"/></> : null}
