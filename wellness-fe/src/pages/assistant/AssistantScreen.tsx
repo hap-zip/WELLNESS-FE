@@ -161,9 +161,9 @@ export default function AssistantScreen({ asTab = false }: { asTab?: boolean }) 
 function ConversationStart({ suggestions, onSelect }: { suggestions: string[]; onSelect: (value: string) => void }) {
   return (
     <View style={styles.start}>
-      <Text accessibilityRole="header" style={styles.startTitle}>기록에서 무엇을{`\n`}찾아볼까요?</Text>
+        <Text style={styles.startKicker}>YOUR RECORDS / ASK</Text><Text accessibilityRole="header" style={styles.startTitle}>기록에서 무엇을{`\n`}찾아볼까요?</Text>
       <Text style={styles.startDescription}>수면, 불편 부위, 활동과 루틴 기록을 함께 읽어 정리해 드려요. 진단이나 처방은 제공하지 않아요.</Text>
-      <Text style={styles.indexTitle}>바로 물어보기</Text>
+      <Text style={styles.indexTitle}>자주 묻는 질문</Text>
       <View style={styles.questionIndex}>
         {suggestions.map((suggestion) => (
           <Pressable accessibilityRole="button" key={suggestion} onPress={() => onSelect(suggestion)} style={({ pressed }) => [styles.questionRow, pressed && styles.questionPressed]}>

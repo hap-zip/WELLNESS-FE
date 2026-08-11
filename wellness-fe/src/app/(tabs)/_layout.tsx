@@ -16,15 +16,15 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   return <Tabs screenOptions={{
     headerShown: false,
-    tabBarActiveTintColor: colors.data,
+    tabBarActiveTintColor: colors.primary,
     tabBarInactiveTintColor: colors.textMuted,
     tabBarHideOnKeyboard: true,
     tabBarItemStyle: { minHeight: layout.minTouch },
     tabBarLabelStyle: { fontSize: 11, lineHeight: 15, fontWeight: '600', marginTop: 2 },
     tabBarIconStyle: { marginTop: 3 },
-    tabBarStyle: { height: 66 + insets.bottom, paddingTop: 5, paddingBottom: Math.max(insets.bottom, 7), borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider, backgroundColor: colors.white, elevation: 0, shadowOpacity: 0 },
+    tabBarStyle: { height: 66 + insets.bottom, paddingTop: 5, paddingBottom: Math.max(insets.bottom, 7), borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider, backgroundColor: colors.surface, elevation: 0, shadowOpacity: 0 },
   }}>
-    {tabs.map(tab => <Tabs.Screen key={tab.name} name={tab.name} options={{ title: tab.title, tabBarIcon: ({ color, focused }) => <View style={[styles.icon, focused && styles.focusedIcon]}><AppIcon color={color} name={tab.icon} size={21} strokeWidth={focused ? 2.3 : 1.8}/></View> }}/>) }
+    {tabs.map(tab => <Tabs.Screen key={tab.name} name={tab.name} options={{ title: tab.title, tabBarIcon: ({ color, focused }) => <View style={[styles.icon, focused && styles.focusedIcon]}><AppIcon color={String(color)} name={tab.icon} size={21} strokeWidth={focused ? 2.3 : 1.8}/></View> }}/>) }
   </Tabs>;
 }
 

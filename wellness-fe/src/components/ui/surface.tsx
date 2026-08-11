@@ -9,9 +9,9 @@ export function Surface({ children, style, tone = 'plain', ...props }: PropsWith
 }
 
 const styles = StyleSheet.create({
-  base: { padding: spacing.md, borderRadius: radius.lg },
+  base: { padding: spacing.md, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border },
   plain: { backgroundColor: colors.surface },
   subtle: { backgroundColor: colors.surfaceSubtle },
-  inverse: { backgroundColor: colors.inverse },
-  accent: { backgroundColor: colors.primarySoft },
+  inverse: { backgroundColor: colors.inverse, borderColor: colors.inverse },
+  accent: { backgroundColor: colors.primarySoft, borderColor: colors.primaryBorder },
 });

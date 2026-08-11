@@ -68,7 +68,7 @@ export default function HomeAvatar({ highlights, onMarkerPress }: HomeAvatarProp
             disabledParts={[...disabledParts]}
             gender="male"
             onBodyPartPress={handleMusclePress}
-            scale={0.72}
+            scale={0.56}
             side="front"
           />
           {hasActiveTrapezius ? <Pressable accessibilityLabel="어깨와 승모근 기록 보기" accessibilityRole="button" onPress={() => onMarkerPress('shoulder')} style={styles.activeTrapeziusTouchTarget} /> : null}

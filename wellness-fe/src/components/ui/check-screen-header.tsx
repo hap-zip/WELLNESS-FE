@@ -39,16 +39,16 @@ export function CheckIntro({ description, inset = true, step, title, total = 5 }
 }
 
 const styles = StyleSheet.create({
-  progressTrack: { height: 3, backgroundColor: colors.surfaceStrong },
-  progressValue: { height: '100%', backgroundColor: colors.primary },
-  topBar: { minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.xs },
+  progressTrack: { height: 4, backgroundColor: colors.surfaceStrong },
+  progressValue: { height: '100%', backgroundColor: colors.body },
+  topBar: { minHeight: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.xs, borderBottomWidth: 1, borderColor: colors.border },
   touchPlaceholder: { width: layout.minTouch, height: layout.minTouch },
   skip: { minHeight: layout.minTouch, justifyContent: 'center', paddingHorizontal: spacing.sm },
   skipText: { color: colors.textSecondary, ...typography.label },
   copy: { paddingHorizontal: layout.horizontalPadding, paddingTop: spacing.sm },
   copyEmbedded: { paddingHorizontal: 0 },
-  step: { color: colors.primary, ...typography.caption, fontWeight:'600', fontVariant: ['tabular-nums'] },
-  title: { maxWidth: 360, marginTop: spacing.xs, color: colors.text, ...typography.title },
+  step: { color: colors.body, ...typography.caption, fontWeight:'800', fontVariant: ['tabular-nums'] },
+  title: { maxWidth: 360, marginTop: spacing.xs, color: colors.text, fontSize: 30, lineHeight: 37, fontWeight: '800', letterSpacing: -1.1 },
   description: { maxWidth: 350, marginTop: spacing.sm, color: colors.textSecondary, ...typography.body },
   pressed: { opacity: motion.pressOpacity },
 });
