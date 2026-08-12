@@ -62,6 +62,15 @@ export const typography = {
   body: { fontSize: 16, lineHeight: 24, fontWeight: '400' as const },
   label: { fontSize: 15, lineHeight: 22, fontWeight: '600' as const },
   caption: { fontSize: 13, lineHeight: 19, fontWeight: '500' as const },
+  // Role-based scale for the editorial flagship screens (Home / Connection / Routine).
+  // Every large heading in those screens must reference one of these — no ad hoc
+  // fontSize literals per screen. `display`/`title`/`sectionTitle`/`label` above stay
+  // as-is for the screens not yet migrated (Settings/Chat/Records/Me/Safety).
+  displayLg: { fontSize: 32, lineHeight: 38, fontWeight: '700' as const, letterSpacing: -1.0 },
+  displayMd: { fontSize: 26, lineHeight: 32, fontWeight: '700' as const, letterSpacing: -0.5 },
+  titleLg: { fontSize: 20, lineHeight: 26, fontWeight: '700' as const, letterSpacing: -0.3 },
+  titleMd: { fontSize: 17, lineHeight: 23, fontWeight: '700' as const, letterSpacing: -0.2 },
+  kicker: { fontSize: 11, lineHeight: 15, fontWeight: '800' as const, letterSpacing: 1 },
 } as const;
 
 export const motion = { pressOpacity: 0.62, fast: 140, standard: 220, slow: 320 } as const;
