@@ -1,35 +1,35 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useDailyCheck } from '@/context/daily-check-context';
+import { AppIcon, type AppIconName } from '@/components/app-icon';
+import NavigationBackButton from '@/components/navigation-back-button';
+import { CheckScreenHeader } from '@/components/ui/check-screen-header';
 import { useAuth } from '@/context/auth-context';
-import { AppIcon } from '@/components/app-icon';
+import { useDailyCheck } from '@/context/daily-check-context';
 import { healthSyncService } from '@/services/health-sync-service';
 import { wellnessApi } from '@/services/wellness-api';
 import { colors } from '@/theme/tokens';
-import { CheckScreenHeader } from '@/components/ui/check-screen-header';
 import { toLocalDateId } from '@/utils/date';
 
 import { styles } from './auto-check.styles';
 
 const RECORDS = [
-  { key: 'sleepDuration', label: '수면 시간' },
-  { key: 'bedtime', label: '취침 시간' },
-  { key: 'steps', label: '걸음 수' },
+  { icon: 'moon', key: 'sleepDuration', label: '수면 시간' },
+  { icon: 'steps', key: 'steps', label: '걸음 수' },
+  { icon: 'flame', key: 'activityEnergy', label: '활동 에너지' },
 ] as const;
 
 export default function AutoCheckScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ date?: string; mode?: string }>();
   const { session } = useAuth();
-  const { completeStep, draft, resetDraft, skipStep, startDraft, updateDraft } = useDailyCheck();
+  const { completeStep, draft, startDraft, updateDraft } = useDailyCheck();
   const todayId = toLocalDateId();
   const requestedDate = typeof params.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(params.date) ? params.date : todayId;
   const requestedMode = params.mode === 'edit' ? 'edit' as const : 'create' as const;
   const initialized = draft.targetDate === requestedDate && draft.mode === requestedMode;
-  const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
@@ -47,7 +47,6 @@ export default function AutoCheckScreen() {
         return;
       }
       startDraft(requestedDate, requestedMode, submission);
-      setIsEditing(Boolean(submission));
     }).catch(() => {
       if (mounted) setLoadError('수정할 기록을 불러오지 못했어요.');
     });
@@ -60,17 +59,26 @@ export default function AutoCheckScreen() {
     let mounted = true;
     setIsLoading(true);
     setLoadError('');
-    const request = session?.mode === 'demo'
+    const request = session?.mode === 'demo' || (__DEV__ && Platform.OS === 'web')
       ? wellnessApi.getAutoHealthRecord(requestedDate)
       : wellnessApi.getHealthConnection().then((settings) => {
         if (!settings.connected || settings.provider !== 'apple-health') throw new Error('먼저 건강 데이터 설정에서 Apple 건강을 연결해 주세요.');
         return healthSyncService.getDailyRecord(requestedDate, settings);
       });
     void request.then((record) => {
-      if (mounted) { updateDraft({ autoRecords: { sleepDuration: record.sleepDuration, bedtime: record.bedtime, steps: record.steps }, autoSource: record.source }); setIsLoading(false); }
-    }).catch((reason: unknown) => { if (mounted) { setLoadError(reason instanceof Error ? reason.message : '건강 데이터를 불러오지 못했어요.'); setIsLoading(false); } });
+      if (mounted) {
+        updateDraft({ autoRecords: { sleepDuration: record.sleepDuration, bedtime: record.bedtime, steps: record.steps, activityEnergy: record.activityEnergy }, autoSource: record.source });
+        setIsLoading(false);
+      }
+    }).catch((reason: unknown) => {
+      if (mounted) {
+        setLoadError(reason instanceof Error ? reason.message : '건강 데이터를 불러오지 못했어요.');
+        setIsLoading(false);
+      }
+    });
     return () => { mounted = false; };
   };
+
   useEffect(() => {
     const cleanup = loadAutoRecord();
     return cleanup;
@@ -78,58 +86,27 @@ export default function AutoCheckScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.autoConfirmed, initialized, requestedDate, updateDraft]);
 
-  const useManualInput = () => { updateDraft({ autoRecords: { sleepDuration: '', bedtime: '', steps: '' }, autoSource: 'manual' }); setLoadError(''); setIsEditing(true); };
-
-  const moveToCondition = () => router.push('/check/condition');
-  const closeCheck = () => Alert.alert('기록 작성을 그만할까요?', '저장하지 않은 변경 내용은 사라져요.', [
+  const closeCheck = () => Alert.alert('기록 작성을 닫을까요?', '작성 중인 내용은 앱을 사용하는 동안 임시로 남아 있어요.', [
     { text: '계속 기록', style: 'cancel' },
-    { text: '나가기', style: 'destructive', onPress: () => { resetDraft(); router.dismissTo(requestedDate === todayId ? '/(tabs)/home' : '/(tabs)/records'); } },
+    { text: '닫기', onPress: () => router.dismissTo(requestedDate === todayId ? '/(tabs)/home' : '/(tabs)/records') },
   ]);
   const [, month, day] = requestedDate.split('-').map(Number);
 
-  return (
-    <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <CheckScreenHeader
-          description="값이 다르면 바로 수정할 수 있어요."
-          leading={<Pressable accessibilityLabel="데일리 체크 닫기" accessibilityRole="button" hitSlop={8} onPress={closeCheck} style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}>
-            <AppIcon color={colors.text} name="close" size={23}/>
-          </Pressable>}
-          onSkip={() => { skipStep('auto'); moveToCondition(); }}
-          step={1}
-          title={requestedMode === 'edit' ? `${month}월 ${day}일 기록을\n수정해요` : `${month}월 ${day}일 기록을\n시작해요`}
-        />
-        {isLoading ? <View accessibilityLabel="건강 데이터를 불러오는 중" accessibilityRole="progressbar" style={styles.loadingState}><ActivityIndicator color={colors.primary}/><Text style={styles.loadingText}>건강 데이터를 불러오는 중</Text></View> : loadError ? <View accessibilityLiveRegion="polite" style={styles.errorState}><AppIcon color={colors.danger} name="alert" size={24}/><Text style={styles.errorTitle}>{loadError}</Text><Text style={styles.errorDescription}>직접 입력해 계속하거나 건강 데이터 연결 상태를 확인할 수 있어요.</Text><View style={styles.errorActions}><Pressable accessibilityRole="button" onPress={useManualInput} style={({pressed})=>[styles.errorPrimary,pressed&&styles.pressed]}><Text style={styles.errorPrimaryText}>직접 입력하기</Text></Pressable><Pressable accessibilityRole="button" onPress={()=>router.push('/settings/health')} style={({pressed})=>[styles.errorSecondary,pressed&&styles.pressed]}><Text style={styles.errorSecondaryText}>연결 설정</Text></Pressable></View><Pressable accessibilityRole="button" onPress={loadAutoRecord} style={({pressed})=>[styles.retryLink,pressed&&styles.pressed]}><Text style={styles.retryText}>다시 불러오기</Text></Pressable></View> : <>
-        <View style={styles.recordCard}>
-          {RECORDS.map((record, index) => (
-            <View key={record.label} style={[styles.recordRow, index === RECORDS.length - 1 && styles.lastRecordRow]}>
-              <Text style={styles.recordLabel}>{record.label}</Text>
-              {isEditing ? (
-                <TextInput
-                  accessibilityLabel={`${record.label} 수정`}
-                  onChangeText={(value) => updateDraft({ autoRecords: { ...draft.autoRecords, [record.key]: value } })}
-                  selectTextOnFocus
-                  style={styles.recordInput}
-                  value={draft.autoRecords[record.key]}
-                />
-              ) : <Text style={styles.recordValue}>{draft.autoRecords[record.key]}</Text>}
-            </View>
-          ))}
-        </View>
-        <View style={styles.sourceRow}>
-          <AppIcon color={colors.primary} name="heart" size={18}/>
-          <Text style={styles.sourceText}>{draft.autoSource === 'apple-health' ? 'Apple 건강' : draft.autoSource === 'health-connect' ? 'Health Connect' : '직접 입력'}에서 가져왔어요</Text>
-        </View>
-        </>}
-      </ScrollView>
-      {!isLoading && !loadError ? <View style={styles.footer}>
-        <Pressable accessibilityRole="button" onPress={() => setIsEditing((current) => !current)} style={({ pressed }) => [styles.editButton, pressed && styles.pressed]}>
-          <Text style={styles.editText}>{isEditing ? '수정 완료' : '수정하기'}</Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" onPress={() => { updateDraft({ autoConfirmed: true }); completeStep('auto'); moveToCondition(); }} style={({ pressed }) => [styles.confirmButton, pressed && styles.pressed]}>
-          <Text style={styles.confirmText}>맞아요</Text>
-        </Pressable>
-      </View> : null}
-    </SafeAreaView>
-  );
+  return <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
+    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <CheckScreenHeader
+        description="Apple 건강에서 가져온 값이에요. 확인만 해주세요."
+        leading={<NavigationBackButton accessibilityLabel="오늘 화면으로 돌아가기" fallbackHref="/(tabs)/home" />}
+        onClose={closeCheck}
+        step={1}
+        title={requestedMode === 'edit' ? `${month}월 ${day}일 기록을 수정해요` : '어젯밤 데이터를 가져왔어요'}
+      />
+      {isLoading ? <View accessibilityLabel="건강 데이터를 불러오는 중" accessibilityRole="progressbar" style={styles.loadingState}><ActivityIndicator color={colors.primary}/><Text style={styles.loadingText}>건강 데이터를 불러오는 중</Text></View> : loadError ? <View accessibilityLiveRegion="polite" style={styles.errorState}><AppIcon color={colors.danger} name="alert" size={24}/><Text style={styles.errorTitle}>{loadError}</Text><Text style={styles.errorDescription}>수면 시간은 직접 입력하지 않아요. 건강 데이터 연결을 확인한 뒤 다시 불러와 주세요.</Text><View style={styles.errorActions}><Pressable accessibilityRole="button" onPress={() => router.push('/settings/health')} style={({ pressed }) => [styles.errorPrimary, pressed && styles.pressed]}><Text style={styles.errorPrimaryText}>건강 데이터 연결</Text></Pressable><Pressable accessibilityRole="button" onPress={loadAutoRecord} style={({ pressed }) => [styles.errorSecondary, pressed && styles.pressed]}><Text style={styles.errorSecondaryText}>다시 불러오기</Text></Pressable></View></View> : <>
+        <View accessibilityLabel="자동 수집 상태 정상" style={styles.statusRow}><View style={[styles.statusChip, styles.statusChipActive]}><Text style={[styles.statusText, styles.statusTextActive]}>정상</Text></View>{['동기화 중', '권한 부족', '데이터 없음', '오류'].map((label) => <View key={label} style={styles.statusChip}><Text style={styles.statusText}>{label}</Text></View>)}</View>
+        <View style={styles.recordList}>{RECORDS.map((record) => <View accessibilityLabel={`${record.label} ${draft.autoRecords[record.key] || '기록 없음'}`} key={record.label} style={styles.recordRow}><View style={styles.recordIcon}><AppIcon color={colors.textSecondary} name={record.icon as AppIconName} size={19}/></View><View style={styles.recordCopy}><Text style={styles.recordLabel}>{record.label}</Text><Text style={styles.recordSource}>{draft.autoSource === 'manual' ? '이전 기록' : `${draft.autoSource === 'apple-health' ? 'Apple 건강' : 'Health Connect'} · 오전 7:02 동기화`}</Text></View><Text style={styles.recordValue}>{draft.autoRecords[record.key] || '기록 없음'}</Text></View>)}</View>
+        <Text style={styles.guide}>수면·걸음·활동 에너지는 연결된 건강 데이터에서 자동으로 가져와요.</Text>
+      </>}
+    </ScrollView>
+    {!isLoading && !loadError ? <View style={styles.footer}><Pressable accessibilityRole="button" onPress={() => { updateDraft({ autoConfirmed: true }); completeStep('auto'); router.push('/check/discomfort'); }} style={({ pressed }) => [styles.confirmButton, pressed && styles.pressed]}><Text style={styles.confirmText}>다음</Text></Pressable></View> : null}
+  </SafeAreaView>;
 }

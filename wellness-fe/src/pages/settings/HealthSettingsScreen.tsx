@@ -67,7 +67,7 @@ export default function HealthSettingsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={styles.screen}>
-      <PageHeader backLabel="마이 화면으로 돌아가기" fallbackHref="/(tabs)/me" title="건강 데이터" />
+      <PageHeader backLabel="마이 화면으로 돌아가기" fallbackHref="/(tabs)/me" title="건강 데이터 연결" />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 36 }]}>
         {isLoading ? <Center /> : error || !data ? (
           <StateNotice
@@ -87,14 +87,11 @@ export default function HealthSettingsScreen() {
                 <Text style={styles.heroTitle}>{data.provider === 'apple-health' ? 'Apple 건강' : 'Health Connect'}</Text>
                 <Text style={styles.heroDescription}>{data.connected ? data.lastSyncedLabel ?? '연결 설정됨 · 읽을 데이터 확인 필요' : '수면과 활동 데이터를 자동으로 가져와요'}</Text>
               </View>
-              <Switch
-                accessibilityLabel="건강 데이터 연결"
-                disabled={busy}
-                onValueChange={(connected) => void update({ ...data, connected })}
-                thumbColor={data.connected ? colors.primary : colors.white}
-                trackColor={{ false: colors.border, true: colors.primaryBorder }}
-                value={data.connected}
-              />
+              {data.connected ? (
+                <Pressable accessibilityRole="button" disabled={busy} onPress={() => void update(data)} style={styles.resyncButton}><Text style={styles.resyncText}>다시 동기화</Text></Pressable>
+              ) : (
+                <Switch accessibilityLabel="건강 데이터 연결" disabled={busy} onValueChange={(connected) => void update({ ...data, connected })} thumbColor={data.connected ? colors.primary : colors.white} trackColor={{ false: colors.border, true: colors.primaryBorder }} value={data.connected}/>
+              )}
             </View>
             {saveError ? <Text accessibilityLiveRegion="polite" style={styles.inlineError}>{saveError}</Text> : null}
             {!data.connected ? (
@@ -102,15 +99,17 @@ export default function HealthSettingsScreen() {
                 actionLabel={isDemo ? '연결 과정 미리보기' : 'Apple 건강 연결하기'}
                 description={isDemo ? '실제 연동 전 선택 화면을 체험할 수 있어요.' : '연결하면 수면과 걸음 기록을 자동으로 가져와요.'}
                 icon="＋"
-                onAction={() => void update({ ...data, connected: true, permissions: { sleep: true, steps: true, heartRate: false } })}
+                onAction={() => void update({ ...data, connected: true, permissions: { sleep: true, steps: true, activityEnergy: true, heartRate: false } })}
                 title="연결된 건강 데이터가 없어요"
               />
             ) : (
               <>
-                <Text style={styles.sectionTitle}>가져올 데이터</Text>
+                <Text style={styles.sectionTitle}>수집 항목별 권한</Text>
                 <View style={styles.group}>
-                  <Toggle label="수면 시간과 취침 시각" value={data.permissions.sleep} onChange={(value) => void update({ ...data, permissions: { ...data.permissions, sleep: value } })} />
-                  <Toggle label="걸음 수와 활동량" value={data.permissions.steps} onChange={(value) => void update({ ...data, permissions: { ...data.permissions, steps: value } })} />
+                  <Toggle label="수면 분석" value={data.permissions.sleep} onChange={(value) => void update({ ...data, permissions: { ...data.permissions, sleep: value } })} />
+                  <Toggle label="걸음 수" value={data.permissions.steps} onChange={(value) => void update({ ...data, permissions: { ...data.permissions, steps: value } })} />
+                  <Toggle label="활동 에너지" value={data.permissions.activityEnergy} onChange={(value) => void update({ ...data, permissions: { ...data.permissions, activityEnergy: value } })} />
+                  <PermissionStatus label="활동 에너지" status="거부" tone="warning"/><PermissionStatus label="운동 기록" status="없음" tone="muted"/>
                 </View>
                 <View style={styles.info}><Text style={styles.infoText}>앱은 선택한 항목만 읽고 건강 앱의 원본 데이터는 수정하지 않아요.</Text></View>
                 {!data.lastSyncedLabel ? <View style={styles.info}><Text style={styles.infoText}>Apple 건강에서 수면·걸음 수 읽기 권한이 켜져 있는지, 오늘 또는 어제 기록이 실제로 존재하는지 확인해 주세요.</Text></View> : null}
@@ -135,6 +134,8 @@ export default function HealthSettingsScreen() {
 function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (value: boolean) => void }) {
   return <View style={styles.row}><Text style={styles.rowLabel}>{label}</Text><Switch accessibilityLabel={label} onValueChange={onChange} thumbColor={value ? colors.primary : colors.white} trackColor={{ false: colors.border, true: colors.primaryBorder }} value={value} /></View>;
 }
+
+function PermissionStatus({ label, status, tone }: { label: string; status: string; tone: 'warning' | 'muted' }) { return <View style={styles.row}><Text style={styles.rowLabel}>{label}</Text><Text style={tone === 'warning' ? styles.permissionWarning : styles.permissionMuted}>{status}</Text></View>; }
 
 function Center() {
   return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;

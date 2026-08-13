@@ -39,7 +39,7 @@ export const styles = StyleSheet.create({
   errorText: { marginHorizontal: layout.horizontalPadding, marginTop: spacing.md, color: colors.danger, ...typography.caption },
   footer: { width: '100%', maxWidth: layout.maxContentWidth, alignSelf: 'center', paddingHorizontal: layout.horizontalPadding, paddingTop: spacing.sm, backgroundColor: colors.surface },
   nextButton: { minHeight: layout.ctaHeight, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, backgroundColor: colors.primary },
-  nextButtonText: { color: colors.white, fontSize: 16, fontWeight:'700' },
+  nextButtonText: { color: colors.primaryText, fontSize: 16, fontWeight:'700' },
   disabledButton: { backgroundColor: colors.disabled },
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.scrim },
   pickerSheet: { paddingBottom: spacing.xl, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, backgroundColor: colors.surface },

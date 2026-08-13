@@ -2,6 +2,7 @@ export type AutoHealthRecord = {
   sleepDuration: string;
   bedtime: string;
   steps: string;
+  activityEnergy: string;
   source: 'apple-health' | 'health-connect' | 'manual';
 };
 
@@ -52,9 +53,9 @@ export type DailyCheckSubmission = {
   autoRecords: AutoHealthRecord;
   condition: string | null;
   conditionTags: string[];
-  discomfort: { bodyParts: string[]; intensity: number | null; feelings: string[]; areas: { id: string; label: string; view: 'front' | 'back'; intensity: number }[] };
-  sleep: { satisfaction: number | null; posture: string | null; pillow: string | null };
-  activitySkin: { activity: string | null; skinStates: string[]; memo: string; photoUri: string | null };
+  discomfort: { bodyParts: string[]; intensity: number | null; feelings: string[]; headache?: boolean; areas: { id: string; label: string; view: 'front' | 'back'; intensity: number; feelings?: string[] }[] };
+  sleep: { satisfaction: number | null; posture: string | null; pillow: string | null; minutes?: number };
+  activitySkin: { activity: string | null; activities?: string[]; skinStates: string[]; trouble?: boolean; troubleSpots?: string[]; memo: string; photoUri: string | null };
   skippedSteps: string[];
 };
 
@@ -67,8 +68,9 @@ export type WellnessRecordSummary = {
   steps: string;
   bodyParts: string[];
   intensity: number | null;
-  memo: string;
-};
+    memo: string;
+    routineCompleted?: boolean;
+  };
 
 export type RecordsMonth = {
   year: number;
@@ -167,7 +169,7 @@ export type RoutineCompletion = {
 export type RoutineEffect = 'better' | 'same' | 'worse' | 'unknown';
 export type RoutineFeedback = { routineId: string; effect: RoutineEffect; discomfortLevel: number; memo: string };
 export type SignalSummary = { title: string; description: string; durationLabel: string; occurrences: number; evidence: string[]; guidance: string[] };
-export type ReportPeriod = '3days' | '7days' | '14days' | 'custom';
+export type ReportPeriod = '30days' | '90days' | 'custom';
 export type ReportOptions = { period: ReportPeriod; customStartDate?: string; customEndDate?: string; includeSleep: boolean; includeActivity: boolean; includeDiscomfort: boolean; includeRoutines: boolean; hidePersonalInfo: boolean };
 export type HealthReport = { id: string; userName: string; periodLabel: string; createdAtLabel: string; headline: string; highlights: { label: string; value: string; change: string }[]; discomfortAreas: string[]; sleepPostures: string[]; routineCount: number; feedbackSummary: string; discoveredPatterns: string[]; note: string; options: ReportOptions };
 
@@ -187,6 +189,6 @@ export type AssistantReply = {
 };
 
 export type UserProfileSummary = { name: string; email: string; joinedLabel: string; recordDays: number; routineCount: number; healthConnected: boolean; notificationEnabled: boolean };
-export type HealthConnectionSettings = { provider: 'apple-health' | 'health-connect'; connected: boolean; lastSyncedLabel: string | null; permissions: { sleep: boolean; steps: boolean; heartRate: boolean } };
+export type HealthConnectionSettings = { provider: 'apple-health' | 'health-connect'; connected: boolean; lastSyncedLabel: string | null; permissions: { sleep: boolean; steps: boolean; activityEnergy: boolean; heartRate: boolean } };
 export type NotificationSettings = { enabled: boolean; osPermission: 'granted' | 'denied' | 'not-determined'; dailyCheck: boolean; routine: boolean; weeklyReport: boolean; nextDayEffect: boolean; persistentSignal: boolean; reminderTime: string };
 export type DataConsentSettings = { healthData: boolean; personalizedInsights: boolean; marketing: boolean; consentedAtLabel: string; retentionLabel: string };

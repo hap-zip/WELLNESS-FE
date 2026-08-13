@@ -1,10 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PageHeader } from '@/components/ui/page-header';
+import { FormField } from '@/components/ui/form-field';
+import { AppIcon } from '@/components/app-icon';
 import { useAuth } from '@/context/auth-context';
+import { colors } from '@/theme/tokens';
 import { styles } from './account-settings.styles';
 
 export default function AccountSettingsScreen() {
@@ -34,21 +37,18 @@ export default function AccountSettingsScreen() {
       <PageHeader backLabel="마이 화면으로 돌아가기" fallbackHref="/(tabs)/me" title="계정 관리" />
       <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
         <Text style={styles.sectionTitle}>비밀번호 변경</Text>
-        <Field label="현재 비밀번호" value={current} onChange={setCurrent} />
-        <Field label="새 비밀번호" value={next} onChange={setNext} />
-        <Field label="새 비밀번호 확인" value={confirm} onChange={setConfirm} />
+        <Field autoComplete="current-password" label="현재 비밀번호" value={current} onChange={setCurrent} />
+        <Field autoComplete="new-password" error={next.length > 0 && next.length < 8 ? '영문·숫자를 포함해 8자 이상 입력해 주세요.' : undefined} label="새 비밀번호" value={next} onChange={setNext} />
+        <Field autoComplete="new-password" label="새 비밀번호 확인" value={confirm} onChange={setConfirm} />
         {confirm && next !== confirm ? <Text accessibilityLiveRegion="polite" style={styles.error}>새 비밀번호가 서로 다릅니다.</Text> : null}
         <Pressable accessibilityRole="button" accessibilityState={{ disabled: !valid }} disabled={!valid} onPress={changePassword} style={[styles.primary, !valid && styles.disabled]}><Text style={styles.primaryText}>비밀번호 변경</Text></Pressable>
-        <Text style={styles.sectionTitle}>로그인 상태</Text>
-        <Pressable accessibilityRole="button" onPress={logout} style={styles.menu}><Text style={styles.menuText}>로그아웃</Text></Pressable>
-        <Text style={styles.sectionTitle}>회원 탈퇴</Text>
-        <Text style={styles.help}>탈퇴하면 모든 데이터가 삭제되고 복구할 수 없습니다.</Text>
-        <Pressable accessibilityRole="button" onPress={withdraw} style={styles.danger}><Text style={styles.dangerText}>회원 탈퇴</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={logout} style={styles.menu}><Text style={styles.menuText}>로그아웃</Text><AppIcon color={colors.textMuted} name="chevron-right" size={18}/></Pressable>
+        <Pressable accessibilityRole="button" onPress={withdraw} style={styles.menu}><Text style={styles.dangerText}>회원 탈퇴</Text><AppIcon color={colors.textMuted} name="chevron-right" size={18}/></Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   </SafeAreaView>;
 }
 
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput accessibilityLabel={label} autoCapitalize="none" autoComplete="current-password" onChangeText={onChange} secureTextEntry style={styles.input} value={value} /></View>;
+function Field({ autoComplete, error, label, value, onChange }: { autoComplete: 'current-password' | 'new-password'; error?: string; label: string; value: string; onChange: (value: string) => void }) {
+  return <View style={styles.field}><FormField autoCapitalize="none" autoComplete={autoComplete} error={error} hideLabel label={label} onChangeText={onChange} placeholder={label} showPasswordToggle value={value} /></View>;
 }

@@ -100,7 +100,7 @@ export default function NotificationSettingsScreen() {
           <View style={styles.rowCopy}><Text style={styles.masterTitle}>기기 알림 권한</Text><Text style={styles.masterDescription}>{permissionLabel(form.osPermission)}</Text></View>
           <Pressable accessibilityRole="button" onPress={() => void requestPermission()} style={({ pressed }) => [styles.permissionButton, pressed && styles.pressed]}><Text style={styles.permissionButtonText}>{form.osPermission === 'denied' ? '설정 열기' : form.osPermission === 'granted' ? '허용됨' : '권한 허용'}</Text></Pressable>
         </View>
-        <View style={styles.master}>
+        <View style={styles.appMaster}>
           <View style={styles.rowCopy}><Text style={styles.masterTitle}>알림 사용</Text><Text style={styles.masterDescription}>필요한 웰니스 알림만 선택해서 받아요</Text></View>
           <Switch accessibilityLabel="앱 알림 사용" onValueChange={(value) => set('enabled', value)} trackColor={{ false: colors.border, true: colors.primaryBorder }} thumbColor={form.enabled ? colors.primary : colors.white} value={form.enabled} />
         </View>
@@ -129,7 +129,7 @@ export default function NotificationSettingsScreen() {
         <View style={styles.info}><Text style={styles.infoText}>오늘 상태 기록은 이 기기에 직접 예약돼요. 추천 루틴과 지속 신호 등 기록 결과에 따라 달라지는 알림은 서버 연결 후 발송됩니다.</Text></View>
       </>}
     </ScrollView>
-    {form ? <View style={[styles.action, { paddingBottom: Math.max(insets.bottom, 12) }]}><Pressable accessibilityRole="button" accessibilityState={{ busy: saving, disabled: saving || !dirty }} disabled={saving || !dirty} onPress={() => void save()} style={({ pressed }) => [styles.primary, (saving || !dirty) && styles.disabledPrimary, pressed && styles.pressed]}>{saving ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryText}>{dirty ? '설정 저장하기' : '저장됨'}</Text>}</Pressable></View> : null}
+    {form ? <View style={[styles.action, { paddingBottom: Math.max(insets.bottom, 12) }]}><Pressable accessibilityRole="button" accessibilityState={{ busy: saving, disabled: saving || !dirty }} disabled={saving || !dirty} onPress={() => void save()} style={({ pressed }) => [styles.primary, (saving || !dirty) && styles.disabledPrimary, pressed && styles.pressed]}>{saving ? <ActivityIndicator color={colors.primaryText} /> : <Text style={styles.primaryText}>{dirty ? '설정 저장하기' : '저장됨'}</Text>}</Pressable></View> : null}
   </SafeAreaView>;
 }
 

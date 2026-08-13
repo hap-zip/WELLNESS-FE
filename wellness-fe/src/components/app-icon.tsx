@@ -1,7 +1,7 @@
 import Svg, { Circle, Line, Path, Polyline } from 'react-native-svg';
 import { colors } from '@/theme/tokens';
 
-export type AppIconName = 'alert' | 'arrow-up' | 'arrow-up-right' | 'bell' | 'calendar' | 'camera' | 'check' | 'chevron-left' | 'chevron-right' | 'close' | 'connection' | 'copy' | 'document' | 'download' | 'eye' | 'eye-off' | 'heart' | 'help' | 'home' | 'image' | 'info' | 'lock' | 'message' | 'minus' | 'pause' | 'person' | 'play' | 'plus' | 'share' | 'trend-down' | 'trend-up';
+export type AppIconName = 'alert' | 'arrow-up' | 'arrow-up-right' | 'bell' | 'calendar' | 'camera' | 'check' | 'chevron-left' | 'chevron-right' | 'close' | 'connection' | 'copy' | 'document' | 'download' | 'eye' | 'eye-off' | 'flame' | 'heart' | 'help' | 'home' | 'image' | 'info' | 'lock' | 'message' | 'minus' | 'moon' | 'pause' | 'person' | 'play' | 'plus' | 'share' | 'steps' | 'trend-down' | 'trend-up';
 
 type Props = { color?: string; name: AppIconName; size?: number; strokeWidth?: number };
 
@@ -15,6 +15,9 @@ export function AppIcon({ color = colors.text, name, size = 24, strokeWidth = 1.
     {name === 'minus' ? <Line {...common} x1="5" x2="19" y1="12" y2="12"/> : null}
     {name === 'help' ? <><Circle {...common} cx="12" cy="12" r="9"/><Path {...common} d="M9.5 9a2.7 2.7 0 0 1 5.2 1c0 2-2.7 2.3-2.7 4"/><Circle cx="12" cy="17.5" fill={color} r="1"/></> : null}
     {name === 'heart' ? <Path {...common} d="M20.8 5.7c-2-2.1-5.2-2.1-7.2 0L12 7.4l-1.6-1.7c-2-2.1-5.2-2.1-7.2 0-2.1 2.2-2.1 5.7 0 7.9L12 22l8.8-8.4c2.1-2.2 2.1-5.7 0-7.9Z"/> : null}
+    {name === 'moon' ? <Path {...common} d="M20.2 15.2A8.4 8.4 0 0 1 8.8 3.8 8.8 8.8 0 1 0 20.2 15.2Z"/> : null}
+    {name === 'steps' ? <><Path {...common} d="M9.1 4.1c2.1.5 3.1 3.2 2.4 6s-2.8 4.4-4.9 3.9-3.1-3.2-2.4-6 2.8-4.4 4.9-3.9Z"/><Path {...common} d="M15.9 10c2.1-.5 4.2 1.2 4.9 3.9s-.3 5.5-2.4 6-4.2-1.2-4.9-3.9.3-5.5 2.4-6Z"/></> : null}
+    {name === 'flame' ? <Path {...common} d="M13.3 2.8c.7 3.9-2.2 5.2-2.2 8.1 0 1.2.7 2 1.7 2.5-.1-2 1-3.2 2.7-4.4 2.1 2 3.3 4.3 3.1 6.8-.3 3.5-3.1 5.7-6.6 5.7S5.7 19.1 5.4 15.8c-.4-4.4 2.7-8.6 7.9-13Z"/> : null}
     {name === 'check' ? <Polyline {...common} points="4 12.5 9.5 18 20 6.5"/> : null}
     {name === 'close' ? <><Line {...common} x1="5" x2="19" y1="5" y2="19"/><Line {...common} x1="19" x2="5" y1="5" y2="19"/></> : null}
     {name === 'chevron-left' ? <Polyline {...common} points="15 5 8 12 15 19"/> : null}

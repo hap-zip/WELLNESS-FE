@@ -17,12 +17,12 @@ export function PageHeader({ backLabel, fallbackHref, right, title }: { backLabe
 
 const styles = StyleSheet.create({
   header: {
-    minHeight: 56,
+    minHeight: layout.headerHeight,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
+    paddingVertical: 0,
     backgroundColor: colors.surface,
   },
   title: { flex: 1, flexShrink: 1, color: colors.text, textAlign: 'center', fontSize: 17, lineHeight: 24, fontWeight: '700', letterSpacing: -0.3 },

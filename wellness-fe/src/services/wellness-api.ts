@@ -8,6 +8,7 @@ export interface WellnessApi {
   getDiscoverSummary(endDate: string, periodDays?: number): Promise<DiscoverSummary>;
   getPatternDetail(patternId: string, endDate: string): Promise<PatternDetail | null>;
   getDailyCheck(date: string): Promise<DailyCheckSubmission | null>;
+  deleteDailyCheck(date: string): Promise<void>;
   getRecordDetail(date: string): Promise<RecordDetail | null>;
   getRecordsMonth(year: number, month: number): Promise<RecordsMonth>;
   getTodayRoutine(): Promise<RoutinePlan>;
@@ -72,10 +73,11 @@ const mockHomeSummary: HomeSummary = {
 };
 
 const dailyChecks = new Map<string, DailyCheckSubmission>();
+const deletedRecordDates = new Set<string>();
 let latestRoutineCompletion: RoutineCompletion | null = null;
 let latestRoutineFeedback: RoutineFeedback | null = null;
 let routineFeedbackHistory: RoutineFeedback[] = [];
-let healthConnection: HealthConnectionSettings = { provider: 'apple-health', connected: false, lastSyncedLabel: null, permissions: { sleep: true, steps: true, heartRate: false } };
+let healthConnection: HealthConnectionSettings = { provider: 'apple-health', connected: false, lastSyncedLabel: null, permissions: { sleep: true, steps: true, activityEnergy: true, heartRate: false } };
 const HEALTH_CONNECTION_STORAGE_KEY = 'wellness.health-connection.v2';
 const LEGACY_HEALTH_CONNECTION_STORAGE_KEY = 'wellness.health-connection.v1';
 let healthConnectionLoaded = false;
@@ -97,6 +99,7 @@ async function loadHealthConnection() {
         permissions: {
           sleep: Boolean(parsed.permissions.sleep),
           steps: Boolean(parsed.permissions.steps),
+          activityEnergy: parsed.permissions.activityEnergy !== false,
           heartRate: false,
         },
       };
@@ -144,14 +147,14 @@ const CONDITION_LABELS: Readonly<Record<string, string>> = {
 };
 
 const mockRecords: WellnessRecordSummary[] = [
-  { id: 'mock-today', date: localDateId(relativeDate(0)), condition: '꽤 불편해요', conditionTone: 'danger', sleepDuration: '5시간 42분', steps: '4,230보', bodyParts: ['목'], intensity: 4, memo: '오후부터 목이 뻐근했어요.' },
-  { id: 'mock-day-1', date: localDateId(relativeDate(1)), condition: '조금 피곤해요', conditionTone: 'caution', sleepDuration: '6시간 10분', steps: '6,840보', bodyParts: ['어깨'], intensity: 2, memo: '' },
-  { id: 'mock-day-3', date: localDateId(relativeDate(3)), condition: '괜찮아요', conditionTone: 'good', sleepDuration: '7시간 21분', steps: '8,120보', bodyParts: [], intensity: null, memo: '가벼운 산책을 했어요.' },
-  { id: 'mock-day-6', date: localDateId(relativeDate(6)), condition: '조금 불편해요', conditionTone: 'caution', sleepDuration: '6시간 35분', steps: '5,510보', bodyParts: ['허리'], intensity: 3, memo: '' },
+  { id: 'mock-today', date: localDateId(relativeDate(0)), condition: '꽤 불편해요', conditionTone: 'danger', sleepDuration: '5시간 42분', steps: '4,230보', bodyParts: ['목'], intensity: 4, memo: '오후부터 목이 뻐근했어요.', routineCompleted: false },
+  { id: 'mock-day-1', date: localDateId(relativeDate(1)), condition: '조금 피곤해요', conditionTone: 'caution', sleepDuration: '6시간 10분', steps: '6,840보', bodyParts: ['어깨'], intensity: 2, memo: '', routineCompleted: true },
+  { id: 'mock-day-3', date: localDateId(relativeDate(3)), condition: '괜찮아요', conditionTone: 'good', sleepDuration: '7시간 21분', steps: '8,120보', bodyParts: [], intensity: null, memo: '가벼운 산책을 했어요.', routineCompleted: true },
+  { id: 'mock-day-6', date: localDateId(relativeDate(6)), condition: '조금 불편해요', conditionTone: 'caution', sleepDuration: '6시간 35분', steps: '5,510보', bodyParts: ['허리'], intensity: 3, memo: '', routineCompleted: false },
 ];
 
 function latestRecordFor(date: string): WellnessRecordSummary | null {
-  if (userDataDeleted) return null;
+  if (userDataDeleted || deletedRecordDates.has(date)) return null;
   const savedCheck = dailyChecks.get(date);
   if (savedCheck) {
     const intensity = savedCheck.discomfort.intensity ?? 0;
@@ -182,7 +185,7 @@ function editableCheckFromRecord(record: WellnessRecordSummary): DailyCheckSubmi
   const areas = record.bodyParts.map((label) => ({ ...(zoneByLabel[label] ?? { id: label, view: 'front' as const }), label, intensity: record.intensity ?? 1 }));
   return {
     date: record.date,
-    autoRecords: { sleepDuration: record.sleepDuration, bedtime: '오전 12:18', steps: record.steps, source: 'manual' },
+    autoRecords: { sleepDuration: record.sleepDuration, bedtime: '오전 12:18', steps: record.steps, activityEnergy: '312kcal', source: 'manual' },
     condition,
     conditionTags: record.conditionTone === 'good' ? ['상쾌해요'] : ['피곤해요'],
     discomfort: {
@@ -212,20 +215,20 @@ const TODAY_ROUTINE: RoutinePlan = {
   id: 'neck-release-01',
   title: '목 주변 가볍게 이완하기',
   description: '호흡을 이어가며 목과 어깨의 긴장을 천천히 풀어요.',
-  reason: '최근 목 불편과 짧은 수면 기록을 바탕으로 추천했어요.',
+  reason: '어깨 앞 불편이 3일째 이어지고 있고, 어제 수면이 6시간보다 짧았어요. 목과 어깨 주변을 짧게 풀어주는 동작을 골랐어요.',
   intensity: '가볍게',
   targetArea: '목 · 어깨',
   totalSeconds: 120,
   caution: '통증이나 어지러움이 느껴지면 즉시 멈추고 편한 자세로 돌아오세요.',
   steps: [
-    { id: 'breath', title: '자세 잡고 호흡하기', instruction: '등을 편하게 세우고 어깨 힘을 뺀 채 천천히 숨을 쉬어요.', durationSeconds: 30, side: 'center' },
-    { id: 'left', title: '오른쪽 목 늘리기', instruction: '오른손을 머리 위에 가볍게 올리고 오른쪽으로 기울여요.', durationSeconds: 30, side: 'right' },
-    { id: 'right', title: '왼쪽 목 늘리기', instruction: '왼손을 머리 위에 가볍게 올리고 왼쪽으로 기울여요.', durationSeconds: 30, side: 'left' },
-    { id: 'roll', title: '어깨 천천히 돌리기', instruction: '양쪽 어깨를 귀 쪽으로 올렸다가 뒤로 크게 원을 그려요.', durationSeconds: 30, side: 'center' },
+    { id: 'neck', title: '목 뒤 늘이기', instruction: '턱을 가슴 쪽으로 천천히 당기고 어깨는 내린 채 유지해요.', durationSeconds: 40, side: 'center' },
+    { id: 'shoulder', title: '어깨 으쓱 이완', instruction: '숨을 들이마시며 어깨를 올리고, 내쉬며 툭 떨어뜨려요.', durationSeconds: 40, side: 'center' },
+    { id: 'roll', title: '어깨 천천히 돌리기', instruction: '양쪽 어깨를 귀 쪽으로 올렸다가 뒤로 크게 원을 그려요.', durationSeconds: 40, side: 'center' },
   ],
 };
 
 const BODY_PART_HIGHLIGHTS: Readonly<Record<string, readonly Omit<BodyMapHighlight, 'intensity'>[]>> = {
+  머리: [{ part: 'neck', muscle: 'neck' }],
   목: [{ part: 'neck', muscle: 'neck' }],
   어깨: [{ part: 'shoulder', muscle: 'trapezius' }, { part: 'shoulder', muscle: 'deltoids' }],
   허리: [{ part: 'hip', muscle: 'obliques' }],
@@ -233,7 +236,30 @@ const BODY_PART_HIGHLIGHTS: Readonly<Record<string, readonly Omit<BodyMapHighlig
   손목: [{ part: 'forearm', muscle: 'forearm' }],
 };
 
+const ZONE_HIGHLIGHTS: Readonly<Record<string, readonly Omit<BodyMapHighlight, 'intensity'>[]>> = {
+  'front-head': BODY_PART_HIGHLIGHTS.머리,
+  'back-head': BODY_PART_HIGHLIGHTS.머리,
+  'back-neck': BODY_PART_HIGHLIGHTS.목,
+  'front-shoulder-left': BODY_PART_HIGHLIGHTS.어깨,
+  'front-shoulder-right': BODY_PART_HIGHLIGHTS.어깨,
+  'back-shoulder-left': BODY_PART_HIGHLIGHTS.어깨,
+  'back-shoulder-right': BODY_PART_HIGHLIGHTS.어깨,
+  'front-arm-left': [{ part: 'upperArm', muscle: 'biceps' }, { part: 'forearm', muscle: 'forearm' }],
+  'front-arm-right': [{ part: 'upperArm', muscle: 'biceps' }, { part: 'forearm', muscle: 'forearm' }],
+  'back-arm-left': [{ part: 'upperArm', muscle: 'biceps' }, { part: 'forearm', muscle: 'forearm' }],
+  'back-arm-right': [{ part: 'upperArm', muscle: 'biceps' }, { part: 'forearm', muscle: 'forearm' }],
+  'front-chest': BODY_PART_HIGHLIGHTS.가슴 ?? [{ part: 'chest', muscle: 'chest' }],
+  'front-abdomen': [{ part: 'abdomen', muscle: 'abs' }, { part: 'abdomen', muscle: 'obliques' }],
+  'back-upper': [{ part: 'shoulder', muscle: 'trapezius' }],
+  'back-lower': BODY_PART_HIGHLIGHTS.허리,
+  'front-leg-left': [{ part: 'thigh', muscle: 'quadriceps' }, { part: 'knee', muscle: 'knees' }, { part: 'calf', muscle: 'tibialis' }],
+  'front-leg-right': [{ part: 'thigh', muscle: 'quadriceps' }, { part: 'knee', muscle: 'knees' }, { part: 'calf', muscle: 'tibialis' }],
+  'back-leg-left': [{ part: 'thigh', muscle: 'quadriceps' }, { part: 'calf', muscle: 'calves' }],
+  'back-leg-right': [{ part: 'thigh', muscle: 'quadriceps' }, { part: 'calf', muscle: 'calves' }],
+};
+
 function broadBodyPart(label: string) {
+  if (label.includes('머리')) return '머리';
   if (label.includes('목')) return '목';
   if (label.includes('어깨')) return '어깨';
   if (label.includes('허리')) return '허리';
@@ -243,10 +269,11 @@ function broadBodyPart(label: string) {
 }
 
 function highlightsFromCheck(check: DailyCheckSubmission): BodyMapHighlight[] {
-  const intensity = Math.min(3, Math.max(1, Math.ceil((check.discomfort.intensity ?? 1) / 2))) as 1 | 2 | 3;
   const unique = new Map<string, BodyMapHighlight>();
-  check.discomfort.areas.map((area) => broadBodyPart(area.label)).flatMap((part) => BODY_PART_HIGHLIGHTS[part] ?? []).forEach((highlight) => {
-    unique.set(highlight.muscle, { ...highlight, intensity });
+  check.discomfort.areas.forEach((area) => {
+    const intensity = Math.min(3, Math.max(1, Math.ceil((area.intensity ?? check.discomfort.intensity ?? 1) / 2))) as 1 | 2 | 3;
+    const highlights = ZONE_HIGHLIGHTS[area.id] ?? BODY_PART_HIGHLIGHTS[broadBodyPart(area.label)] ?? [];
+    highlights.forEach((highlight) => unique.set(highlight.muscle, { ...highlight, intensity }));
   });
   return [...unique.values()];
 }
@@ -259,9 +286,12 @@ function detailsFromCheck(check: DailyCheckSubmission, highlights: readonly Body
   highlights.forEach(({ part }) => {
     if (updated.has(part)) return;
     updated.add(part);
+    const matchingAreas = check.discomfort.areas.filter((area) => (ZONE_HIGHLIGHTS[area.id] ?? BODY_PART_HIGHLIGHTS[broadBodyPart(area.label)] ?? []).some((highlight) => highlight.part === part));
+    const partIntensity = matchingAreas.length ? `${Math.max(...matchingAreas.map((area) => area.intensity))}단계` : intensity;
+    const partFeelings = [...new Set(matchingAreas.flatMap((area) => area.feelings ?? []))];
     details[part] = {
-      title: `${check.discomfort.areas.map((area) => area.label).join(', ')} 부위가 불편해요`,
-      lines: [{ label: '불편 강도', value: intensity }, { label: '느낌', value: feeling }, { label: '수면 자세', value: check.sleep.posture ?? '기록 없음' }],
+      title: `${matchingAreas.map((area) => area.label).join(', ') || '기록한 부위'}가 불편해요`,
+      lines: [{ label: '불편 강도', value: partIntensity }, { label: '느낌', value: partFeelings.join(', ') || feeling }, { label: '지속', value: '오늘 기록' }, { label: '두통 동반', value: check.discomfort.headache ? '있음' : '없음' }],
     };
   });
   return details;
@@ -292,7 +322,7 @@ class MockWellnessApi implements WellnessApi {
   }
 
   async getAutoHealthRecord(): Promise<AutoHealthRecord> {
-    return { sleepDuration: '5시간 42분', bedtime: '오전 1:18', steps: '4,230보', source: 'apple-health' };
+    return { sleepDuration: '6시간 27분', bedtime: '오전 12:35', steps: '4,120보', activityEnergy: '312kcal', source: 'apple-health' };
   }
 
   async getHomeSummary(): Promise<HomeSummary> {
@@ -310,10 +340,12 @@ class MockWellnessApi implements WellnessApi {
       ? localDateId(new Date(latestRoutineCompletion.completedAt)) < localDateId(new Date())
       : false;
     const pendingFeedback = latestRoutineCompletion && !latestRoutineFeedback && isFollowingDay ? { routineId: latestRoutineCompletion.routineId, title: '지난 루틴 효과 확인', question: '목 이완 루틴 후, 지금은 목이 어떤가요?' } : undefined;
-    if (!todayCheck) return { ...mockHomeSummary, routine, pendingFeedback, routineEffectLabel: feedbackSummary };
+    const dateLabel = new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' }).format(new Date());
+    if (!todayCheck) return { ...mockHomeSummary, dateLabel, routine, pendingFeedback, routineEffectLabel: feedbackSummary };
     const bodyHighlights = highlightsFromCheck(todayCheck);
     return {
       ...mockHomeSummary,
+      dateLabel,
       evidence: todayCheck.discomfort.areas.length > 0
         ? `${todayCheck.discomfort.areas.map((area) => area.label).join(', ')}이(가) ${todayCheck.discomfort.intensity ?? 0}단계로 기록됐어요`
         : '오늘 기록된 불편 부위가 없어요',
@@ -327,6 +359,7 @@ class MockWellnessApi implements WellnessApi {
   }
 
   async getDailyCheck(date: string): Promise<DailyCheckSubmission | null> {
+    if (deletedRecordDates.has(date)) return null;
     const savedCheck = dailyChecks.get(date);
     if (savedCheck) return savedCheck;
     const record = mockRecords.find((item) => item.date === date);
@@ -357,7 +390,7 @@ class MockWellnessApi implements WellnessApi {
   }
 
   async createHealthReport(options: ReportOptions): Promise<HealthReport> {
-    const periodLabel = options.period === '3days' ? '최근 3일' : options.period === '7days' ? '최근 7일' : options.period === '14days' ? '최근 14일' : `${options.customStartDate ?? ''}–${options.customEndDate ?? ''}`;
+    const periodLabel = options.period === '30days' ? '최근 30일' : options.period === '90days' ? '최근 90일' : `${options.customStartDate ?? ''}–${options.customEndDate ?? ''}`;
     const highlights = [
       ...(options.includeSleep ? [{ label: '평균 수면', value: '6시간 22분', change: '이전보다 12분 감소' }] : []),
       ...(options.includeActivity ? [{ label: '평균 걸음', value: '6,430보', change: '이전보다 8% 증가' }] : []),
@@ -427,7 +460,6 @@ class MockWellnessApi implements WellnessApi {
   }
 
   async getPatternDetail(patternId: string, endDate: string): Promise<PatternDetail | null> {
-    if (accumulatedRecordDays() < REQUIRED_ANALYSIS_DAYS) return null;
     const pattern = DISCOVER_PATTERNS.find((item) => item.id === patternId);
     if (!pattern) return null;
     const summary = await this.getDiscoverSummary(endDate);
@@ -451,7 +483,7 @@ class MockWellnessApi implements WellnessApi {
   async getRecordsMonth(year: number, month: number): Promise<RecordsMonth> {
     const records = (userDataDeleted ? [] : mockRecords).filter((record) => {
       const [recordYear, recordMonth] = record.date.split('-').map(Number);
-      return recordYear === year && recordMonth === month;
+      return recordYear === year && recordMonth === month && !deletedRecordDates.has(record.date);
     });
     const savedRecords = [...dailyChecks.keys()].filter((date) => {
       const [recordYear, recordMonth] = date.split('-').map(Number);
@@ -477,8 +509,14 @@ class MockWellnessApi implements WellnessApi {
 
   async saveDailyCheck(payload: DailyCheckSubmission): Promise<{ recordId: string }> {
     dailyChecks.set(payload.date, payload);
+    deletedRecordDates.delete(payload.date);
     userDataDeleted = false;
     return { recordId: `daily-check-${payload.date}` };
+  }
+
+  async deleteDailyCheck(date: string): Promise<void> {
+    dailyChecks.delete(date);
+    deletedRecordDates.add(date);
   }
 }
 

@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
-import { Alert, FlatList, KeyboardAvoidingView, Linking, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, KeyboardAvoidingView, Linking, Platform, Pressable, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppIcon } from '@/components/app-icon';
+import { Momi } from '@/components/momi';
 import NavigationBackButton from '@/components/navigation-back-button';
 import type { AssistantMessage, AssistantReply } from '@/domain/wellness';
 import { wellnessApi } from '@/services/wellness-api';
@@ -20,11 +21,13 @@ type ChatItem = AssistantMessage & {
   photoUri?: string;
 };
 
-const INITIAL_SUGGESTIONS = ['최근 수면 흐름을 정리해줘', '목이 불편했던 날을 찾아줘', '오늘 할 루틴을 추천해줘'];
+const INITIAL_SUGGESTIONS = ['최근 수면 흐름을 정리해줘', '어깨가 불편했던 날을 찾아줘', '오늘 할 루틴을 추천해줘', '이번 주는 지난주와 어떻게 달라?'];
 
 export default function AssistantScreen({ asTab = false }: { asTab?: boolean }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  const compactHeight = height < 500;
   const listRef = useRef<FlatList<ChatItem>>(null);
   const [messages, setMessages] = useState<ChatItem[]>([]);
   const [suggestions, setSuggestions] = useState(INITIAL_SUGGESTIONS);
@@ -86,7 +89,7 @@ export default function AssistantScreen({ asTab = false }: { asTab?: boolean }) 
   );
 
   const header = asTab ? (
-    <View style={styles.tabHeader}>
+    <View style={[styles.tabHeader, compactHeight && styles.tabHeaderCompact]}>
       <View>
         <Text accessibilityRole="header" style={styles.tabTitle}>웰니스 챗</Text>
         <Text style={styles.scope}>최근 14일 기록을 참고해요</Text>
@@ -96,11 +99,8 @@ export default function AssistantScreen({ asTab = false }: { asTab?: boolean }) 
   ) : (
     <View style={styles.topBar}>
       <NavigationBackButton accessibilityLabel="이전 화면으로 돌아가기" fallbackHref="/(tabs)/home" />
-      <View style={styles.compactHeaderCopy}>
-        <Text accessibilityRole="header" style={styles.compactTitle}>웰니스 챗</Text>
-        <Text style={styles.compactScope}>최근 14일 기록</Text>
-      </View>
-      {reportButton}
+      <Text accessibilityRole="header" style={styles.compactTitle}>웰니스 챗</Text>
+      <View style={styles.scopePill}><Text style={styles.scopePillText}>최근 14일</Text></View>
     </View>
   );
 
@@ -110,26 +110,26 @@ export default function AssistantScreen({ asTab = false }: { asTab?: boolean }) 
         {header}
         <FlatList
           ref={listRef}
-          contentContainerStyle={[styles.list, messages.length === 0 && styles.emptyList]}
+          contentContainerStyle={[styles.list, compactHeight && styles.listCompact, messages.length === 0 && styles.emptyList]}
           data={messages}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           keyExtractor={(item) => item.id}
-          ListEmptyComponent={<ConversationStart onSelect={(value) => void send(value)} suggestions={suggestions} />}
+          ListEmptyComponent={<ConversationStart compact={compactHeight} onSelect={(value) => void send(value)} suggestions={suggestions} />}
           ListFooterComponent={(
             <>
               {pending ? <View accessibilityLiveRegion="polite" style={styles.reading}><View style={styles.readingLine} /><Text style={styles.readingText}>기록을 읽는 중</Text></View> : null}
               {failedPrompt ? <View style={styles.errorRow}><Text style={styles.errorText}>답변을 가져오지 못했어요.</Text><Pressable accessibilityRole="button" onPress={() => void send(failedPrompt)} style={({ pressed }) => [styles.retry, pressed && styles.pressed]}><Text style={styles.retryText}>다시 시도</Text></Pressable></View> : null}
             </>
           )}
-          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+          onContentSizeChange={() => { if (messages.length) listRef.current?.scrollToEnd({ animated: true }); }}
           renderItem={({ item }) => <Message item={item} onAction={(route) => router.push(route)} />}
           showsVerticalScrollIndicator={false}
         />
         {messages.length > 0 && suggestions.length > 0 ? <FollowUpList onSelect={(value) => void send(value)} suggestions={suggestions} /> : null}
         {photoUri ? <Attachment onRemove={() => setPhotoUri(null)} uri={photoUri} /> : null}
-        <View style={[styles.composer, { paddingBottom: asTab ? 10 : Math.max(insets.bottom, 10) }]}>
-          <Text style={styles.composerLabel}>기록이나 의약품 정보에 관해 물어보세요</Text>
+        <View style={[styles.composer, compactHeight && styles.composerCompact, { paddingBottom: asTab ? 10 : Math.max(insets.bottom, 10) }]}>
+          {!compactHeight ? <Text style={styles.composerLabel}>기록이나 의약품 정보에 관해 물어보세요</Text> : null}
           <View style={styles.composerRow}>
             <Pressable accessibilityLabel="약 포장 사진 첨부" accessibilityRole="button" onPress={() => void attachMedicinePhoto()} style={({ pressed }) => [styles.attach, pressed && styles.pressed]}>
               <AppIcon color={colors.text} name="camera" size={21} />
@@ -158,16 +158,14 @@ export default function AssistantScreen({ asTab = false }: { asTab?: boolean }) 
   );
 }
 
-function ConversationStart({ suggestions, onSelect }: { suggestions: string[]; onSelect: (value: string) => void }) {
+function ConversationStart({ compact, suggestions, onSelect }: { compact: boolean; suggestions: string[]; onSelect: (value: string) => void }) {
   return (
-    <View style={styles.start}>
-        <Text style={styles.startKicker}>YOUR RECORDS / ASK</Text><Text accessibilityRole="header" style={styles.startTitle}>기록에서 무엇을{`\n`}찾아볼까요?</Text>
-      <Text style={styles.startDescription}>수면, 불편 부위, 활동과 루틴 기록을 함께 읽어 정리해 드려요. 진단이나 처방은 제공하지 않아요.</Text>
-      <Text style={styles.indexTitle}>자주 묻는 질문</Text>
+    <View style={[styles.start, compact && styles.startCompact]}>
+        <View style={styles.welcomeRow}><Momi mood="neutral" size={compact ? 40 : 48}/><View style={[styles.welcomeBubble, compact && styles.welcomeBubbleCompact]}><Text style={styles.startDescription}>최근 14일의 수면, 불편, 활동 기록을 함께 읽어드려요. 진단이나 처방은 제공하지 않아요.</Text></View></View>
+      <Text style={[styles.indexTitle, compact && styles.indexTitleCompact]}>자주 묻는 질문</Text>
       <View style={styles.questionIndex}>
         {suggestions.map((suggestion) => (
           <Pressable accessibilityRole="button" key={suggestion} onPress={() => onSelect(suggestion)} style={({ pressed }) => [styles.questionRow, pressed && styles.questionPressed]}>
-            <View style={styles.questionIcon}><AppIcon color={colors.primary} name="message" size={17} /></View>
             <Text style={styles.questionText}>{suggestion}</Text>
             <AppIcon color={colors.textMuted} name="chevron-right" size={18} />
           </Pressable>
@@ -213,7 +211,7 @@ function Message({ item, onAction }: { item: ChatItem; onAction: (route: NonNull
 
   return (
     <View style={styles.answerEntry}>
-      <View style={styles.answerHeading}><View style={styles.assistantIcon}><AppIcon color={colors.primary} name="message" size={16}/></View><Text style={styles.answerHeadingText}>기록을 바탕으로 정리했어요</Text></View>
+      <View style={styles.answerHeading}><View style={styles.assistantIcon}><Momi mood="happy" size={30}/></View><Text style={styles.answerHeadingText}>기록을 바탕으로 정리했어요</Text></View>
       <View style={styles.answerBody}><Text accessibilityLiveRegion="polite" style={styles.answerText}>{item.text}</Text></View>
       {item.references?.length ? <View style={styles.referenceLedger}><Text style={styles.referenceTitle}>참고한 기록</Text>{item.references.map((reference) => <View key={reference.label} style={styles.referenceRow}><Text style={styles.referenceLabel}>{reference.label}</Text><Text style={styles.referenceValue}>{reference.value}</Text></View>)}</View> : null}
       {item.officialInfo ? <MedicineSheet info={item.officialInfo} /> : null}

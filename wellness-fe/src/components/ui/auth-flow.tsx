@@ -5,7 +5,7 @@ import { colors, spacing, typography } from '@/theme/tokens';
 
 export function BrandWordmark({ inverse = false }: { inverse?: boolean }) {
   const color = inverse ? colors.white : colors.text;
-  return <View accessibilityLabel="몸기록" accessible style={styles.wordmark}><View style={[styles.wordmarkDot, { backgroundColor: inverse ? colors.white : colors.body }]}/><Text style={[styles.wordmarkText, { color }]}>몸기록</Text></View>;
+  return <View accessibilityLabel="몸기록" accessible style={styles.wordmark}><View style={[styles.wordmarkDot, { backgroundColor: inverse ? colors.white : colors.primary }]}/><Text style={[styles.wordmarkText, { color }]}>몸기록</Text></View>;
 }
 
 export function SetupProgress({ current, total = 3 }: { current: number; total?: number }) {

@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import type { AutoHealthRecord } from '@/domain/wellness';
 
 const STEP_COUNT = 'HKQuantityTypeIdentifierStepCount' as const;
+const ACTIVE_ENERGY = 'HKQuantityTypeIdentifierActiveEnergyBurned' as const;
 const SLEEP_ANALYSIS = 'HKCategoryTypeIdentifierSleepAnalysis' as const;
 const ASLEEP_VALUES = new Set([1, 3, 4, 5]);
 
@@ -116,6 +117,10 @@ function formatSteps(value: number) {
   return `${Math.max(0, Math.round(value)).toLocaleString('ko-KR')}보`;
 }
 
+function formatEnergy(value: number) {
+  return `${Math.max(0, Math.round(value)).toLocaleString('ko-KR')}kcal`;
+}
+
 function isoDate(value: Date | string | undefined) {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
@@ -132,9 +137,9 @@ export const appleHealthService = {
     }
   },
 
-  async requestReadAuthorization(permissions: { sleep: boolean; steps: boolean } = { sleep: true, steps: true }) {
+  async requestReadAuthorization(permissions: { sleep: boolean; steps: boolean; activityEnergy?: boolean } = { sleep: true, steps: true, activityEnergy: true }) {
     const healthKit = await requireAvailableHealthKit();
-    const toRead = [permissions.steps ? STEP_COUNT : null, permissions.sleep ? SLEEP_ANALYSIS : null].filter((value): value is typeof STEP_COUNT | typeof SLEEP_ANALYSIS => value !== null);
+    const toRead = [permissions.steps ? STEP_COUNT : null, permissions.activityEnergy !== false ? ACTIVE_ENERGY : null, permissions.sleep ? SLEEP_ANALYSIS : null].filter((value): value is typeof STEP_COUNT | typeof ACTIVE_ENERGY | typeof SLEEP_ANALYSIS => value !== null);
     if (toRead.length === 0) return;
     try {
       const requested = await healthKit.requestAuthorization({ toRead });
@@ -147,9 +152,9 @@ export const appleHealthService = {
     }
   },
 
-  async configureBackgroundSync(permissions: { sleep: boolean; steps: boolean }) {
+  async configureBackgroundSync(permissions: { sleep: boolean; steps: boolean; activityEnergy?: boolean }) {
     const healthKit = await requireAvailableHealthKit();
-    const typeIdentifiers = [permissions.steps ? STEP_COUNT : null, permissions.sleep ? SLEEP_ANALYSIS : null].filter((value): value is typeof STEP_COUNT | typeof SLEEP_ANALYSIS => value !== null);
+    const typeIdentifiers = [permissions.steps ? STEP_COUNT : null, permissions.activityEnergy !== false ? ACTIVE_ENERGY : null, permissions.sleep ? SLEEP_ANALYSIS : null].filter((value): value is typeof STEP_COUNT | typeof ACTIVE_ENERGY | typeof SLEEP_ANALYSIS => value !== null);
     if (typeIdentifiers.length === 0) {
       await healthKit.clearBackgroundTypes();
       return;
@@ -166,6 +171,7 @@ export const appleHealthService = {
     const healthKit = await requireAvailableHealthKit();
     const subscriptions = [
       healthKit.subscribeToChanges(STEP_COUNT, ({ errorMessage }) => onChange(errorMessage)),
+      healthKit.subscribeToChanges(ACTIVE_ENERGY, ({ errorMessage }) => onChange(errorMessage)),
       healthKit.subscribeToChanges(SLEEP_ANALYSIS, ({ errorMessage }) => onChange(errorMessage)),
     ];
     return () => subscriptions.forEach((subscription) => subscription.remove());
@@ -218,12 +224,12 @@ export const appleHealthService = {
     return diagnostic;
   },
 
-  async readDailyRecord(dateId: string, permissions: { sleep: boolean; steps: boolean } = { sleep: true, steps: true }): Promise<AutoHealthRecord> {
+  async readDailyRecord(dateId: string, permissions: { sleep: boolean; steps: boolean; activityEnergy?: boolean } = { sleep: true, steps: true, activityEnergy: true }): Promise<AutoHealthRecord> {
     const healthKit = await requireAvailableHealthKit();
     const day = dayRange(dateId);
     const sleep = sleepRange(dateId);
     try {
-      const toRead = [permissions.steps ? STEP_COUNT : null, permissions.sleep ? SLEEP_ANALYSIS : null].filter((value): value is typeof STEP_COUNT | typeof SLEEP_ANALYSIS => value !== null);
+      const toRead = [permissions.steps ? STEP_COUNT : null, permissions.activityEnergy !== false ? ACTIVE_ENERGY : null, permissions.sleep ? SLEEP_ANALYSIS : null].filter((value): value is typeof STEP_COUNT | typeof ACTIVE_ENERGY | typeof SLEEP_ANALYSIS => value !== null);
       if (toRead.length === 0) {
         throw new AppleHealthError('NO_HEALTH_DATA', 'Apple 건강에서 가져오도록 선택한 항목이 없어요.');
       }
@@ -236,6 +242,12 @@ export const appleHealthService = {
         ? await healthKit.queryStatisticsForQuantity(STEP_COUNT, ['cumulativeSum'], {
           filter: { date: { ...day, strictStartDate: true, strictEndDate: true } },
           unit: 'count',
+        })
+        : null;
+      const energyStatistics = permissions.activityEnergy !== false
+        ? await healthKit.queryStatisticsForQuantity(ACTIVE_ENERGY, ['cumulativeSum'], {
+          filter: { date: { ...day, strictStartDate: true, strictEndDate: true } },
+          unit: 'kcal',
         })
         : null;
       const sleepSamples = permissions.sleep
@@ -253,15 +265,17 @@ export const appleHealthService = {
       );
       const sleepMilliseconds = asleepIntervals.reduce((total, interval) => total + interval.end.getTime() - interval.start.getTime(), 0);
       const steps = stepStatistics?.sumQuantity?.quantity;
+      const activityEnergy = energyStatistics?.sumQuantity?.quantity;
 
-      if (sleepMilliseconds === 0 && steps === undefined) {
-        throw new AppleHealthError('NO_HEALTH_DATA', 'Apple 건강의 수면·걸음 수 읽기 권한이 꺼져 있거나, 이 날짜에 저장된 기록이 없어요.');
+      if (sleepMilliseconds === 0 && steps === undefined && activityEnergy === undefined) {
+        throw new AppleHealthError('NO_HEALTH_DATA', 'Apple 건강의 수면·걸음·활동 에너지 읽기 권한이 꺼져 있거나, 이 날짜에 저장된 기록이 없어요.');
       }
 
       return {
         sleepDuration: sleepMilliseconds > 0 ? formatDuration(sleepMilliseconds) : '기록 없음',
         bedtime: asleepIntervals[0] ? formatTime(asleepIntervals[0].start) : '기록 없음',
         steps: steps !== undefined ? formatSteps(steps) : '기록 없음',
+        activityEnergy: activityEnergy !== undefined ? formatEnergy(activityEnergy) : '기록 없음',
         source: 'apple-health',
       };
     } catch (error) {

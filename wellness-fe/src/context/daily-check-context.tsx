@@ -6,7 +6,7 @@ export type CheckStep = 'auto' | 'condition' | 'discomfort' | 'sleep' | 'activit
 type DailyCheckDraft = {
   targetDate: string | null;
   mode: 'create' | 'edit';
-  autoRecords: { sleepDuration: string; bedtime: string; steps: string };
+  autoRecords: { sleepDuration: string; bedtime: string; steps: string; activityEnergy: string };
   autoSource: 'apple-health' | 'health-connect' | 'manual';
   autoConfirmed: boolean;
   condition: string | null;
@@ -15,12 +15,18 @@ type DailyCheckDraft = {
   intensity: number | null;
   bodyView: 'front' | 'back';
   bodyAreaIntensities: Record<string, number>;
+  bodyAreaFeelings: Record<string, string[]>;
   discomfortFeelings: string[];
+  headache: boolean;
+  sleepMinutes: number;
   sleepSatisfaction: number | null;
   sleepPosture: string | null;
   pillow: string | null;
   activity: string | null;
+  activities: string[];
   skinStates: string[];
+  skinTrouble: boolean;
+  troubleSpots: string[];
   skinPhotoUri: string | null;
   memo: string;
   skippedSteps: CheckStep[];
@@ -29,7 +35,7 @@ type DailyCheckDraft = {
 const initialDraft: DailyCheckDraft = {
   targetDate: null,
   mode: 'create',
-  autoRecords: { sleepDuration: '', bedtime: '', steps: '' },
+  autoRecords: { sleepDuration: '', bedtime: '', steps: '', activityEnergy: '' },
   autoSource: 'manual',
   autoConfirmed: false,
   condition: null,
@@ -38,12 +44,18 @@ const initialDraft: DailyCheckDraft = {
   intensity: null,
   bodyView: 'front',
   bodyAreaIntensities: {},
+  bodyAreaFeelings: {},
   discomfortFeelings: [],
+  headache: false,
+  sleepMinutes: 420,
   sleepSatisfaction: null,
   sleepPosture: null,
   pillow: null,
   activity: null,
+  activities: [],
   skinStates: [],
+  skinTrouble: false,
+  troubleSpots: [],
   skinPhotoUri: null,
   memo: '',
   skippedSteps: [],
@@ -68,9 +80,9 @@ export function DailyCheckProvider({ children }: PropsWithChildren) {
   const skipStep = useCallback((step: CheckStep) => setDraft((current) => {
     const cleared: Partial<DailyCheckDraft> = step === 'auto' ? { autoConfirmed: false }
       : step === 'condition' ? { condition: null, conditionTags: [] }
-        : step === 'discomfort' ? { bodyParts: [], intensity: null, bodyAreaIntensities: {}, discomfortFeelings: [] }
-          : step === 'sleep' ? { sleepSatisfaction: null, sleepPosture: null, pillow: null }
-            : { activity: null, skinStates: [], skinPhotoUri: null, memo: '' };
+        : step === 'discomfort' ? { bodyParts: [], intensity: null, bodyAreaIntensities: {}, bodyAreaFeelings: {}, discomfortFeelings: [], headache: false }
+          : step === 'sleep' ? { sleepSatisfaction: null, sleepPosture: null, pillow: null, sleepMinutes: 420 }
+            : { activity: null, activities: [], skinStates: [], skinTrouble: false, troubleSpots: [], skinPhotoUri: null, memo: '' };
     return {
       ...current,
       ...cleared,
@@ -86,7 +98,7 @@ export function DailyCheckProvider({ children }: PropsWithChildren) {
     setDraft({
       targetDate: date,
       mode,
-      autoRecords: { sleepDuration: submission.autoRecords.sleepDuration, bedtime: submission.autoRecords.bedtime, steps: submission.autoRecords.steps },
+      autoRecords: { sleepDuration: submission.autoRecords.sleepDuration, bedtime: submission.autoRecords.bedtime, steps: submission.autoRecords.steps, activityEnergy: submission.autoRecords.activityEnergy ?? '' },
       autoSource: submission.autoRecords.source,
       autoConfirmed: true,
       condition: submission.condition,
@@ -95,12 +107,18 @@ export function DailyCheckProvider({ children }: PropsWithChildren) {
       intensity: submission.discomfort.intensity,
       bodyView: submission.discomfort.areas[0]?.view ?? 'front',
       bodyAreaIntensities: Object.fromEntries(submission.discomfort.areas.map((area) => [area.id, area.intensity])),
+      bodyAreaFeelings: Object.fromEntries(submission.discomfort.areas.map((area) => [area.id, area.feelings ?? submission.discomfort.feelings])),
       discomfortFeelings: [...submission.discomfort.feelings],
+      headache: submission.discomfort.headache ?? false,
+      sleepMinutes: submission.sleep.minutes ?? 420,
       sleepSatisfaction: submission.sleep.satisfaction,
       sleepPosture: submission.sleep.posture,
       pillow: submission.sleep.pillow,
       activity: submission.activitySkin.activity,
+      activities: [...(submission.activitySkin.activities ?? [])],
       skinStates: [...submission.activitySkin.skinStates],
+      skinTrouble: submission.activitySkin.trouble ?? false,
+      troubleSpots: [...(submission.activitySkin.troubleSpots ?? [])],
       skinPhotoUri: submission.activitySkin.photoUri,
       memo: submission.activitySkin.memo,
       skippedSteps: submission.skippedSteps.filter((step): step is CheckStep => ['auto', 'condition', 'discomfort', 'sleep', 'activitySkin'].includes(step)),
@@ -108,10 +126,8 @@ export function DailyCheckProvider({ children }: PropsWithChildren) {
   }, []);
   const completedCount = [
     draft.autoConfirmed,
-    draft.condition !== null,
-    draft.bodyParts.length > 0 && draft.bodyParts.every((part) => draft.bodyAreaIntensities[part] !== undefined),
-    draft.sleepSatisfaction !== null && draft.sleepPosture !== null,
-    draft.activity !== null && draft.skinStates.length > 0,
+    draft.bodyParts.length === 0 || draft.bodyParts.every((part) => draft.bodyAreaIntensities[part] !== undefined),
+    draft.sleepPosture !== null,
   ].filter(Boolean).length;
 
   const value = useMemo(() => ({

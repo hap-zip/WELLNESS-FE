@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from 'react';
 import { StyleSheet, View, type ViewProps } from 'react-native';
-import { colors, radius, spacing } from '@/theme/tokens';
+import { colors, layout, spacing } from '@/theme/tokens';
 
 type SurfaceTone = 'plain' | 'subtle' | 'inverse' | 'accent';
 
@@ -9,9 +9,9 @@ export function Surface({ children, style, tone = 'plain', ...props }: PropsWith
 }
 
 const styles = StyleSheet.create({
-  base: { padding: spacing.md, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border },
+  base: { paddingVertical: spacing.xl, paddingHorizontal: layout.horizontalPadding, backgroundColor: colors.surface },
   plain: { backgroundColor: colors.surface },
   subtle: { backgroundColor: colors.surfaceSubtle },
   inverse: { backgroundColor: colors.inverse, borderColor: colors.inverse },
-  accent: { backgroundColor: colors.primarySoft, borderColor: colors.primaryBorder },
+  accent: { backgroundColor: colors.primarySoft },
 });

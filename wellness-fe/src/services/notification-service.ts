@@ -10,6 +10,12 @@ const CHANNEL_ID = 'wellness-reminders';
 const SETTINGS_KEY = 'wellness.notification-settings.v1';
 const DAILY_NOTIFICATION_KEY = 'wellness.daily-notification-id.v1';
 
+const storage = {
+  async get(key: string) { if (Platform.OS === 'web') return typeof window === 'undefined' ? null : window.localStorage.getItem(key); return SecureStore.getItemAsync(key); },
+  async set(key: string, value: string) { if (Platform.OS === 'web') { if (typeof window !== 'undefined') window.localStorage.setItem(key, value); return; } await SecureStore.setItemAsync(key, value); },
+  async remove(key: string) { if (Platform.OS === 'web') { if (typeof window !== 'undefined') window.localStorage.removeItem(key); return; } await SecureStore.deleteItemAsync(key); },
+};
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldPlaySound: false,
@@ -45,10 +51,10 @@ async function ensureAndroidChannel() {
 }
 
 async function cancelDailyReminder() {
-  const identifier = await SecureStore.getItemAsync(DAILY_NOTIFICATION_KEY);
+  const identifier = await storage.get(DAILY_NOTIFICATION_KEY);
   if (!identifier) return;
   await Notifications.cancelScheduledNotificationAsync(identifier).catch(() => undefined);
-  await SecureStore.deleteItemAsync(DAILY_NOTIFICATION_KEY);
+  await storage.remove(DAILY_NOTIFICATION_KEY);
 }
 
 async function scheduleDailyReminder(time: string) {
@@ -72,7 +78,7 @@ async function scheduleDailyReminder(time: string) {
       minute,
     },
   });
-  await SecureStore.setItemAsync(DAILY_NOTIFICATION_KEY, identifier);
+  await storage.set(DAILY_NOTIFICATION_KEY, identifier);
 }
 
 async function getNotificationPermission(): Promise<NotificationSettings['osPermission']> {
@@ -96,11 +102,11 @@ export const notificationService = {
 
   async getSettings(): Promise<NotificationSettings> {
     const fallback = await wellnessApi.getNotificationSettings();
-    const stored = await SecureStore.getItemAsync(SETTINGS_KEY);
+    const stored = await storage.get(SETTINGS_KEY);
     let settings = fallback;
     if (stored) {
       try { settings = { ...fallback, ...(JSON.parse(stored) as NotificationSettings) }; }
-      catch { await SecureStore.deleteItemAsync(SETTINGS_KEY); }
+      catch { await storage.remove(SETTINGS_KEY); }
     }
     return { ...settings, osPermission: await getNotificationPermission() };
   },
@@ -110,7 +116,7 @@ export const notificationService = {
     const next = { ...settings, osPermission: permission };
     if (next.enabled && next.dailyCheck && permission === 'granted') await scheduleDailyReminder(next.reminderTime);
     else await cancelDailyReminder();
-    await SecureStore.setItemAsync(SETTINGS_KEY, JSON.stringify(next));
+    await storage.set(SETTINGS_KEY, JSON.stringify(next));
     await wellnessApi.saveNotificationSettings(next);
   },
 

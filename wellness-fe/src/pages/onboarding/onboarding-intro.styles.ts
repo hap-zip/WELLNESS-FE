@@ -1,24 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, layout, motion, radius, spacing, typography } from '@/theme/tokens';
-
+import { colors, layout, motion, radius, typography } from '@/theme/tokens';
 export const styles = StyleSheet.create({
-  screen: { flex: 1, alignItems: 'center', backgroundColor: colors.surface },
-  shell: { flex: 1, maxWidth: layout.maxContentWidth },
-  topBar: { minHeight: 68, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: layout.horizontalPadding },
-  skipButton: { minHeight: layout.minTouch, justifyContent: 'center' },
-  skipText: { color: colors.textMuted, ...typography.caption, fontWeight: '700' },
-  progress: { height: 3, flexDirection: 'row', gap: spacing.xs, marginHorizontal: layout.horizontalPadding },
-  progressItem: { flex: 1, backgroundColor: colors.surfaceStrong },
-  progressActive: { backgroundColor: colors.primary },
-  page: { paddingTop: spacing.lg },
-  copy: { paddingHorizontal: layout.horizontalPadding, paddingTop: spacing.md },
-  title: { maxWidth: 500, color: colors.text, ...typography.display },
-  description: { maxWidth: 450, marginTop: spacing.sm, color: colors.textSecondary, ...typography.body },
-  note: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.lg },
-  noteLine: { width: 24, height: 3, borderRadius: 2, backgroundColor: colors.primary },
-  noteText: { flex: 1, color: colors.textMuted, ...typography.caption },
-  footer: { paddingHorizontal: layout.horizontalPadding, paddingTop: spacing.sm, paddingBottom: spacing.sm, backgroundColor: colors.surface },
-  nextButton: { minHeight: layout.ctaHeight, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, backgroundColor: colors.primary },
-  nextButtonText: { color: colors.white, fontSize: 16, fontWeight:'700' },
-  pressed: { opacity: motion.pressOpacity },
+  screen:{flex:1,alignItems:'center',backgroundColor:colors.surface},shell:{flex:1,maxWidth:layout.maxContentWidth},topBar:{minHeight:64,flexDirection:'row',alignItems:'center',justifyContent:'flex-end',paddingHorizontal:layout.horizontalPadding},skipButton:{minHeight:layout.minTouch,justifyContent:'center'},skipText:{color:colors.textMuted,...typography.caption,fontWeight:'600'},progress:{position:'absolute',zIndex:2,top:474,left:0,right:0,height:7,flexDirection:'row',justifyContent:'center',gap:7},progressItem:{width:7,height:7,borderRadius:4,backgroundColor:colors.border},progressActive:{width:20,backgroundColor:colors.primary},page:{paddingTop:142},visual:{height:250,marginHorizontal:layout.horizontalPadding,alignItems:'center',justifyContent:'center',borderRadius:24,backgroundColor:colors.primarySoft},copy:{alignItems:'center',paddingHorizontal:layout.horizontalPadding,paddingTop:56},title:{maxWidth:340,color:colors.text,textAlign:'center',...typography.display},description:{maxWidth:340,marginTop:10,color:colors.textSecondary,textAlign:'center',fontSize:14.5,lineHeight:25},noteText:{marginTop:14,color:colors.textMuted,...typography.caption,textAlign:'center'},footer:{paddingHorizontal:layout.horizontalPadding,paddingTop:8,paddingBottom:8,backgroundColor:colors.surface},nextButton:{minHeight:layout.ctaHeight,alignItems:'center',justifyContent:'center',borderRadius:radius.pill,backgroundColor:colors.primary},nextButtonText:{color:colors.primaryText,fontSize:16,fontWeight:'700'},pressed:{opacity:motion.pressOpacity,transform:[{scale:.975}]}
 });

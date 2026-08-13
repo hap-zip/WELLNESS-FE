@@ -1,5 +1,5 @@
-import { Redirect } from 'expo-router';
+import AssistantScreen from '@/pages/assistant/AssistantScreen';
 
 export default function AssistantRoute() {
-  return <Redirect href="/(tabs)/chat" />;
+  return <AssistantScreen />;
 }

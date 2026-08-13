@@ -1,5 +1,5 @@
-import ConditionCheckScreen from '@/pages/check/ConditionCheckScreen';
+import { Redirect } from 'expo-router';
 
 export default function ConditionCheckRoute() {
-  return <ConditionCheckScreen />;
+  return <Redirect href="/check/discomfort" />;
 }

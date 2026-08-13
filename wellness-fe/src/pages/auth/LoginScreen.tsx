@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BrandWordmark } from '@/components/ui/auth-flow';
+import { Momi } from '@/components/momi';
 import { FormField } from '@/components/ui/form-field';
 import { useAuth } from '@/context/auth-context';
 import { userFacingError } from '@/services/api-error';
@@ -18,8 +18,8 @@ export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { startSession } = useAuth();
-  const [email, setEmail] = useState<string>(TEMPORARY_TEST_ACCOUNT.email);
-  const [password, setPassword] = useState<string>(TEMPORARY_TEST_ACCOUNT.password);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [touched, setTouched] = useState({ email: false, password: false });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,25 +63,27 @@ export default function LoginScreen() {
 
   return <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.screen}>
     <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-      <BrandWordmark/>
+      <View style={styles.page}>
+      <Pressable accessibilityLabel="몸기록" delayLongPress={900} onLongPress={() => { if (__DEV__) { setEmail(TEMPORARY_TEST_ACCOUNT.email); setPassword(TEMPORARY_TEST_ACCOUNT.password); } }} style={styles.loginBrand}><Momi mood="happy" showShadow size={76}/></Pressable>
       <View style={styles.header}>
-        <Text accessibilityRole="header" style={styles.title}>다시, 내 기록으로.</Text>
-        <Text style={styles.description}>오늘의 상태부터 지난 변화까지 이어서 확인하세요.</Text>
+        <Text accessibilityRole="header" style={styles.title}>오늘의 몸을{`\n`}기록해볼까요?</Text>
+        <Text style={styles.description}>3분이면 오늘 하루가 한 줄로 남아요.</Text>
       </View>
 
       <View style={styles.form}>
-        <FormField autoCapitalize="none" autoComplete="email" error={emailError} keyboardType="email-address" label="이메일" onBlur={() => setTouched((current) => ({ ...current, email: true }))} onChangeText={(value) => { setEmail(value); setError(''); }} placeholder="name@example.com" returnKeyType="next" textContentType="emailAddress" value={email}/>
-        <FormField autoCapitalize="none" autoComplete="current-password" error={passwordError} label="비밀번호" onBlur={() => setTouched((current) => ({ ...current, password: true }))} onChangeText={(value) => { setPassword(value); setError(''); }} onSubmitEditing={() => void submit()} placeholder="8자 이상 입력" returnKeyType="done" secureTextEntry showPasswordToggle textContentType="password" value={password}/>
+        <FormField autoCapitalize="none" autoComplete="email" error={emailError} hideLabel keyboardType="email-address" label="이메일" onBlur={() => setTouched((current) => ({ ...current, email: true }))} onChangeText={(value) => { setEmail(value); setError(''); }} placeholder="이메일" returnKeyType="next" textContentType="emailAddress" value={email}/>
+        <FormField autoCapitalize="none" autoComplete="current-password" error={passwordError} hideLabel label="비밀번호" onBlur={() => setTouched((current) => ({ ...current, password: true }))} onChangeText={(value) => { setPassword(value); setError(''); }} onSubmitEditing={() => void submit()} placeholder="비밀번호" returnKeyType="done" secureTextEntry showPasswordToggle textContentType="password" value={password}/>
       </View>
-      <Pressable accessibilityRole="button" onPress={openReset} style={({ pressed }) => [styles.forgotButton, pressed && styles.pressed]}><Text style={styles.forgotText}>비밀번호를 잊으셨나요?</Text></Pressable>
       {error ? <View accessibilityLiveRegion="assertive" style={styles.errorBand}><Text accessibilityRole="alert" style={styles.errorText}>{error}</Text></View> : null}
 
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" accessibilityState={{ disabled: !canSubmit, busy: isSubmitting }} disabled={!canSubmit || isSubmitting} onPress={() => void submit()} style={({ pressed }) => [styles.primaryButton, (!canSubmit || isSubmitting) && styles.disabledButton, pressed && styles.pressed]}>{isSubmitting ? <ActivityIndicator color={colors.white}/> : <Text style={styles.primaryButtonText}>로그인</Text>}</Pressable>
-        <View style={styles.signupRow}><Text style={styles.signupText}>몸기록이 처음인가요?</Text><Pressable accessibilityRole="link" hitSlop={8} onPress={() => router.push('/(auth)/signup')} style={({ pressed }) => pressed && styles.pressed}><Text style={styles.signupLink}>회원가입</Text></Pressable></View>
+        <Pressable accessibilityRole="button" accessibilityState={{ disabled: !canSubmit, busy: isSubmitting }} disabled={!canSubmit || isSubmitting} onPress={() => void submit()} style={({ pressed }) => [styles.primaryButton, (!canSubmit || isSubmitting) && styles.disabledButton, pressed && styles.pressed]}>{isSubmitting ? <ActivityIndicator color={colors.primaryText}/> : <Text style={styles.primaryButtonText}>로그인</Text>}</Pressable>
+        <View style={styles.signupRow}><Pressable accessibilityRole="link" hitSlop={8} onPress={() => router.push('/(auth)/signup')} style={({ pressed }) => pressed && styles.pressed}><Text style={styles.signupText}>회원가입</Text></Pressable><View style={styles.linkDivider}/><Pressable accessibilityRole="button" onPress={openReset} style={({ pressed }) => [styles.forgotButton, pressed && styles.pressed]}><Text style={styles.forgotText}>비밀번호 찾기</Text></Pressable></View>
       </View>
 
-      <View style={styles.preview}><View style={styles.previewRule}/><Text style={styles.previewTitle}>건강 데이터 연결 테스트 계정</Text><Text style={styles.testAccount}>test@navr.com · qwer1234</Text></View>
+      <View style={styles.social}><View style={styles.socialDivider}><View style={styles.socialRule}/><Text style={styles.socialLabel}>간편 로그인</Text><View style={styles.socialRule}/></View><Pressable accessibilityRole="button" onPress={() => Alert.alert('준비 중', '카카오 로그인 연동 전입니다.')} style={[styles.socialButton, styles.kakao]}><Text style={styles.kakaoText}>카카오로 계속하기</Text></Pressable><Pressable accessibilityRole="button" onPress={() => Alert.alert('준비 중', '네이버 로그인 연동 전입니다.')} style={[styles.socialButton, styles.naver]}><Text style={styles.socialWhite}>네이버로 계속하기</Text></Pressable><Pressable accessibilityRole="button" onPress={() => Alert.alert('준비 중', 'Apple 로그인 연동 전입니다.')} style={[styles.socialButton, styles.apple]}><Text style={styles.appleText}>Apple로 계속하기</Text></Pressable></View>
+
+      </View>
     </ScrollView>
 
     <Modal animationType="slide" onRequestClose={() => setResetOpen(false)} transparent visible={resetOpen}>

@@ -9,15 +9,16 @@ type Props = ComponentProps<typeof TextInput> & {
   error?: string;
   helper?: string;
   label: string;
+  hideLabel?: boolean;
   showPasswordToggle?: boolean;
 };
 
-export function FormField({ error, helper, label, onBlur, onFocus, secureTextEntry, showPasswordToggle = false, style, ...inputProps }: Props) {
+export function FormField({ error, helper, hideLabel = false, label, onBlur, onFocus, secureTextEntry, showPasswordToggle = false, style, ...inputProps }: Props) {
   const [focused, setFocused] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
+      {hideLabel ? null : <Text style={styles.label}>{label}</Text>}
       <View style={[styles.inputShell, focused && styles.inputFocused, error ? styles.inputError : null]}>
         <TextInput
           {...inputProps}
@@ -36,11 +37,12 @@ export function FormField({ error, helper, label, onBlur, onFocus, secureTextEnt
 }
 
 const styles = StyleSheet.create({
-  field: { gap: spacing.xs },
+  field: { minWidth: 0, gap: spacing.sm },
   label: { color: colors.textSecondary, ...typography.label },
-  inputShell: { minHeight: layout.controlHeight, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
-  inputFocused: { borderWidth: 1.5, borderColor: colors.brand },
+  inputShell: { minWidth: 0, minHeight: layout.controlHeight, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, backgroundColor: colors.surface },
+  inputFocused: { borderWidth: 1.5, borderColor: colors.primary },
   input: {
+    minWidth: 0,
     minHeight: layout.controlHeight,
     flex: 1,
     paddingHorizontal: spacing.md,
@@ -48,7 +50,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 16,
   },
-  visibilityButton: { width: layout.minTouch, height: layout.minTouch, alignItems: 'center', justifyContent: 'center' },
+  visibilityButton: { width: 48, height: layout.controlHeight, alignItems: 'center', justifyContent: 'center' },
   inputError: { borderWidth: 1.5, borderColor: colors.danger },
   helper: { color: colors.textMuted, ...typography.caption },
   error: { color: colors.danger, ...typography.caption },

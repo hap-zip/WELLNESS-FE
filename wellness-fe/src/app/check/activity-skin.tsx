@@ -1,5 +1,5 @@
-import ActivitySkinCheckScreen from '@/pages/check/ActivitySkinCheckScreen';
+import { Redirect } from 'expo-router';
 
 export default function ActivitySkinCheckRoute() {
-  return <ActivitySkinCheckScreen />;
+  return <Redirect href="/check/review" />;
 }

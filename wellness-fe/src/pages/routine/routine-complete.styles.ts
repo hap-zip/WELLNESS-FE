@@ -1,3 +1,31 @@
-import {StyleSheet} from 'react-native';
-import {colors,layout,motion,spacing,typography} from '@/theme/tokens';
-export const completeStyles=StyleSheet.create({screen:{flex:1,backgroundColor:colors.canvas},body:{flexGrow:1,width:'100%',maxWidth:layout.maxContentWidth,alignSelf:'center',justifyContent:'center',paddingHorizontal:layout.horizontalPadding,paddingVertical:spacing.xl},check:{width:56,height:56,alignItems:'center',justifyContent:'center',borderRadius:28,backgroundColor:colors.recovery},checkText:{color:colors.recovery,fontSize:32},eyebrow:{marginTop:spacing.xl,color:colors.recovery,...typography.caption,fontWeight:'700'},title:{maxWidth:420,marginTop:spacing.xs,color:colors.text,...typography.display},description:{maxWidth:420,marginTop:spacing.sm,color:colors.textSecondary,...typography.body},summary:{width:'100%',minHeight:112,flexDirection:'row',alignItems:'center',marginTop:spacing.xxxl,borderBottomWidth:1,borderColor:colors.recovery},summaryItem:{flex:1,alignItems:'center',paddingHorizontal:spacing.xs},summaryValue:{color:colors.text,textAlign:'center',fontSize:18,lineHeight:25,fontWeight:'700'},summaryLabel:{marginTop:spacing.xxs,color:colors.textMuted,textAlign:'center',...typography.caption},divider:{width:1,height:44,backgroundColor:colors.primaryBorder},status:{marginTop:spacing.sm,color:colors.textMuted,...typography.caption},errorTitle:{color:colors.text,...typography.sectionTitle},retryButton:{minWidth:110,minHeight:48,alignItems:'center',justifyContent:'center',marginTop:spacing.md,borderWidth:1,borderColor:colors.border},retryText:{color:colors.text,...typography.label},actions:{width:'100%',maxWidth:layout.maxContentWidth,alignSelf:'center',paddingHorizontal:layout.horizontalPadding,paddingTop:spacing.sm,borderTopWidth:1,borderTopColor:colors.divider,backgroundColor:colors.canvas},primaryButton:{minHeight:layout.ctaHeight,alignItems:'center',justifyContent:'center',backgroundColor:colors.recovery},primaryText:{color:colors.white,fontSize:16,fontWeight:'700'},laterButton:{minHeight:48,alignItems:'center',justifyContent:'center'},laterText:{color:colors.textMuted,...typography.label},pressed:{opacity:motion.pressOpacity}});
+import { StyleSheet } from 'react-native';
+import { colors, layout, motion, spacing, typography } from '@/theme/tokens';
+
+export const completeStyles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.surface },
+  body: { flexGrow: 1, width: '100%', maxWidth: layout.maxContentWidth, alignSelf: 'center', alignItems: 'center', paddingHorizontal: layout.horizontalPadding, paddingTop: 28, paddingBottom: 24 },
+  check: { height: 108, alignItems: 'center', justifyContent: 'center' },
+  checkText: { color: colors.recovery, fontSize: 32 },
+  eyebrow: { marginTop: 4, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, overflow: 'hidden', borderRadius: 20, color: colors.primaryPressed, backgroundColor: colors.primarySoft, ...typography.caption, fontWeight: '700' },
+  title: { maxWidth: 420, marginTop: spacing.md, color: colors.text, textAlign: 'center', ...typography.display },
+  description: { maxWidth: 420, marginTop: 14, padding: spacing.md, borderRadius: 16, color: colors.textSecondary, backgroundColor: colors.surfaceSubtle, ...typography.body },
+  summary: { width: '100%', marginTop: 22, paddingHorizontal: 16, borderWidth: 1, borderColor: colors.border, borderRadius: 18 },
+  summaryItem: { minHeight: 51, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  summaryValue: { color: colors.text, textAlign: 'right', fontSize: 14, lineHeight: 22, fontWeight: '700' },
+  summaryLabel: { color: colors.textMuted, ...typography.caption },
+  divider: { width: '100%', height: 1, backgroundColor: colors.divider },
+  feelingBlock: { width: '100%', marginTop: 18 },
+  feelingTitle: { color: colors.textSecondary, ...typography.caption, fontWeight: '700' },
+  feelings: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  feeling: { flex: 1, paddingVertical: 14, borderWidth: 1, borderColor: colors.divider, borderRadius: 24, color: colors.textMuted, textAlign: 'center', ...typography.caption },
+  status: { marginTop: spacing.sm, color: colors.textMuted, ...typography.caption },
+  errorTitle: { color: colors.text, ...typography.sectionTitle },
+  retryButton: { minWidth: 110, minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: 24 },
+  retryText: { color: colors.text, ...typography.label },
+  actions: { width: '100%', maxWidth: layout.maxContentWidth, alignSelf: 'center', flexDirection: 'row', gap: 10, paddingHorizontal: layout.horizontalPadding, paddingTop: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider, backgroundColor: colors.surface },
+  primaryButton: { flex: 1.7, minHeight: layout.ctaHeight, alignItems: 'center', justifyContent: 'center', borderRadius: 27, backgroundColor: colors.primary },
+  primaryText: { color: colors.primaryText, fontSize: 16, fontWeight: '700' },
+  laterButton: { flex: 1.3, minHeight: layout.ctaHeight, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, borderWidth: 1, borderColor: colors.border, borderRadius: 27 },
+  laterText: { color: colors.text, fontSize: 13, lineHeight: 19, fontWeight: '700' },
+  pressed: { opacity: motion.pressOpacity },
+});

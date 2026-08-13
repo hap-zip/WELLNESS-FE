@@ -4,7 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppState, StyleSheet } from 'react-native';
+import { AppState, Platform, StyleSheet } from 'react-native';
 
 import { DailyCheckProvider } from '@/context/daily-check-context';
 import { AuthProvider, useAuth } from '@/context/auth-context';
@@ -82,14 +82,17 @@ function RootNavigator() {
 
   useEffect(() => {
     const firstSegment = segments[0];
+    const isSplashRoute = firstSegment === '(auth)' && segments[1] === 'splash';
     const isAuthRoute = !firstSegment || firstSegment === '(auth)';
     const isOnboardingRoute = firstSegment === '(onboarding)';
     if (isRestoring) return;
+    if (isSplashRoute) return;
     if (!session && !isAuthRoute) router.replace('/(auth)/login');
     else if (session?.onboardingComplete === false && !isOnboardingRoute) router.replace('/(onboarding)/intro');
   }, [isRestoring, router, segments, session]);
 
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     const openNotification = (notification: Notifications.Notification) => {
       const url = notification.request.content.data?.url;
       if (url === '/check/auto') router.push('/check/auto');
