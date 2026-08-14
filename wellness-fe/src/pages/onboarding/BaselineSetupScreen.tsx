@@ -41,7 +41,7 @@ export default function BaselineSetupScreen() {
   const submit = async () => {
     if (isSaving) return;
     setIsSaving(true); setSaveError('');
-    try { await wellnessApi.saveBaseline(profile); router.push('/(onboarding)/health-connect'); }
+    try { await wellnessApi.saveBaseline(profile); router.replace('/(onboarding)/health-connect'); }
     catch { setSaveError('기본 상태를 저장하지 못했어요. 입력은 그대로 두었으니 다시 시도해 주세요.'); }
     finally { setIsSaving(false); }
   };

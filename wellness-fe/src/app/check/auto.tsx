@@ -1,5 +1,5 @@
-import AutoCheckScreen from '@/pages/check/AutoCheckScreen';
+import CheckFlowScreen from '@/pages/check/CheckFlowScreen';
 
 export default function AutoCheckRoute() {
-  return <AutoCheckScreen />;
+  return <CheckFlowScreen initialStep={0} />;
 }

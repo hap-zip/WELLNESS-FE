@@ -1,12 +1,15 @@
-import { useEffect } from 'react';
+import { useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import Svg, { Circle, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
-import Animated, { Easing, useAnimatedProps, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { cancelAnimation, Easing, useAnimatedProps, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import type { ConnectionMetric } from '@/domain/wellness';
 import { colors } from '@/theme/tokens';
 import { mkLine } from './wellness-charts';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const WIDTH = 320; const PLOT_HEIGHT = 150; const PADDING = 20;
+const DRAW_EASE = Easing.bezier(0.23, 1, 0.32, 1);
 type VisualConnectionMetric = ConnectionMetric & { color: string };
 export default function ConnectionOverlayChart({ labels, metrics, onPointPress, selectedIndex }: { labels: readonly string[]; metrics: readonly VisualConnectionMetric[]; onPointPress: (index: number) => void; selectedIndex: number | null }) {
   return <Svg accessibilityLabel="선택한 기록을 겹쳐 본 그래프" height={188} viewBox="0 0 320 188" width="100%">
@@ -18,4 +21,30 @@ export default function ConnectionOverlayChart({ labels, metrics, onPointPress, 
   </Svg>;
 }
 function xAt(index:number,count:number){return PADDING+(count===1?(WIDTH-2*PADDING)/2:(WIDTH-2*PADDING)*index/Math.max(count-1,1))}
-function MetricPath({delay,metric}:{delay:number;metric:VisualConnectionMetric}){const line=mkLine(metric.values,WIDTH,PLOT_HEIGHT,PADDING);const reduce=useReducedMotion();const progress=useSharedValue(reduce?1:0);useEffect(()=>{progress.value=reduce?1:0;if(!reduce)progress.value=withTiming(1,{duration:800+delay,easing:Easing.out(Easing.cubic)})},[delay,line.path,progress,reduce]);const props=useAnimatedProps(()=>({strokeDashoffset:line.length*(1-progress.value)}));return <>{line.path?<AnimatedPath animatedProps={props} d={line.path} fill="none" stroke={metric.color} strokeDasharray={`${line.length} ${line.length}`} strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.8"/>:null}{line.points.map((point,index)=><Circle cx={point.x} cy={point.y} fill={colors.white} key={index} r="2.8" stroke={metric.color} strokeWidth="1.8"/>)}</>}
+function MetricPath({delay,metric}:{delay:number;metric:VisualConnectionMetric}) {
+  const line=mkLine(metric.values,WIDTH,PLOT_HEIGHT,PADDING);
+  const reduce=useReducedMotion();
+  const progress=useSharedValue(reduce?1:0);
+  useFocusEffect(useCallback(()=>{
+    progress.value=reduce?1:0;
+    if(!reduce) progress.value=withDelay(120+delay,withTiming(1,{duration:700,easing:DRAW_EASE}));
+    return()=>cancelAnimation(progress);
+  },[delay,progress,reduce]));
+  const props=useAnimatedProps(()=>({strokeDashoffset:line.length*(1-progress.value)}));
+  return <>
+    {line.path?<AnimatedPath animatedProps={props} d={line.path} fill="none" stroke={metric.color} strokeDasharray={`${line.length} ${line.length}`} strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.8"/>:null}
+    {line.points.map((point,index)=><MetricPoint color={metric.color} delay={delay+420+index*35} key={index} point={point}/>)}
+  </>;
+}
+
+function MetricPoint({color,delay,point}:{color:string;delay:number;point:{x:number;y:number}}) {
+  const reduce=useReducedMotion();
+  const progress=useSharedValue(reduce?1:0);
+  useFocusEffect(useCallback(()=>{
+    progress.value=reduce?1:0;
+    if(!reduce) progress.value=withDelay(120+delay,withTiming(1,{duration:220,easing:DRAW_EASE}));
+    return()=>cancelAnimation(progress);
+  },[delay,progress,reduce]));
+  const props=useAnimatedProps(()=>({opacity:progress.value,r:2.8*progress.value}));
+  return <AnimatedCircle animatedProps={props} cx={point.x} cy={point.y} fill={colors.white} stroke={color} strokeWidth="1.8"/>;
+}

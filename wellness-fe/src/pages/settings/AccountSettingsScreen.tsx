@@ -1,54 +1,101 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { PageHeader } from '@/components/ui/page-header';
-import { FormField } from '@/components/ui/form-field';
-import { AppIcon } from '@/components/app-icon';
+import { EyeGlyph, EyeOffGlyph, MonthNextGlyph, WarningCircleGlyph } from '@/components/glyphs';
+import { SubScreenHeader } from '@/components/ui/sub-screen-header';
 import { useAuth } from '@/context/auth-context';
-import { colors } from '@/theme/tokens';
-import { styles } from './account-settings.styles';
+import { text } from '@/theme/typography';
+import { usePalette } from '@/theme/use-palette';
 
+/** `Momgirok v8.dc.html` → `isSubAccount` 를 그대로 옮긴 것. */
 export default function AccountSettingsScreen() {
+  const c = usePalette();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { session, signOut } = useAuth();
-  const [current, setCurrent] = useState('');
-  const [next, setNext] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const valid = current.length >= 8 && next.length >= 8 && next === confirm;
+  const { signOut } = useAuth();
+  const [pwShown, setPwShown] = useState(false);
 
-  const changePassword = () => {
-    if (!valid) return;
-    Alert.alert('아직 변경할 수 없어요', '계정 서버 연결 후 비밀번호 변경을 제공할 예정이에요.');
+  const finishSignOut = async () => {
+    await signOut();
+    router.dismissAll();
+    router.replace('/(auth)/login');
   };
-  const logout = () => Alert.alert('로그아웃할까요?', '이 기기의 로그인 상태만 종료돼요.', [
-    { text: '취소', style: 'cancel' },
-    { text: '로그아웃', onPress: () => void signOut().then(() => router.replace('/(auth)/login')) },
-  ]);
-  const withdraw = () => Alert.alert(
-    session?.mode === 'demo' ? '체험 모드입니다' : '아직 탈퇴할 수 없어요',
-    session?.mode === 'demo' ? '체험 모드는 로그아웃하면 기기에 저장된 세션이 삭제돼요.' : '계정 서버 연결 후 안전한 본인 확인과 함께 제공할 예정이에요.',
-  );
 
-  return <SafeAreaView edges={['top']} style={styles.screen}>
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-      <PageHeader backLabel="마이 화면으로 돌아가기" fallbackHref="/(tabs)/me" title="계정 관리" />
-      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
-        <Text style={styles.sectionTitle}>비밀번호 변경</Text>
-        <Field autoComplete="current-password" label="현재 비밀번호" value={current} onChange={setCurrent} />
-        <Field autoComplete="new-password" error={next.length > 0 && next.length < 8 ? '영문·숫자를 포함해 8자 이상 입력해 주세요.' : undefined} label="새 비밀번호" value={next} onChange={setNext} />
-        <Field autoComplete="new-password" label="새 비밀번호 확인" value={confirm} onChange={setConfirm} />
-        {confirm && next !== confirm ? <Text accessibilityLiveRegion="polite" style={styles.error}>새 비밀번호가 서로 다릅니다.</Text> : null}
-        <Pressable accessibilityRole="button" accessibilityState={{ disabled: !valid }} disabled={!valid} onPress={changePassword} style={[styles.primary, !valid && styles.disabled]}><Text style={styles.primaryText}>비밀번호 변경</Text></Pressable>
-        <Pressable accessibilityRole="button" onPress={logout} style={styles.menu}><Text style={styles.menuText}>로그아웃</Text><AppIcon color={colors.textMuted} name="chevron-right" size={18}/></Pressable>
-        <Pressable accessibilityRole="button" onPress={withdraw} style={styles.menu}><Text style={styles.dangerText}>회원 탈퇴</Text><AppIcon color={colors.textMuted} name="chevron-right" size={18}/></Pressable>
+  const logout = () => {
+    Alert.alert('로그아웃', '정말 로그아웃할까요?', [
+      { text: '취소', style: 'cancel' },
+      { text: '로그아웃', style: 'destructive', onPress: () => { void finishSignOut(); } },
+    ]);
+  };
+  const withdraw = () => {
+    Alert.alert('회원 탈퇴', '탈퇴하면 모든 기록이 삭제되고 되돌릴 수 없어요.', [
+      { text: '취소', style: 'cancel' },
+      { text: '탈퇴하기', style: 'destructive', onPress: () => { void finishSignOut(); } },
+    ]);
+  };
+
+  return (
+    <SafeAreaView edges={['top']} style={[s.screen, { backgroundColor: c.bg }]}>
+      <SubScreenHeader backLabel="마이 화면으로 돌아가기" fallback={() => router.replace('/(tabs)/me')} title="계정 관리" />
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 20 }} showsVerticalScrollIndicator={false}>
+        <View style={[s.section, { backgroundColor: c.card }]}>
+          <Text style={[text({ size: 12.5, weight: 700 }), { color: c.g500 }]}>비밀번호 변경</Text>
+
+          <View style={s.fields}>
+            <View style={[s.field, { borderColor: c.g300 }]}>
+              <Text style={[text({ size: 14.5 }), { color: c.g400 }]}>현재 비밀번호</Text>
+              <Pressable accessibilityLabel="비밀번호 보기" accessibilityRole="button" onPress={() => setPwShown((v) => !v)} style={s.eyeBtn}>
+                {pwShown ? <EyeGlyph color={c.g500} /> : <EyeOffGlyph color={c.g500} />}
+              </Pressable>
+            </View>
+
+            <View style={[s.field, s.fieldError, { borderColor: c.danger }]}>
+              <Text style={[text({ size: 14.5 }), { color: c.g400 }]}>새 비밀번호</Text>
+              <Text style={[text({ size: 12, weight: 700 }), { color: c.dangerDk }]}>8자 이상</Text>
+            </View>
+
+            <View style={[s.field, { borderColor: c.g300 }]}>
+              <Text style={[text({ size: 14.5 }), { color: c.g400 }]}>새 비밀번호 확인</Text>
+            </View>
+          </View>
+
+          <View style={s.errorRow}>
+            <WarningCircleGlyph color={c.dangerDk} />
+            <Text style={[text({ size: 12, weight: 600 }), { color: c.dangerDk }]}>영문·숫자를 포함해 8자 이상 입력해주세요</Text>
+          </View>
+
+          <Pressable accessibilityRole="button" accessibilityState={{ disabled: true }} disabled style={[s.submitBtn, { backgroundColor: c.g300 }]}>
+            <Text style={[text({ size: 15.5, weight: 700 }), { color: '#fff' }]}>변경하기</Text>
+          </Pressable>
+        </View>
+
+        <View style={[s.section, s.dangerSection, { backgroundColor: c.card }]}>
+          <Pressable accessibilityRole="button" onPress={logout} style={[s.dangerRow, { borderBottomColor: c.g200, borderBottomWidth: 1 }]}>
+            <Text style={[text({ size: 14.5, weight: 600, tracking: -0.025 }), { color: c.g900 }]}>로그아웃</Text>
+            <MonthNextGlyph color={c.g400} size={17} />
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={withdraw} style={s.dangerRow}>
+            <Text style={[text({ size: 14.5, weight: 600, tracking: -0.025 }), { color: c.dangerDk }]}>회원 탈퇴</Text>
+            <MonthNextGlyph color={c.g400} size={17} />
+          </Pressable>
+        </View>
       </ScrollView>
-    </KeyboardAvoidingView>
-  </SafeAreaView>;
+    </SafeAreaView>
+  );
 }
 
-function Field({ autoComplete, error, label, value, onChange }: { autoComplete: 'current-password' | 'new-password'; error?: string; label: string; value: string; onChange: (value: string) => void }) {
-  return <View style={styles.field}><FormField autoCapitalize="none" autoComplete={autoComplete} error={error} hideLabel label={label} onChangeText={onChange} placeholder={label} showPasswordToggle value={value} /></View>;
-}
+const s = StyleSheet.create({
+  screen: { flex: 1 },
+  section: { padding: 20 },
+  fields: { marginTop: 14, gap: 10 },
+  field: { height: 54, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, borderWidth: 1, borderRadius: 16 },
+  fieldError: { borderWidth: 1.5 },
+  eyeBtn: { width: 38, height: 38, marginRight: -10, alignItems: 'center', justifyContent: 'center' },
+  errorRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  submitBtn: { marginTop: 16, height: 52, borderRadius: 27, alignItems: 'center', justifyContent: 'center' },
+
+  dangerSection: { marginTop: 10, paddingTop: 16, paddingHorizontal: 20, paddingBottom: 8 },
+  dangerRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+});

@@ -53,7 +53,7 @@ export default function DesignAScreen() {
     <SafeAreaView edges={['top']} style={styles.screen}>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 48 }]} showsVerticalScrollIndicator={false}>
         <View style={styles.topline}>
-          <Text style={styles.wordmark}>몸기록</Text>
+          <Text style={styles.wordmark}>하음</Text>
           <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.iconBtn}><AppIcon color={A.accentInk} name="bell" size={18} /></Pressable>
         </View>
 

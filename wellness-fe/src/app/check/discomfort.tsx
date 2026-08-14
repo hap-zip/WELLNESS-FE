@@ -1,5 +1,5 @@
-import DiscomfortCheckScreen from '@/pages/check/DiscomfortCheckScreen';
+import CheckFlowScreen from '@/pages/check/CheckFlowScreen';
 
 export default function DiscomfortCheckRoute() {
-  return <DiscomfortCheckScreen />;
+  return <CheckFlowScreen initialStep={1} />;
 }

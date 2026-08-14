@@ -1,155 +1,138 @@
 import { useRef, useState } from 'react';
-import { Alert, FlatList, KeyboardAvoidingView, Linking, Platform, Pressable, Text, TextInput, useWindowDimensions, View } from 'react-native';
-import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppIcon } from '@/components/app-icon';
-import { Momi } from '@/components/momi';
-import NavigationBackButton from '@/components/navigation-back-button';
-import type { AssistantMessage, AssistantReply } from '@/domain/wellness';
-import { wellnessApi } from '@/services/wellness-api';
-import { colors } from '@/theme/tokens';
+import { CHEKI } from '@/lib/cheki';
+import { ChevronSmallGlyph, MonthPrevGlyph, MoreDotsGlyph, SendArrowGlyph } from '@/components/glyphs';
+import { text } from '@/theme/typography';
+import { usePalette } from '@/theme/use-palette';
+import type { Palette } from '@/theme/palette';
+import { BOT_REFERENCES, BOT_REPLY, BOT_REPLY_DELAY_MS, SUGGESTIONS } from './assistant.data';
 
-import { styles } from './assistant.styles';
+/**
+ * `Momgirok v8.dc.html` → `<sc-if value="{{ isChat }}">` 를 그대로 옮긴 것.
+ *
+ * v8 은 고정된 데모 응답 하나만 900ms 뒤에 붙이는 정적 챗이다 — README 의
+ * "미구현" 목록에 실패·재전송·중단·대화 목록이 명시돼 있어 그대로 둔다.
+ * (예전 구현에 있던 약 포장 사진 인식·공식 의약품 정보 카드는 v8 스펙에 없다.)
+ */
 
-type ChatItem = AssistantMessage & {
-  action?: AssistantReply['action'];
-  references?: AssistantReply['references'];
-  officialInfo?: AssistantReply['officialInfo'];
-  photoUri?: string;
-};
+type ChatMessage = { id: string; role: 'user' | 'bot'; text: string };
 
-const INITIAL_SUGGESTIONS = ['최근 수면 흐름을 정리해줘', '어깨가 불편했던 날을 찾아줘', '오늘 할 루틴을 추천해줘', '이번 주는 지난주와 어떻게 달라?'];
-
-export default function AssistantScreen({ asTab = false }: { asTab?: boolean }) {
+export default function AssistantScreen() {
+  const c = usePalette();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
-  const compactHeight = height < 500;
-  const listRef = useRef<FlatList<ChatItem>>(null);
-  const [messages, setMessages] = useState<ChatItem[]>([]);
-  const [suggestions, setSuggestions] = useState(INITIAL_SUGGESTIONS);
+  const scrollRef = useRef<ScrollView>(null);
+
+  const [chat, setChat] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [failedPrompt, setFailedPrompt] = useState('');
 
-  const send = async (raw: string) => {
-    const text = raw.trim() || (photoUri ? '포장 사진으로 약 정보 확인해줘' : '');
-    if (!text || pending) return;
-    const userMessage: ChatItem = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      text,
-      photoUri: photoUri ?? undefined,
-      createdAt: new Date().toISOString(),
-    };
-    const history = [...messages, userMessage];
-    const attached = photoUri;
-    setMessages(history);
+  const send = (raw: string) => {
+    const t = raw.trim();
+    if (!t || pending) return;
+    setChat((cur) => [...cur, { id: `u${Date.now()}`, role: 'user', text: t }]);
     setInput('');
-    setPhotoUri(null);
-    setSuggestions([]);
     setPending(true);
-    setFailedPrompt('');
-    try {
-      const reply = await wellnessApi.askRecordAssistant(attached ? `${text} 포장사진` : text, history);
-      setMessages((current) => [...current, { ...reply.message, action: reply.action, references: reply.references, officialInfo: reply.officialInfo }]);
-      setSuggestions(reply.suggestions);
-    } catch {
-      setFailedPrompt(text);
-      setInput(text);
-    } finally {
+    setTimeout(() => {
       setPending(false);
-    }
+      setChat((cur) => [...cur, { id: `b${Date.now()}`, role: 'bot', text: BOT_REPLY }]);
+      requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+    }, BOT_REPLY_DELAY_MS);
+    requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
   };
-
-  const attachMedicinePhoto = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('사진 접근 권한이 필요해요', '약 포장 사진을 첨부하려면 기기 설정에서 사진 접근을 허용해 주세요.', [
-        { text: '취소', style: 'cancel' },
-        { text: '설정 열기', onPress: () => void Linking.openSettings() },
-      ]);
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 0.75 });
-    if (!result.canceled) {
-      setPhotoUri(result.assets[0].uri);
-      if (!input) setInput('이 약 정보를 확인해줘');
-    }
-  };
-
-  const reportButton = (
-    <Pressable accessibilityLabel="기록 요약 만들기" accessibilityRole="button" onPress={() => router.push('/reports/setup')} style={({ pressed }) => [styles.reportButton, pressed && styles.pressed]}>
-      <AppIcon color={colors.text} name="document" size={20} />
-    </Pressable>
-  );
-
-  const header = asTab ? (
-    <View style={[styles.tabHeader, compactHeight && styles.tabHeaderCompact]}>
-      <View>
-        <Text accessibilityRole="header" style={styles.tabTitle}>웰니스 챗</Text>
-        <Text style={styles.scope}>최근 14일 기록을 참고해요</Text>
-      </View>
-      {reportButton}
-    </View>
-  ) : (
-    <View style={styles.topBar}>
-      <NavigationBackButton accessibilityLabel="이전 화면으로 돌아가기" fallbackHref="/(tabs)/home" />
-      <Text accessibilityRole="header" style={styles.compactTitle}>웰니스 챗</Text>
-      <View style={styles.scopePill}><Text style={styles.scopePillText}>최근 14일</Text></View>
-    </View>
-  );
 
   return (
-    <SafeAreaView edges={['top']} style={styles.screen}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
-        {header}
-        <FlatList
-          ref={listRef}
-          contentContainerStyle={[styles.list, compactHeight && styles.listCompact, messages.length === 0 && styles.emptyList]}
-          data={messages}
-          keyboardDismissMode="interactive"
-          keyboardShouldPersistTaps="handled"
-          keyExtractor={(item) => item.id}
-          ListEmptyComponent={<ConversationStart compact={compactHeight} onSelect={(value) => void send(value)} suggestions={suggestions} />}
-          ListFooterComponent={(
-            <>
-              {pending ? <View accessibilityLiveRegion="polite" style={styles.reading}><View style={styles.readingLine} /><Text style={styles.readingText}>기록을 읽는 중</Text></View> : null}
-              {failedPrompt ? <View style={styles.errorRow}><Text style={styles.errorText}>답변을 가져오지 못했어요.</Text><Pressable accessibilityRole="button" onPress={() => void send(failedPrompt)} style={({ pressed }) => [styles.retry, pressed && styles.pressed]}><Text style={styles.retryText}>다시 시도</Text></Pressable></View> : null}
-            </>
-          )}
-          onContentSizeChange={() => { if (messages.length) listRef.current?.scrollToEnd({ animated: true }); }}
-          renderItem={({ item }) => <Message item={item} onAction={(route) => router.push(route)} />}
-          showsVerticalScrollIndicator={false}
-        />
-        {messages.length > 0 && suggestions.length > 0 ? <FollowUpList onSelect={(value) => void send(value)} suggestions={suggestions} /> : null}
-        {photoUri ? <Attachment onRemove={() => setPhotoUri(null)} uri={photoUri} /> : null}
-        <View style={[styles.composer, compactHeight && styles.composerCompact, { paddingBottom: asTab ? 10 : Math.max(insets.bottom, 10) }]}>
-          {!compactHeight ? <Text style={styles.composerLabel}>기록이나 의약품 정보에 관해 물어보세요</Text> : null}
-          <View style={styles.composerRow}>
-            <Pressable accessibilityLabel="약 포장 사진 첨부" accessibilityRole="button" onPress={() => void attachMedicinePhoto()} style={({ pressed }) => [styles.attach, pressed && styles.pressed]}>
-              <AppIcon color={colors.text} name="camera" size={21} />
-            </Pressable>
+    <SafeAreaView edges={['top']} style={[s.screen, { backgroundColor: c.bg }]}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.flex1}>
+        <View style={[s.header, { backgroundColor: c.card, borderBottomColor: c.g200 }]}>
+          <Pressable accessibilityLabel="뒤로" accessibilityRole="button" onPress={() => router.back()} style={s.backBtn}>
+            <MonthPrevGlyph color={c.g800} size={20} />
+          </Pressable>
+          <View style={[s.headerAvatar, { backgroundColor: c.priLightest }]}>
+            <Image accessible={false} resizeMode="contain" source={CHEKI.base} style={s.headerAvatarImg} />
+          </View>
+          <View style={s.flex1}>
+            <View style={s.headerNameRow}>
+              <Text style={[text({ size: 15.5, weight: 700, tracking: -0.03 }), { color: c.g900 }]}>체키</Text>
+              <View style={[s.onlineDot, { backgroundColor: c.pri }]} />
+            </View>
+            <Text numberOfLines={1} style={[text({ size: 11.5 }), { color: c.g500 }]}>내 기록을 바탕으로 답해요 · 최근 14일</Text>
+          </View>
+          <Pressable accessibilityLabel="더보기" accessibilityRole="button" style={s.moreBtn}>
+            <MoreDotsGlyph color={c.g600} size={19} />
+          </Pressable>
+        </View>
+
+        <ScrollView contentContainerStyle={s.body} ref={scrollRef} showsVerticalScrollIndicator={false}>
+          {chat.length === 0 ? (
+            <View>
+              <View style={s.introHero}>
+                <Image accessibilityIgnoresInvertColors accessibilityLabel="체키가 클립보드를 들고 안내할 준비를 하고 있어요" resizeMode="contain" source={CHEKI.chat} style={s.introMascot} />
+                <Text style={[text({ size: 16.5, weight: 700, tracking: -0.03, leading: 1.55 }), s.introTitle, { color: c.g900 }]}>기록에서 무엇을 찾아볼까요?</Text>
+                <Text style={[text({ size: 12.5, leading: 1.65 }), s.introSub, { color: c.g600 }]}>수면·불편·활동을 함께 읽어 정리해요. 진단이나 처방은 하지 않아요.</Text>
+              </View>
+              <View style={s.suggestionList}>
+                {SUGGESTIONS.map((q) => (
+                  <Pressable key={q} accessibilityRole="button" onPress={() => send(q)} style={[s.suggestionRow, { borderColor: c.g200, backgroundColor: c.card }]}>
+                    <Text style={[text({ size: 13.5, weight: 600, tracking: -0.02 }), { color: c.g800 }]}>{q}</Text>
+                    <ChevronSmallGlyph color={c.g400} />
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          {chat.map((item) => (
+            <View key={item.id} style={item.role === 'user' ? s.userWrap : s.botWrap}>
+              {item.role === 'user' ? (
+                <View style={[s.userBubble, { backgroundColor: c.pri }]}>
+                  <Text style={[text({ size: 14.5, weight: 500, leading: 1.6 }), { color: '#fff' }]}>{item.text}</Text>
+                </View>
+              ) : (
+                <View style={s.botRow}>
+                  <View style={[s.rule, { backgroundColor: c.pri }]} />
+                  <View style={s.flex1}>
+                    <Text style={[text({ size: 14.5, leading: 1.75 }), s.botBubble, { backgroundColor: c.card, borderColor: c.g200, color: c.g800 }]}>{item.text}</Text>
+                    <View style={[s.refCard, { backgroundColor: c.card, borderColor: c.g200 }]}>
+                      <Text style={[text({ size: 11.5, weight: 700 }), { color: c.g500 }]}>참고한 기록</Text>
+                      {BOT_REFERENCES.map((ref, i) => (
+                        <View key={ref.key} style={[s.refRow, i > 0 && { borderTopWidth: 1, borderTopColor: c.g200 }]}>
+                          <Text style={[text({ size: 12.5 }), { color: c.g600 }]}>{ref.label}</Text>
+                          <Text style={[text({ size: 12.5, weight: 700, tabular: true }), { color: ref.danger ? c.danger : c.g900 }]}>{ref.value}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+              )}
+            </View>
+          ))}
+
+          {pending ? (
+            <View style={s.pendingRow}>
+              <View style={[s.pendingDot, { backgroundColor: c.pri }]} />
+              <Text style={[text({ size: 12.5, weight: 600 }), { color: c.g500 }]}>기록을 읽는 중</Text>
+            </View>
+          ) : null}
+        </ScrollView>
+
+        <View style={[s.composer, { backgroundColor: c.card, borderTopColor: c.g200, paddingBottom: 14 + insets.bottom }]}>
+          <View style={[s.inputRow, { backgroundColor: c.g100 }]}>
             <TextInput
-              accessibilityLabel="웰니스 챗 질문"
-              blurOnSubmit={false}
-              editable={!pending}
-              maxLength={300}
-              multiline
+              accessibilityLabel="질문 입력"
               onChangeText={setInput}
-              onSubmitEditing={() => void send(input)}
+              onSubmitEditing={() => send(input)}
               placeholder="궁금한 내용을 입력하세요"
-              placeholderTextColor={colors.placeholder}
+              placeholderTextColor={c.g400}
               returnKeyType="send"
-              style={styles.input}
+              style={[s.input, { color: c.g900 }]}
               value={input}
             />
-            <Pressable accessibilityLabel="메시지 보내기" accessibilityRole="button" accessibilityState={{ busy: pending, disabled: (!input.trim() && !photoUri) || pending }} disabled={(!input.trim() && !photoUri) || pending} onPress={() => void send(input)} style={({ pressed }) => [styles.send, ((!input.trim() && !photoUri) || pending) && styles.sendDisabled, pressed && styles.pressed]}>
-              <AppIcon color={colors.white} name="arrow-up" size={20} />
+            <Pressable accessibilityLabel="보내기" accessibilityRole="button" accessibilityState={{ disabled: !input.trim() }} disabled={!input.trim()} onPress={() => send(input)} style={[s.sendBtn, { backgroundColor: input.trim() ? c.pri : c.g300 }]}>
+              <SendArrowGlyph color="#fff" />
             </Pressable>
           </View>
         </View>
@@ -158,76 +141,40 @@ export default function AssistantScreen({ asTab = false }: { asTab?: boolean }) 
   );
 }
 
-function ConversationStart({ compact, suggestions, onSelect }: { compact: boolean; suggestions: string[]; onSelect: (value: string) => void }) {
-  return (
-    <View style={[styles.start, compact && styles.startCompact]}>
-        <View style={styles.welcomeRow}><Momi mood="neutral" size={compact ? 40 : 48}/><View style={[styles.welcomeBubble, compact && styles.welcomeBubbleCompact]}><Text style={styles.startDescription}>최근 14일의 수면, 불편, 활동 기록을 함께 읽어드려요. 진단이나 처방은 제공하지 않아요.</Text></View></View>
-      <Text style={[styles.indexTitle, compact && styles.indexTitleCompact]}>자주 묻는 질문</Text>
-      <View style={styles.questionIndex}>
-        {suggestions.map((suggestion) => (
-          <Pressable accessibilityRole="button" key={suggestion} onPress={() => onSelect(suggestion)} style={({ pressed }) => [styles.questionRow, pressed && styles.questionPressed]}>
-            <Text style={styles.questionText}>{suggestion}</Text>
-            <AppIcon color={colors.textMuted} name="chevron-right" size={18} />
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-}
+const s = StyleSheet.create({
+  screen: { flex: 1 },
+  flex1: { flex: 1, minWidth: 0 },
 
-function FollowUpList({ suggestions, onSelect }: { suggestions: string[]; onSelect: (value: string) => void }) {
-  return (
-    <View style={styles.followUp}>
-      <Text style={styles.followUpTitle}>이어서 물어보기</Text>
-      {suggestions.slice(0, 2).map((suggestion) => (
-        <Pressable accessibilityRole="button" key={suggestion} onPress={() => onSelect(suggestion)} style={({ pressed }) => [styles.followUpRow, pressed && styles.questionPressed]}>
-          <Text style={styles.followUpText}>{suggestion}</Text>
-          <AppIcon color={colors.textMuted} name="chevron-right" size={17} />
-        </Pressable>
-      ))}
-    </View>
-  );
-}
+  header: { height: 56, flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 4, paddingRight: 12, borderBottomWidth: 1 },
+  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  headerAvatar: { width: 38, height: 38, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' },
+  headerAvatarImg: { width: 36, height: 36, marginBottom: -3 },
+  headerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  onlineDot: { width: 6, height: 6, borderRadius: 4 },
+  moreBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
 
-function Attachment({ uri, onRemove }: { uri: string; onRemove: () => void }) {
-  return (
-    <View style={styles.attachment}>
-      <Image accessibilityLabel="첨부한 약 포장 사진" source={{ uri }} style={styles.attachmentImage} />
-      <View style={styles.attachmentCopy}><Text style={styles.attachmentTitle}>약 포장 사진</Text><Text style={styles.attachmentHint}>제품명과 표기 내용을 확인해요</Text></View>
-      <Pressable accessibilityLabel="첨부 사진 제거" accessibilityRole="button" onPress={onRemove} style={styles.attachmentRemove}><AppIcon color={colors.text} name="close" size={18} /></Pressable>
-    </View>
-  );
-}
+  body: { paddingTop: 20, paddingHorizontal: 20, paddingBottom: 8 },
+  introHero: { alignItems: 'center', paddingHorizontal: 8 },
+  introMascot: { width: 148, height: 148 },
+  introTitle: { marginTop: 4, textAlign: 'center' },
+  rule: { width: 3, alignSelf: 'stretch', borderRadius: 2 },
+  introSub: { marginTop: 6, textAlign: 'center' },
+  suggestionList: { marginTop: 20, gap: 8 },
+  suggestionRow: { minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingHorizontal: 16, borderWidth: 1, borderRadius: 26 },
 
-function Message({ item, onAction }: { item: ChatItem; onAction: (route: NonNullable<AssistantReply['action']>['route']) => void }) {
-  if (item.role === 'user') {
-    return (
-      <View style={styles.userEntry}>
-        {item.photoUri ? <Image accessibilityLabel="사용자가 첨부한 약 포장 사진" source={{ uri: item.photoUri }} style={styles.messagePhoto} /> : null}
-        <View style={styles.userBlock}><Text style={styles.userText}>{item.text}</Text></View>
-      </View>
-    );
-  }
+  userWrap: { marginBottom: 16, flexDirection: 'row', justifyContent: 'flex-end' },
+  userBubble: { maxWidth: '80%', paddingVertical: 12, paddingHorizontal: 16, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderBottomLeftRadius: 18, borderBottomRightRadius: 4 },
+  botWrap: { marginBottom: 16, flexDirection: 'row', justifyContent: 'flex-start' },
+  botRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, width: '100%' },
+  botBubble: { padding: 14, paddingHorizontal: 16, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderBottomRightRadius: 18, borderBottomLeftRadius: 4, borderWidth: 1 },
+  refCard: { marginTop: 8, padding: 14, borderRadius: 16, borderWidth: 1 },
+  refRow: { marginTop: 10, minHeight: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 
-  return (
-    <View style={styles.answerEntry}>
-      <View style={styles.answerHeading}><View style={styles.assistantIcon}><Momi mood="happy" size={30}/></View><Text style={styles.answerHeadingText}>기록을 바탕으로 정리했어요</Text></View>
-      <View style={styles.answerBody}><Text accessibilityLiveRegion="polite" style={styles.answerText}>{item.text}</Text></View>
-      {item.references?.length ? <View style={styles.referenceLedger}><Text style={styles.referenceTitle}>참고한 기록</Text>{item.references.map((reference) => <View key={reference.label} style={styles.referenceRow}><Text style={styles.referenceLabel}>{reference.label}</Text><Text style={styles.referenceValue}>{reference.value}</Text></View>)}</View> : null}
-      {item.officialInfo ? <MedicineSheet info={item.officialInfo} /> : null}
-      {item.action ? <Pressable accessibilityRole="button" onPress={() => onAction(item.action!.route)} style={({ pressed }) => [styles.actionRow, pressed && styles.questionPressed]}><Text style={styles.actionText}>{item.action.label}</Text><AppIcon color={colors.data} name="arrow-up-right" size={18} /></Pressable> : null}
-    </View>
-  );
-}
+  pendingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4, paddingBottom: 14 },
+  pendingDot: { width: 6, height: 6, borderRadius: 4 },
 
-function MedicineSheet({ info }: { info: NonNullable<AssistantReply['officialInfo']> }) {
-  return (
-    <View style={styles.medicineSheet}>
-      <View style={styles.medicineHeader}><Text style={styles.medicineSource}>공식 의약품 정보</Text><Text style={styles.medicineName}>{info.productName}</Text><Text style={styles.medicineIngredient}>{info.ingredient}</Text></View>
-      <View style={styles.medicineSection}><Text style={styles.medicineLabel}>효능·효과</Text><Text style={styles.medicineText}>{info.efficacy}</Text></View>
-      <View style={styles.medicineSection}><Text style={styles.medicineLabel}>복용 전 확인</Text>{info.cautions.map((caution) => <Text key={caution} style={styles.caution}>— {caution}</Text>)}</View>
-      <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(info.sourceUrl)} style={({ pressed }) => [styles.sourceRow, pressed && styles.questionPressed]}><Text style={styles.sourceText}>{info.sourceLabel}</Text><AppIcon color={colors.data} name="arrow-up-right" size={17} /></Pressable>
-      <Text style={styles.medicineLimit}>사진만으로 제품이나 복용 가능 여부를 확정하지 않습니다.</Text>
-    </View>
-  );
-}
+  composer: { paddingTop: 10, paddingHorizontal: 16, borderTopWidth: 1 },
+  inputRow: { height: 48, flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 16, paddingRight: 5, borderRadius: 25 },
+  input: { flex: 1, minWidth: 0, height: 44, fontSize: 14 },
+  sendBtn: { width: 38, height: 38, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+});

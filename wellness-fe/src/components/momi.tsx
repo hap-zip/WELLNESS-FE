@@ -13,7 +13,7 @@ const poses: Record<MomiMood, { armLeft: string; armRight: string; legLeft: stri
   ache: { armLeft: 'M26 66 34 50', armRight: 'M94 68 105 80', legLeft: 'M49 101 45 121', legRight: 'M71 101 75 121' },
 };
 
-export function Momi({ alt = '몸기록 캐릭터 몸이', bodyFill = '#FFFDF7', ink = '#2A2F36', leaf = colors.primary, mood = 'happy', showShadow = false, size = 96 }: Props) {
+export function Momi({ alt = '하음 캐릭터 몸이', bodyFill = '#FFFDF7', ink = '#2A2F36', leaf = colors.primary, mood = 'happy', showShadow = false, size = 96 }: Props) {
   const pose = poses[mood]; const eyeY = mood === 'sleepy' ? 56 : 55;
   const mouth = { happy: 'M53 66q7 7.5 14 0', neutral: 'M54.5 68h11', cheer: 'M51 64q9 13 18 0q-9 4-18 0Z', sleepy: 'M55 68q5 4.5 10 0', ache: 'M52 69q3.5-4 7 0t7 0' }[mood];
   const common = { fill: 'none', stroke: ink, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, strokeWidth: 4.2 };

@@ -1,15 +1,16 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 
-import { colors, spacing, typography } from '@/theme/tokens';
+import { colors, spacing } from '@/theme/tokens';
+import { BrandHeaderLogo } from '@/components/brand-logo';
+import { AnimatedProgressFill } from './animated-progress-fill';
 
-export function BrandWordmark({ inverse = false }: { inverse?: boolean }) {
-  const color = inverse ? colors.white : colors.text;
-  return <View accessibilityLabel="몸기록" accessible style={styles.wordmark}><View style={[styles.wordmarkDot, { backgroundColor: inverse ? colors.white : colors.primary }]}/><Text style={[styles.wordmarkText, { color }]}>몸기록</Text></View>;
+export function BrandWordmark({ inverse: _inverse = false }: { inverse?: boolean }) {
+  return <View accessibilityLabel="하음" accessible style={styles.wordmark}><BrandHeaderLogo width={126}/></View>;
 }
 
 export function SetupProgress({ current, total = 3 }: { current: number; total?: number }) {
-  return <View accessibilityLabel={`시작 설정 ${total}단계 중 ${current}단계`} accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: total, now: current }} style={styles.progress}>{Array.from({ length: total }, (_, index) => <View key={index} style={[styles.progressSegment, index < current && styles.progressActive]}/>)}</View>;
+  return <View accessibilityLabel={`시작 설정 ${total}단계 중 ${current}단계`} accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: total, now: current }} style={styles.progress}>{Array.from({ length: total }, (_, index) => <View key={index} style={styles.progressSegment}><AnimatedProgressFill progress={index < current ? 1 : 0} style={styles.progressActive}/></View>)}</View>;
 }
 
 export type OnboardingScene = 'record' | 'connect' | 'act';
@@ -41,11 +42,9 @@ export function OnboardingSceneVisual({ scene }: { scene: OnboardingScene }) {
 }
 
 const styles = StyleSheet.create({
-  wordmark: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  wordmarkDot: { width: 10, height: 10, borderRadius: 5 },
-  wordmarkText: { ...typography.sectionTitle, fontWeight:'700', letterSpacing: -0.6 },
+  wordmark: { flexDirection: 'row', alignItems: 'center' },
   progress: { height: 3, flexDirection: 'row', gap: spacing.xs },
-  progressSegment: { flex: 1, backgroundColor: colors.surfaceStrong },
-  progressActive: { backgroundColor: colors.primary },
+  progressSegment: { flex: 1, overflow: 'hidden', backgroundColor: colors.surfaceStrong },
+  progressActive: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.primary },
   visual: { width: '100%', aspectRatio: 320 / 230 },
 });

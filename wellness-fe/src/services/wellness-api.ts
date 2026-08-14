@@ -1,4 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
+import { healthSyncService } from '@/services/health-sync-service';
+import { toLocalDateId } from '@/utils/date';
 
 import type { AssistantMessage, AssistantReply, AutoHealthRecord, BaselineProfile, BodyMapHighlight, BodyMapPart, DailyCheckSubmission, DataConsentSettings, DiscoverSummary, HealthConnectionSettings, HealthReport, HomeSummary, NotificationSettings, PatternDetail, RecordDetail, RecordsMonth, ReportOptions, RoutineCompletion, RoutineFeedback, RoutinePlan, SignalSummary, UserProfileSummary, WellnessRecordSummary } from '@/domain/wellness';
 
@@ -321,8 +323,11 @@ class MockWellnessApi implements WellnessApi {
     return { message: { ...base, text: '저는 몸 상태를 진단하는 대신, 남긴 기록을 찾아보고 정리하는 일을 도와드려요. 수면, 불편 부위, 활동, 루틴 중 궁금한 내용을 물어보세요.' }, suggestions: ['최근 수면 알려줘', '목 불편 기록 알려줘', '오늘 루틴 추천해줘'] };
   }
 
-  async getAutoHealthRecord(): Promise<AutoHealthRecord> {
-    return { sleepDuration: '6시간 27분', bedtime: '오전 12:35', steps: '4,120보', activityEnergy: '312kcal', source: 'apple-health' };
+  async getAutoHealthRecord(date = toLocalDateId()): Promise<AutoHealthRecord> {
+    await loadHealthConnection();
+    if (!healthConnection.connected) throw new Error('건강 데이터가 연결되지 않았어요.');
+    if (healthConnection.provider !== 'apple-health') throw new Error('현재 빌드에서는 Apple 건강 데이터만 실제 조회할 수 있어요.');
+    return healthSyncService.getDailyRecord(date, healthConnection);
   }
 
   async getHomeSummary(): Promise<HomeSummary> {
@@ -396,7 +401,7 @@ class MockWellnessApi implements WellnessApi {
       ...(options.includeActivity ? [{ label: '평균 걸음', value: '6,430보', change: '이전보다 8% 증가' }] : []),
       ...(options.includeDiscomfort ? [{ label: '불편 기록', value: '목 4일', change: '가장 자주 기록' }] : []),
     ];
-    return { id: `report-${Date.now()}`, userName: '김몸기록', periodLabel, createdAtLabel: new Date().toLocaleDateString('ko-KR'), headline: '수면이 짧은 날 목 불편이 자주 기록됐어요', highlights, discomfortAreas: options.includeDiscomfort ? ['목 뒤 4→3단계', '왼쪽 어깨 3단계'] : [], sleepPostures: options.includeSleep ? ['똑바로 4회', '왼쪽으로 2회'] : [], routineCount: options.includeRoutines ? (latestRoutineCompletion ? 3 : 2) : 0, feedbackSummary: latestRoutineFeedback?.effect === 'better' ? '루틴 후 한결 편해졌다고 기록했어요.' : '루틴 효과 피드백 2회가 기록됐어요.', discoveredPatterns: ['6시간 미만 수면 다음 날 목 불편 증가'], note: '이 요약은 직접 기록한 생활 데이터에 기반하며 의료 진단서가 아니에요.', options };
+    return { id: `report-${Date.now()}`, userName: '김하음', periodLabel, createdAtLabel: new Date().toLocaleDateString('ko-KR'), headline: '수면이 짧은 날 목 불편이 자주 기록됐어요', highlights, discomfortAreas: options.includeDiscomfort ? ['목 뒤 4→3단계', '왼쪽 어깨 3단계'] : [], sleepPostures: options.includeSleep ? ['똑바로 4회', '왼쪽으로 2회'] : [], routineCount: options.includeRoutines ? (latestRoutineCompletion ? 3 : 2) : 0, feedbackSummary: latestRoutineFeedback?.effect === 'better' ? '루틴 후 한결 편해졌다고 기록했어요.' : '루틴 효과 피드백 2회가 기록됐어요.', discoveredPatterns: ['6시간 미만 수면 다음 날 목 불편 증가'], note: '이 요약은 직접 기록한 생활 데이터에 기반하며 의료 진단서가 아니에요.', options };
   }
 
   async getRecordDetail(date: string): Promise<RecordDetail | null> {

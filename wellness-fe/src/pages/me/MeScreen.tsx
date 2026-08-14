@@ -1,31 +1,136 @@
-import { useCallback } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCallback, useState } from 'react';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppIcon } from '@/components/app-icon';
-import { Momi } from '@/components/momi';
-import StateNotice from '@/components/state-notice';
-import type { UserProfileSummary } from '@/domain/wellness';
-import { useAsyncData } from '@/hooks/use-async-data';
+import { MonthNextGlyph } from '@/components/glyphs';
+import { useThemePreference } from '@/context/theme-context';
+import { text } from '@/theme/typography';
+import { usePalette } from '@/theme/use-palette';
+import type { Palette } from '@/theme/palette';
 import { wellnessApi } from '@/services/wellness-api';
-import { colors } from '@/theme/tokens';
-import { styles } from './me.styles';
+import { notificationService } from '@/services/notification-service';
+import { ME_CARE, ME_MENU, ME_STATS } from './me.data';
+
+/**
+ * `Momgirok v8.dc.html` → `<sc-if value="{{ isMe }}">` 를 그대로 옮긴 것.
+ * "화면 모드"(라이트/다크)는 프로토타입에 없는 항목이다 — 이 세션에서 실제
+ * 시스템 설정과 분리해 추가한 기능이라 "건강 관리" 섹션 끝에 얹었다.
+ */
 
 export default function MeScreen() {
-  const router = useRouter(); const insets = useSafeAreaInsets(); const { data, error, isLoading, reload } = useAsyncData<UserProfileSummary | null>(wellnessApi.getUserProfile, null);
-  useFocusEffect(useCallback(() => { void reload().catch(() => undefined); }, [reload]));
-  return <SafeAreaView edges={['top']} style={styles.screen}><ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 108 }]} showsVerticalScrollIndicator={false}>
-    <View style={styles.header}><Text accessibilityRole="header" style={styles.headerTitle}>마이</Text></View>
-    {isLoading ? <View style={styles.center}><ActivityIndicator color={colors.primary} /></View> : error || !data ? <StateNotice actionLabel="다시 시도" description="네트워크 상태를 확인해 주세요." icon="!" onAction={() => void reload().catch(() => undefined)} title="프로필을 불러오지 못했어요" tone="error" /> : <>
-      <Pressable accessibilityRole="button" onPress={() => router.push('/settings/account')} style={({ pressed }) => [styles.identity, pressed && styles.pressed]}><View style={styles.avatar}><Momi mood="happy" size={36} /></View><View style={styles.identityCopy}><Text style={styles.name}>{data.name}</Text><Text style={styles.email}>{data.email}</Text></View><AppIcon color={colors.textMuted} name="chevron-right" size={20} /></Pressable>
-      <View style={styles.stats}><Stat label="연속 기록" value={`${data.recordDays}일`} /><Stat label="기록한 날" value={`${data.recordDays}일`} /><Stat label="완료 루틴" value={`${data.routineCount}회`} /></View>
-      <MenuSection title="건강 관리"><Menu icon="heart" label="건강 데이터 연결" description="연결 상태와 항목별 권한을 확인해요" value={data.healthConnected ? '연결됨' : '연결하기'} onPress={() => router.push('/settings/health')} /><Menu icon="bell" label="알림 설정" description="오늘 기록과 루틴 알림 시간을 정해요" value={data.notificationEnabled ? '사용 중' : '꺼짐'} onPress={() => router.push('/settings/notifications')} /></MenuSection>
-      <MenuSection title="기록과 정보"><Menu icon="document" label="기록 요약 만들기" description="선택한 기간을 한 장의 요약으로 정리해요" onPress={() => router.push('/reports/setup')} /><Menu icon="check" label="동의·데이터 관리" description="동의 내역과 저장된 데이터를 관리해요" onPress={() => router.push('/settings/data')} /><Menu icon="lock" label="계정 관리" description="비밀번호와 로그인 상태를 관리해요" onPress={() => router.push('/settings/account')} /></MenuSection>
-      <MenuSection title="도움말"><Menu icon="info" label="서비스 정보·문의" description="버전, 약관, 문의 채널" onPress={() => router.push('/settings/info')} /></MenuSection><Text style={styles.version}>MOMGIROK · VERSION 1.0.0</Text>
-    </>}
-  </ScrollView></SafeAreaView>;
+  const c = usePalette();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { scheme } = useThemePreference();
+  const [healthConnected, setHealthConnected] = useState<boolean | null>(null);
+  const [notificationLabel, setNotificationLabel] = useState('확인 중');
+
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    void Promise.all([wellnessApi.getHealthConnection(), notificationService.getSettings()]).then(([health, notifications]) => {
+      if (!active) return;
+      setHealthConnected(health.connected);
+      setNotificationLabel(notifications.enabled && notifications.osPermission === 'granted' ? formatReminderTime(notifications.reminderTime) : '꺼짐');
+    });
+    return () => { active = false; };
+  }, []));
+
+  return (
+    <ScrollView style={[s.screen, { backgroundColor: c.bg }]} contentContainerStyle={{ paddingTop: insets.top }} showsVerticalScrollIndicator={false}>
+      <View style={[s.header, { backgroundColor: c.card, borderBottomColor: c.g200 }]}>
+        <Text style={[text({ size: 20, weight: 700, tracking: -0.035 }), { color: c.g900 }]}>마이</Text>
+      </View>
+
+      {/* 프로필 + 통계 — padding:6px 20px 20px */}
+      <View style={[s.profileSection, { backgroundColor: c.card }]}>
+        <Pressable accessibilityRole="button" onPress={() => router.push('/settings/account')} style={s.profileRow}>
+          <View style={[s.avatar, { backgroundColor: c.priLightest }]}>
+            <Text style={[text({ size: 19, weight: 700, tracking: -0.02 }), { color: c.priDk }]}>테</Text>
+          </View>
+          <View style={s.flex1}>
+            <Text style={[text({ size: 17, weight: 700, tracking: -0.035 }), { color: c.g900 }]}>테스트 사용자</Text>
+            <Text style={[text({ size: 12.5 }), s.profileEmail, { color: c.g500 }]}>test@naver.com</Text>
+          </View>
+          <MonthNextGlyph color={c.g400} size={18} />
+        </Pressable>
+
+        <View style={[s.statsRow, { backgroundColor: c.g100 }]}>
+          {ME_STATS.map((stat, i) => (
+            <View key={stat.key} style={[s.statCell, i < 2 && { borderRightWidth: 1, borderRightColor: c.g200 }]}>
+              <Text style={[text({ size: 20, weight: 700, tracking: -0.04, tabular: true }), { color: c.g900 }]}>{stat.n}</Text>
+              <Text style={[text({ size: 11.5 }), s.statLabel, { color: c.g500 }]}>{stat.l}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* 건강 관리 — padding:16px 20px 8px */}
+      <MenuSection c={c} title="건강 관리">
+        {ME_CARE.map((item, i) => (
+          <MenuRow border={i < ME_CARE.length - 1} c={c} key={item.key} label={item.label} onPress={() => router.push(item.to as Href)} value={item.key === 'health' ? healthConnected === null ? '확인 중' : healthConnected ? '연결됨' : '연결 안 됨' : notificationLabel} />
+        ))}
+        <MenuRow c={c} label="화면 모드" onPress={() => router.push('/settings/appearance')} value={scheme === 'dark' ? '다크' : '라이트'} />
+      </MenuSection>
+
+      {/* 기록과 정보 — padding:16px 20px 8px */}
+      <MenuSection c={c} title="기록과 정보">
+        {ME_MENU.map((item) => (
+          <MenuRow border c={c} key={item.key} label={item.label} onPress={() => router.push(item.to as Href)} />
+        ))}
+        <MenuRow c={c} label="핵심 기능 다시 보기" onPress={() => router.push('/(onboarding)/intro?preview=1')} />
+        <Text style={[text({ size: 11.5 }), s.version, { color: c.g400 }]}>하음 1.0.0</Text>
+      </MenuSection>
+
+      <View style={{ height: 112 }} />
+    </ScrollView>
+  );
 }
-function Stat({ label, value }: { label: string; value: string }) { return <View style={styles.stat}><Text style={styles.statValue}>{value}</Text><Text style={styles.statLabel}>{label}</Text></View>; }
-function MenuSection({ children, title }: { children: React.ReactNode; title: string }) { return <View style={styles.section}><Text style={styles.sectionTitle}>{title}</Text><View style={styles.menuGroup}>{children}</View></View>; }
-function Menu({ description, icon, label, onPress, value }: { description: string; icon: React.ComponentProps<typeof AppIcon>['name']; label: string; onPress: () => void; value?: string }) { return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.menu, pressed && styles.pressed]}><View style={styles.menuIndex}><AppIcon color={colors.primaryText} name={icon} size={18} /></View><View style={styles.menuCopy}><View style={styles.menuTitleRow}><Text style={styles.menuLabel}>{label}</Text>{value ? <Text style={styles.menuValue}>{value}</Text> : null}</View><Text style={styles.menuDescription}>{description}</Text></View><AppIcon color={colors.textMuted} name="chevron-right" size={17} /></Pressable>; }
+
+function MenuSection({ c, title, children }: { c: Palette; title: string; children: React.ReactNode }) {
+  return (
+    <View style={[s.menuSection, { backgroundColor: c.card }]}>
+      <Text style={[text({ size: 12.5, weight: 700 }), { color: c.g500 }]}>{title}</Text>
+      {children}
+    </View>
+  );
+}
+
+function MenuRow({ c, label, value, onPress, border }: { c: Palette; label: string; value?: string; onPress: () => void; border?: boolean }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={[s.menuRow, border && { borderBottomWidth: 1, borderBottomColor: c.g200 }]}>
+      <Text style={[text({ size: 15, weight: 600, tracking: -0.025 }), { color: c.g900 }]}>{label}</Text>
+      <View style={s.menuRowRight}>
+        {value ? <Text style={[text({ size: 13, weight: 600 }), { color: c.g500 }]}>{value}</Text> : null}
+        <MonthNextGlyph color={c.g400} size={17} />
+      </View>
+    </Pressable>
+  );
+}
+
+const s = StyleSheet.create({
+  screen: { flex: 1 },
+  flex1: { flex: 1, minWidth: 0 },
+
+  header: { height: 52, justifyContent: 'center', paddingHorizontal: 20, borderBottomWidth: StyleSheet.hairlineWidth },
+
+  profileSection: { paddingTop: 6, paddingHorizontal: 20, paddingBottom: 20 },
+  profileRow: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 13 },
+  avatar: { width: 52, height: 52, borderRadius: 27, alignItems: 'center', justifyContent: 'center' },
+  profileEmail: { marginTop: 3 },
+  statsRow: { marginTop: 16, paddingVertical: 16, paddingHorizontal: 4, borderRadius: 16, flexDirection: 'row' },
+  statCell: { flex: 1, alignItems: 'center' },
+  statLabel: { marginTop: 4 },
+
+  menuSection: { marginTop: 10, paddingTop: 16, paddingHorizontal: 20, paddingBottom: 8 },
+  menuRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  menuRowRight: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  version: { paddingVertical: 10, paddingTop: 16 },
+});
+
+function formatReminderTime(value: string) {
+  const [hour, minute] = value.split(':').map(Number);
+  const date = new Date();
+  date.setHours(hour || 0, minute || 0, 0, 0);
+  return new Intl.DateTimeFormat('ko-KR', { hour: 'numeric', minute: '2-digit' }).format(date);
+}

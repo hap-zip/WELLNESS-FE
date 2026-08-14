@@ -1,66 +1,106 @@
 import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppIcon, type AppIconName } from '@/components/app-icon';
-import type { RoutineEffect } from '@/domain/wellness';
-import { wellnessApi } from '@/services/wellness-api';
-import { colors } from '@/theme/tokens';
+import { BigCheckGlyph, TrendGlyph } from '@/components/glyphs';
+import { text } from '@/theme/typography';
+import { usePalette } from '@/theme/use-palette';
+import { FB_OPTIONS, fbNoteFor } from '@/pages/routine/routine.data';
 
-import { styles } from './feedback.styles';
-
-const EFFECTS: { id: RoutineEffect; icon: AppIconName; label: string }[] = [
-  { id: 'better', icon: 'trend-up', label: '나아졌어요' },
-  { id: 'same', icon: 'minus', label: '비슷해요' },
-  { id: 'worse', icon: 'trend-down', label: '더 불편해요' },
-];
-const EFFECT_COPY: Partial<Record<RoutineEffect,string>>={better:'좋아요. 이 루틴을 어깨 불편이 있는 날에 더 자주 추천할게요.',same:'조금 더 지켜볼게요. 같은 루틴을 며칠 더 제안해요.',worse:'이 루틴 추천을 줄이고, 다른 방식의 동작을 먼저 제안할게요.'};
-
+/**
+ * `Momgirok v8.dc.html` → `isFeedback` (Bottom Sheet) 을 그대로 옮긴 것.
+ * 루틴 완료 다음 날 알림을 눌러 들어오는 것을 가정한 시연이라 날짜·시각은 고정 문구다.
+ */
 export default function RoutineFeedbackScreen() {
+  const c = usePalette();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
-  const { routineId = '' } = useLocalSearchParams<{ routineId?: string }>();
-  const [effect, setEffect] = useState<RoutineEffect | null>(null);
-  const [level, setLevel] = useState<number | null>(null);
+  const [picked, setPicked] = useState<number | null>(null);
   const [memo, setMemo] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const canSubmit = Boolean(effect);
 
-  const selectEffect = (next: RoutineEffect) => {
-    setEffect(next);
-    if (next === 'unknown') setLevel(null);
-  };
-
-  const submit = async () => {
-    if (!effect) return;
-    setSaving(true);
-    setError('');
-    try {
-      const result = await wellnessApi.saveRoutineFeedback({ routineId, effect, discomfortLevel: level ?? 3, memo: memo.trim() });
-      if (result.shouldShowSignal) router.replace('/safety/signal');
-      else router.dismissTo('/(tabs)/home');
-    } catch {
-      setError('피드백을 저장하지 못했어요. 다시 시도해 주세요.');
-      setSaving(false);
-    }
-  };
+  const close = () => router.back();
 
   return (
-    <SafeAreaView edges={['top']} style={styles.screen}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-        <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={[styles.content, height < 700 && styles.compactContent, { minHeight: Math.max(480, height - (height < 700 ? 72 : 192)), paddingBottom: insets.bottom + 120 }]} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
-          <Text style={styles.eyebrow}>어제 오후 9:20 · 목 주변 가볍게 이완하기</Text>
-          <Text accessibilityRole="header" style={styles.title}>어제 루틴이 도움이 됐나요?</Text>
-          <Text style={styles.description}>답을 모아 다음 추천의 동작과 강도를 조정해요.</Text>
-          <View accessibilityRole="radiogroup" style={styles.effectRow}>{EFFECTS.map((item) => { const selected = effect === item.id; return <Pressable accessibilityRole="radio" accessibilityState={{ checked: selected }} key={item.id} onPress={() => selectEffect(item.id)} style={({ pressed }) => [styles.effectCard, selected && styles.selected, pressed && styles.pressed]}><AppIcon color={selected ? colors.recovery : colors.textSecondary} name={item.icon} size={22}/><Text style={[styles.effectText, selected && styles.selectedText]}>{item.label}</Text></Pressable>; })}</View>
-          {effect ? <Text style={styles.response}>{EFFECT_COPY[effect]}</Text> : null}<Text accessibilityRole="header" style={styles.sectionTitle}>메모 <Text style={styles.optional}>(선택)</Text></Text><TextInput accessibilityLabel="루틴 효과 메모" maxLength={100} multiline onChangeText={setMemo} placeholder="느낀 변화가 있다면 적어주세요" placeholderTextColor={colors.textMuted} style={styles.input} value={memo} /><Text accessibilityLabel={`${memo.length}자 입력됨, 최대 100자`} style={styles.memoCount}>{memo.length}/100</Text>
-          {error ? <Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
-        </ScrollView>
-        <View style={[styles.action, { paddingBottom: Math.max(insets.bottom, 12) }]}><Pressable accessibilityRole="button" accessibilityState={{ disabled: !canSubmit, busy: saving }} disabled={!canSubmit || saving} onPress={() => void submit()} style={({ pressed }) => [styles.button, (!canSubmit || saving) && styles.disabled, pressed && styles.pressed]}>{saving ? <ActivityIndicator color={colors.primaryText} /> : <Text style={styles.buttonText}>답변 보내기</Text>}</Pressable></View>
+    <View style={s.overlay}>
+      <Pressable accessibilityLabel="닫기" accessibilityRole="button" onPress={close} style={StyleSheet.absoluteFill} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={[s.sheet, { backgroundColor: c.card }]}>
+          <View style={s.handleWrap}><View style={[s.handle, { backgroundColor: c.g300 }]} /></View>
+          <View style={[s.content, { paddingBottom: 30 + insets.bottom }]}>
+            <Text style={[text({ size: 11.5, weight: 700 }), { color: c.g500 }]}>어제 오후 9:20 · 목 주변 가볍게 이완하기</Text>
+            <Text style={[text({ size: 22, weight: 700, tracking: -0.04, leading: 1.42 }), s.title, { color: c.g900 }]}>어제 루틴이{'\n'}도움이 됐나요?</Text>
+            <Text style={[text({ size: 12.5, leading: 1.7 }), s.sub, { color: c.g600 }]}>답해주시면 다음 루틴 추천에 반영해요.</Text>
+
+            <View style={s.optionList}>
+              {FB_OPTIONS.map((opt) => {
+                const on = picked === opt.id;
+                const tone = opt.tone === 'ok' ? c.pri : opt.tone === 'bad' ? c.danger : c.g500;
+                const soft = opt.tone === 'ok' ? c.priLightest : opt.tone === 'bad' ? c.dangerBg : c.g100;
+                return (
+                  <Pressable key={opt.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setPicked(opt.id)} style={[s.optionRow, { borderColor: on ? tone : c.g200, backgroundColor: on ? soft : c.card }]}>
+                    <View style={[s.optionIconWrap, { backgroundColor: on ? c.card : c.g100 }]}>
+                      <TrendGlyph color={on ? tone : c.g500} kind={opt.icon} />
+                    </View>
+                    <Text style={[text({ size: 15.5, weight: 700, tracking: -0.03 }), s.flex1, { color: c.g900 }]}>{opt.label}</Text>
+                    {on ? (
+                      <View style={[s.optionCheck, { backgroundColor: tone }]}>
+                        <BigCheckGlyph color="#fff" size={13} strokeWidth={3.4} />
+                      </View>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <View style={s.memoHead}>
+              <Text style={[text({ size: 12.5, weight: 700 }), { color: c.g700 }]}>메모 (선택)</Text>
+              <Text style={[text({ size: 11 }), { color: c.g400 }]}>{memo.length}/100</Text>
+            </View>
+            <TextInput
+              maxLength={100}
+              multiline
+              onChangeText={setMemo}
+              placeholder="느낀 변화가 있다면 적어주세요"
+              placeholderTextColor={c.g400}
+              style={[s.memoInput, { borderColor: c.g300, color: c.g900 }]}
+              value={memo}
+            />
+
+            {picked !== null ? (
+              <View style={[s.noteBox, { backgroundColor: c.priLightest }]}>
+                <Text style={[text({ size: 12.5, leading: 1.7 }), { color: c.priDk }]}>{fbNoteFor(picked)}</Text>
+              </View>
+            ) : null}
+
+            <Pressable accessibilityRole="button" accessibilityState={{ disabled: picked === null }} disabled={picked === null} onPress={close} style={[s.submitBtn, { backgroundColor: picked === null ? c.g300 : c.pri }]}>
+              <Text style={[text({ size: 16, weight: 700 }), { color: '#fff' }]}>답변 보내기</Text>
+            </Pressable>
+          </View>
+        </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
+
+const s = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(22,25,29,.38)' },
+  flex1: { flex: 1, minWidth: 0 },
+  sheet: { borderTopLeftRadius: 26, borderTopRightRadius: 26 },
+  handleWrap: { alignItems: 'center', paddingTop: 10, paddingBottom: 4 },
+  handle: { width: 38, height: 4, borderRadius: 3 },
+  content: { paddingTop: 10, paddingHorizontal: 20 },
+  title: { marginTop: 8 },
+  sub: { marginTop: 6 },
+
+  optionList: { marginTop: 20, gap: 9 },
+  optionRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, borderWidth: 1.5, borderRadius: 16 },
+  optionIconWrap: { width: 32, height: 32, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  optionCheck: { width: 22, height: 22, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+
+  memoHead: { marginTop: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  memoInput: { marginTop: 9, minHeight: 72, paddingVertical: 13, paddingHorizontal: 15, borderWidth: 1, borderRadius: 16, fontSize: 13.5, lineHeight: 23 },
+
+  noteBox: { marginTop: 16, padding: 13, paddingHorizontal: 15, borderRadius: 14 },
+  submitBtn: { marginTop: 18, height: 54, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+});

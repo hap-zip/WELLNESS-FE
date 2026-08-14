@@ -127,6 +127,19 @@ function isoDate(value: Date | string | undefined) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+function asDate(value: Date | string | undefined) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function sleepDateId(endValue: Date | string) {
+  const end = asDate(endValue)!;
+  const target = new Date(end);
+  if (target.getHours() >= 12) target.setDate(target.getDate() + 1);
+  return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(target.getDate()).padStart(2, '0')}`;
+}
+
 export const appleHealthService = {
   async isAvailable() {
     try {
@@ -267,10 +280,6 @@ export const appleHealthService = {
       const steps = stepStatistics?.sumQuantity?.quantity;
       const activityEnergy = energyStatistics?.sumQuantity?.quantity;
 
-      if (sleepMilliseconds === 0 && steps === undefined && activityEnergy === undefined) {
-        throw new AppleHealthError('NO_HEALTH_DATA', 'Apple 건강의 수면·걸음·활동 에너지 읽기 권한이 꺼져 있거나, 이 날짜에 저장된 기록이 없어요.');
-      }
-
       return {
         sleepDuration: sleepMilliseconds > 0 ? formatDuration(sleepMilliseconds) : '기록 없음',
         bedtime: asleepIntervals[0] ? formatTime(asleepIntervals[0].start) : '기록 없음',
@@ -282,5 +291,43 @@ export const appleHealthService = {
       if (error instanceof AppleHealthError) throw error;
       throw new AppleHealthError('QUERY_FAILED', 'Apple 건강 데이터를 불러오지 못했어요. 건강 앱의 접근 권한을 확인해 주세요.', error);
     }
+  },
+
+  async readAllDailyRecords(permissions: { sleep: boolean; steps: boolean; activityEnergy?: boolean } = { sleep: true, steps: true, activityEnergy: true }) {
+    const healthKit = await requireAvailableHealthKit();
+    const [firstStep, firstEnergy, sleepSamples] = await Promise.all([
+      permissions.steps ? healthKit.queryQuantitySamples(STEP_COUNT, { limit: 1, ascending: true, unit: 'count' }) : Promise.resolve([]),
+      permissions.activityEnergy !== false ? healthKit.queryQuantitySamples(ACTIVE_ENERGY, { limit: 1, ascending: true, unit: 'kcal' }) : Promise.resolve([]),
+      permissions.sleep ? healthKit.queryCategorySamples(SLEEP_ANALYSIS, { limit: 0, ascending: true }) : Promise.resolve([]),
+    ]);
+    const earliest = [firstStep[0]?.startDate, firstEnergy[0]?.startDate, sleepSamples[0]?.startDate]
+      .map(asDate).filter((date): date is Date => date !== null).sort((a, b) => a.getTime() - b.getTime())[0];
+    if (!earliest) return {} as Record<string, AutoHealthRecord>;
+
+    const startDate = new Date(earliest); startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(); endDate.setDate(endDate.getDate() + 1); endDate.setHours(0, 0, 0, 0);
+    const filter = { date: { startDate, endDate, strictStartDate: true, strictEndDate: true } };
+    const [stepDays, energyDays] = await Promise.all([
+      permissions.steps ? healthKit.queryStatisticsCollectionForQuantity(STEP_COUNT, ['cumulativeSum'], startDate, { day: 1 }, { filter, unit: 'count' }) : Promise.resolve([]),
+      permissions.activityEnergy !== false ? healthKit.queryStatisticsCollectionForQuantity(ACTIVE_ENERGY, ['cumulativeSum'], startDate, { day: 1 }, { filter, unit: 'kcal' }) : Promise.resolve([]),
+    ]);
+
+    const values = new Map<string, { steps?: number; energy?: number; sleep: { start: Date; end: Date }[] }>();
+    const ensure = (dateId: string) => { const current = values.get(dateId) ?? { sleep: [] }; values.set(dateId, current); return current; };
+    for (const day of stepDays) { const date = asDate(day.startDate); if (date && day.sumQuantity) ensure(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`).steps = day.sumQuantity.quantity; }
+    for (const day of energyDays) { const date = asDate(day.startDate); if (date && day.sumQuantity) ensure(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`).energy = day.sumQuantity.quantity; }
+    for (const sample of sleepSamples) {
+      if (!ASLEEP_VALUES.has(sample.value)) continue;
+      const start = asDate(sample.startDate), end = asDate(sample.endDate);
+      if (start && end) ensure(sleepDateId(end)).sleep.push({ start, end });
+    }
+
+    const records: Record<string, AutoHealthRecord> = {};
+    for (const [dateId, value] of values) {
+      const intervals = mergeIntervals(value.sleep);
+      const milliseconds = intervals.reduce((total, interval) => total + interval.end.getTime() - interval.start.getTime(), 0);
+      records[dateId] = { sleepDuration: milliseconds > 0 ? formatDuration(milliseconds) : '기록 없음', bedtime: intervals[0] ? formatTime(intervals[0].start) : '기록 없음', steps: value.steps !== undefined ? formatSteps(value.steps) : '기록 없음', activityEnergy: value.energy !== undefined ? formatEnergy(value.energy) : '기록 없음', source: 'apple-health' };
+    }
+    return records;
   },
 };

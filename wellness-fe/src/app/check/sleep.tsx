@@ -1,5 +1,5 @@
-import SleepCheckScreen from '@/pages/check/SleepCheckScreen';
+import CheckFlowScreen from '@/pages/check/CheckFlowScreen';
 
 export default function SleepCheckRoute() {
-  return <SleepCheckScreen />;
+  return <CheckFlowScreen initialStep={2} />;
 }

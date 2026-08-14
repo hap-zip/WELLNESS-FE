@@ -7,3 +7,11 @@ export function toMonthDayLabel(dateId: string | null | undefined, fallback = '�
   const [, month, day] = dateId.split('-').map(Number);
   return `${month}월 ${day}일`;
 }
+
+export function toCurrentKoreanDateLabel(date = new Date()) {
+  return new Intl.DateTimeFormat('ko-KR', {
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  }).format(date);
+}

@@ -4,31 +4,28 @@ import type { AutoHealthRecord, HealthConnectionSettings } from '@/domain/wellne
 import { appleHealthService } from '@/services/apple-health-service';
 import { toLocalDateId } from '@/utils/date';
 
-const CACHE_KEY = 'wellness.apple-health-cache.v1';
+const LEGACY_CACHE_KEY = 'wellness.apple-health-cache.v1';
+const LEGACY_CACHE_INDEX_KEY = 'wellness.apple-health-cache-index.v2';
+const CACHE_DAY_PREFIX = 'wellness.apple-health-day.v2.';
 
 type CachedHealthRecord = {
   record: AutoHealthRecord;
   syncedAt: string;
 };
 
-type HealthCache = Record<string, CachedHealthRecord>;
-
 let syncInFlight: Promise<number> | null = null;
 let backgroundSyncEnabled = false;
 let activeSettings: HealthConnectionSettings | null = null;
 
-async function readCache(): Promise<HealthCache> {
-  try {
-    if (!(await SecureStore.isAvailableAsync())) return {};
-    const stored = await SecureStore.getItemAsync(CACHE_KEY);
-    return stored ? JSON.parse(stored) as HealthCache : {};
-  } catch {
-    return {};
+async function writeRecords(records: Record<string, CachedHealthRecord>) {
+  if (!(await SecureStore.isAvailableAsync())) return;
+  for (const [dateId, cachedRecord] of Object.entries(records)) {
+    await SecureStore.setItemAsync(`${CACHE_DAY_PREFIX}${dateId}`, JSON.stringify(cachedRecord));
   }
-}
-
-async function writeCache(cache: HealthCache) {
-  if (await SecureStore.isAvailableAsync()) await SecureStore.setItemAsync(CACHE_KEY, JSON.stringify(cache));
+  await Promise.all([
+    SecureStore.deleteItemAsync(LEGACY_CACHE_KEY).catch(() => undefined),
+    SecureStore.deleteItemAsync(LEGACY_CACHE_INDEX_KEY).catch(() => undefined),
+  ]);
 }
 
 function recentDateIds() {
@@ -39,18 +36,18 @@ function recentDateIds() {
 }
 
 async function syncDates(settings: HealthConnectionSettings, dateIds: string[]) {
-  const cache = await readCache();
+  const updates: Record<string, CachedHealthRecord> = {};
   let syncedCount = 0;
   for (const dateId of dateIds) {
     try {
       const record = await appleHealthService.readDailyRecord(dateId, settings.permissions);
-      cache[dateId] = { record, syncedAt: new Date().toISOString() };
+      updates[dateId] = { record, syncedAt: new Date().toISOString() };
       syncedCount += 1;
     } catch {
       // 한 날짜의 기록이 없더라도 다른 날짜 동기화는 계속한다.
     }
   }
-  if (syncedCount > 0) await writeCache(cache);
+  if (syncedCount > 0) await writeRecords(updates);
   return syncedCount;
 }
 
@@ -83,11 +80,20 @@ export const healthSyncService = {
     return scheduleRecentSync(settings);
   },
 
+  async syncAll(settings: HealthConnectionSettings) {
+    activeSettings = settings;
+    const records = await appleHealthService.readAllDailyRecords(settings.permissions);
+    const syncedAt = new Date().toISOString();
+    const updates = Object.fromEntries(
+      Object.entries(records).map(([dateId, record]) => [dateId, { record, syncedAt }]),
+    );
+    await writeRecords(updates);
+    return Object.keys(records).length;
+  },
+
   async getDailyRecord(dateId: string, settings: HealthConnectionSettings) {
     const record = await appleHealthService.readDailyRecord(dateId, settings.permissions);
-    const cache = await readCache();
-    cache[dateId] = { record, syncedAt: new Date().toISOString() };
-    await writeCache(cache);
+    await writeRecords({ [dateId]: { record, syncedAt: new Date().toISOString() } });
     return record;
   },
 };

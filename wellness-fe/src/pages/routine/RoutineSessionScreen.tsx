@@ -1,36 +1,119 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
-import type { RoutinePlan } from '@/domain/wellness';
-import { useAsyncData } from '@/hooks/use-async-data';
-import { wellnessApi } from '@/services/wellness-api';
-import { AppIcon } from '@/components/app-icon';
-import { colors } from '@/theme/tokens';
-import { sessionStyles as styles } from './routine-session.styles';
 
+import { CloseGlyph } from '@/components/glyphs';
+import { useStretchMap } from '@/hooks/use-stretch-map';
+import { text } from '@/theme/typography';
+import { MOVE_SECONDS, RING_CIRCUMFERENCE, ROUTINE_MOVES } from './routine.data';
+
+/**
+ * `Momgirok v8.dc.html` → `isRoutine` 을 그대로 옮긴 것.
+ * CLAUDE.md 지시대로 절대 시각 기준으로 계산한다 — setInterval 틱 카운트가
+ * 아니라 "언제 끝나야 하는가"(endAt) 를 들고 있다가 화면이 꺼졌다 켜져도
+ * Date.now() 와의 차이로 남은 시간을 다시 구한다.
+ * 지금 하는 동작의 실제 스트레칭 GIF(외부 무료 API)를 타이머 위에 보여준다.
+ */
 export default function RoutineSessionScreen() {
-  const router = useRouter(); const insets = useSafeAreaInsets();
-  const { data: routine, isLoading } = useAsyncData<RoutinePlan | null>(wellnessApi.getTodayRoutine, null);
-  const [stepIndex, setStepIndex] = useState(0); const [remaining, setRemaining] = useState(0); const [paused, setPaused] = useState(false);
-  const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const deadline = useRef<number | null>(null); const initializedId = useRef<string | null>(null);
-  const finish = useCallback((plan: RoutinePlan) => router.replace({ pathname: '/routine/complete', params: { routineId: plan.id, seconds: String(plan.totalSeconds), steps: String(plan.steps.length) } }), [router]);
-  useEffect(() => { if (!routine || initializedId.current === routine.id) return; initializedId.current = routine.id; setRemaining(routine.steps[0].durationSeconds); deadline.current = Date.now() + routine.steps[0].durationSeconds * 1000; }, [routine]);
-  useEffect(() => { if (!routine || paused || remaining <= 0) return; const timer = setInterval(() => { if (!deadline.current) return; const next = Math.max(0, Math.ceil((deadline.current - Date.now()) / 1000)); setRemaining(next); if (next === 0) { clearInterval(timer); if (stepIndex >= routine.steps.length - 1) finish(routine); else { const nextIndex = stepIndex + 1; const seconds = routine.steps[nextIndex].durationSeconds; setStepIndex(nextIndex); setRemaining(seconds); deadline.current = Date.now() + seconds * 1000; } } }, 200); return () => clearInterval(timer); }, [finish, paused, remaining, routine, stepIndex]);
-  const togglePause = () => { if (paused) deadline.current = Date.now() + remaining * 1000; setPaused((value) => !value); };
-  const skip = () => { if (!routine) return; if (stepIndex >= routine.steps.length - 1) finish(routine); else { const next = stepIndex + 1; setStepIndex(next); setRemaining(routine.steps[next].durationSeconds); deadline.current = Date.now() + routine.steps[next].durationSeconds * 1000; setPaused(false); } };
-  if (isLoading || !routine) return <SafeAreaView edges={['top', 'bottom']} style={styles.center}><ActivityIndicator color={colors.sessionAccent} /></SafeAreaView>;
-  const step = routine.steps[stepIndex]; const progress = ((stepIndex + (1 - remaining / step.durationSeconds)) / routine.steps.length) * 100;
-  const nextStep = routine.steps[stepIndex + 1];
-  const circumference = 616;
-  const stepProgress = remaining / step.durationSeconds;
-  return <SafeAreaView edges={['top']} style={styles.screen}><View style={styles.topBar}><Pressable accessibilityLabel="루틴 종료" accessibilityRole="button" onPress={() => setShowExitConfirm(true)} style={({ pressed }) => [styles.exitButton, pressed && styles.pressed]}><AppIcon color={colors.white} name="close" size={22}/></Pressable><Text numberOfLines={1} style={styles.progressLabel}>{stepIndex + 1} / {routine.steps.length} · {routine.title}</Text><View style={styles.topSpacer}/></View><ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false} style={styles.bodyScroll}>
-    <View accessibilityLabel={`남은 시간 ${remaining}초, 루틴 진행률 ${Math.round(progress)}퍼센트`} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(progress) }} style={styles.timerRing}><Svg height={216} width={216}><Circle cx={108} cy={108} fill="none" r={98} stroke="rgba(255,255,255,.13)" strokeWidth={8}/><Circle cx={108} cy={108} fill="none" r={98} rotation={-90} origin="108,108" stroke={colors.sessionAccent} strokeDasharray={`${circumference} ${circumference}`} strokeDashoffset={circumference * (1 - stepProgress)} strokeLinecap="round" strokeWidth={8}/></Svg><View style={styles.timerCenter}><Text accessibilityLiveRegion="polite" style={styles.timer}>{String(Math.floor(remaining / 60)).padStart(2, '0')}:{String(remaining % 60).padStart(2, '0')}</Text><Text style={styles.timerLabel}>남은 시간</Text></View></View><Text accessibilityRole="header" style={styles.title}>{step.title}</Text><Text style={styles.instruction}>{step.instruction}</Text><Text style={styles.breathe}>{paused ? '잠시 쉬어도 괜찮아요' : '호흡을 이어가며 천천히 움직이세요'}</Text>{nextStep ? <Text style={styles.nextStep}>다음 · {nextStep.title}</Text> : <Text style={styles.nextStep}>마지막 동작이에요</Text>}
-  </ScrollView><View style={[styles.actions, { paddingBottom: Math.max(insets.bottom, 18) }]}><Pressable accessibilityRole="button" onPress={togglePause} style={({ pressed }) => [styles.pauseButton, pressed && styles.pressed]}><AppIcon color={colors.session} name={paused ? 'play' : 'pause'} size={20}/><Text style={styles.pauseText}>{paused ? '계속하기' : '일시정지'}</Text></Pressable><Pressable accessibilityRole="button" onPress={skip} style={({ pressed }) => [styles.nextButton, pressed && styles.pressed]}><Text style={styles.nextButtonText}>다음</Text></Pressable></View>
-    <Modal animationType="fade" onRequestClose={() => setShowExitConfirm(false)} transparent visible={showExitConfirm}>
-      <View style={styles.modalOverlay}><Pressable accessibilityLabel="중단 확인 닫기" onPress={() => setShowExitConfirm(false)} style={StyleSheet.absoluteFill}/><View accessibilityViewIsModal style={styles.exitDialog}><Text style={styles.exitTitle}>루틴을 중단할까요?</Text><Text style={styles.exitDescription}>지금까지 진행한 동작은 완료 기록에 포함되지 않아요.</Text><View style={styles.exitActions}><Pressable accessibilityRole="button" onPress={() => setShowExitConfirm(false)} style={({ pressed }) => [styles.exitSecondary, pressed && styles.pressed]}><Text style={styles.exitSecondaryText}>계속하기</Text></Pressable><Pressable accessibilityRole="button" onPress={() => router.replace('/routine')} style={({ pressed }) => [styles.exitDanger, pressed && styles.pressed]}><Text style={styles.exitDangerText}>중단하기</Text></Pressable></View></View></View>
-    </Modal>
-  </SafeAreaView>;
+  const router = useRouter();
+  const stretches = useStretchMap();
+  const [moveIdx, setMoveIdx] = useState(0);
+  const [endAt, setEndAt] = useState(() => Date.now() + MOVE_SECONDS * 1000);
+  const [running, setRunning] = useState(true);
+  const [remaining, setRemaining] = useState(MOVE_SECONDS);
+  const tick = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    tick.current = setInterval(() => {
+      setRemaining(running ? Math.max(0, Math.ceil((endAt - Date.now()) / 1000)) : remaining);
+    }, 250);
+    return () => { if (tick.current) clearInterval(tick.current); };
+  }, [endAt, running, remaining]);
+
+  const move = ROUTINE_MOVES[moveIdx] ?? ROUTINE_MOVES[0];
+  const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
+  const ss = String(remaining % 60).padStart(2, '0');
+  const ringOffset = RING_CIRCUMFERENCE * (1 - remaining / MOVE_SECONDS);
+
+  const toggle = () => {
+    if (running) {
+      setRemaining(Math.max(0, Math.ceil((endAt - Date.now()) / 1000)));
+      setRunning(false);
+    } else {
+      setEndAt(Date.now() + remaining * 1000);
+      setRunning(true);
+    }
+  };
+
+  const next = () => {
+    if (moveIdx >= 2) { router.replace('/routine/complete'); return; }
+    setMoveIdx((i) => i + 1);
+    setEndAt(Date.now() + MOVE_SECONDS * 1000);
+    setRemaining(MOVE_SECONDS);
+    setRunning(true);
+  };
+
+  const R = 98;
+  const CIRC = 2 * Math.PI * R; // ≈616, 소스와 동일
+
+  return (
+    <SafeAreaView edges={['top', 'bottom']} style={s.screen}>
+      <View style={s.header}>
+        <Pressable accessibilityLabel="루틴 종료" accessibilityRole="button" onPress={() => router.dismissTo('/(tabs)/home')} style={s.closeBtn}>
+          <CloseGlyph color="#fff" size={20} />
+        </Pressable>
+        <Text style={[text({ size: 13, weight: 700 }), { color: 'rgba(255,255,255,.6)' }]}>{moveIdx + 1} / 3 · 목 이완 루틴</Text>
+        <View style={s.spacer} />
+      </View>
+
+      <View style={s.center}>
+        {stretches[move.stretchSlug] ? (
+          <Image source={{ uri: stretches[move.stretchSlug].gifUrl }} style={s.moveGif} />
+        ) : null}
+        <View style={s.ringWrap}>
+          <Svg height={216} style={s.ringRotate} viewBox="0 0 216 216" width={216}>
+            <Circle cx={108} cy={108} fill="none" r={R} stroke="rgba(255,255,255,.13)" strokeWidth={8} />
+            <Circle cx={108} cy={108} fill="none" r={R} stroke="#93C90F" strokeDasharray={CIRC} strokeDashoffset={ringOffset} strokeLinecap="round" strokeWidth={8} />
+          </Svg>
+          <View style={s.ringInner}>
+            <Text style={[text({ size: 48, weight: 700, tracking: -0.055, tabular: true }), { color: '#fff' }]}>{mm}:{ss}</Text>
+            <Text style={[text({ size: 12, weight: 600 }), s.remainLabel, { color: 'rgba(255,255,255,.5)' }]}>남은 시간</Text>
+          </View>
+        </View>
+        <Text style={[text({ size: 23, weight: 700, tracking: -0.04 }), s.moveName, { color: '#fff' }]}>{move.name}</Text>
+        <Text style={[text({ size: 14, leading: 1.75 }), s.moveDesc, { color: 'rgba(255,255,255,.6)' }]}>{move.desc}</Text>
+      </View>
+
+      <View style={s.footer}>
+        <Pressable accessibilityRole="button" onPress={toggle} style={s.timerBtn}>
+          <Text style={[text({ size: 16, weight: 700 }), { color: '#fff' }]}>{running ? '일시정지' : '이어서 하기'}</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={next} style={s.nextBtn}>
+          <Text style={[text({ size: 15, weight: 700 }), { color: '#fff' }]}>다음</Text>
+        </Pressable>
+      </View>
+    </SafeAreaView>
+  );
 }
+
+const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#16191D' },
+  header: { height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,.14)' },
+  closeBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  spacer: { width: 44 },
+
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
+  moveGif: { width: 120, height: 120, borderRadius: 20, marginBottom: 20, backgroundColor: 'rgba(255,255,255,.06)' },
+  ringWrap: { width: 216, height: 216 },
+  ringRotate: { transform: [{ rotate: '-90deg' }] },
+  ringInner: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  remainLabel: { marginTop: 4 },
+  moveName: { marginTop: 34, textAlign: 'center' },
+  moveDesc: { marginTop: 11, maxWidth: 276, textAlign: 'center' },
+
+  footer: { paddingHorizontal: 20, paddingBottom: 36, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  timerBtn: { flex: 1, height: 56, borderRadius: 29, alignItems: 'center', justifyContent: 'center', backgroundColor: '#93C90F' },
+  nextBtn: { width: 92, height: 56, borderRadius: 29, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,.25)' },
+});

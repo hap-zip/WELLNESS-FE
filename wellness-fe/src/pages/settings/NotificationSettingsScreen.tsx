@@ -1,146 +1,63 @@
+import { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Linking, Platform, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import StateNotice from '@/components/state-notice';
-import { PageHeader } from '@/components/ui/page-header';
+import { SubScreenHeader } from '@/components/ui/sub-screen-header';
 import type { NotificationSettings } from '@/domain/wellness';
-import { useAsyncData } from '@/hooks/use-async-data';
+import { NOTIFY_ROWS } from '@/pages/me/me.data';
 import { notificationService } from '@/services/notification-service';
-import { colors } from '@/theme/tokens';
-import { styles } from './settings.styles';
+import { text } from '@/theme/typography';
+import { usePalette } from '@/theme/use-palette';
+import { useAppColorScheme } from '@/hooks/use-app-color-scheme';
+
+const FIELD_BY_ID = { daily: 'dailyCheck', routine: 'routine', weekly: 'weeklyReport', effect: 'nextDayEffect', persist: 'persistentSignal' } as const satisfies Record<string, keyof NotificationSettings>;
 
 export default function NotificationSettingsScreen() {
-  const insets = useSafeAreaInsets();
-  const { data, error, isLoading, reload } = useAsyncData<NotificationSettings | null>(notificationService.getSettings, null);
-  const [form, setForm] = useState<NotificationSettings | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [saveError, setSaveError] = useState('');
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testStatus, setTestStatus] = useState('');
+  const c = usePalette(); const router = useRouter(); const insets = useSafeAreaInsets();
+  const scheme = useAppColorScheme();
+  const [settings, setSettings] = useState<NotificationSettings | null>(null);
+  const [showPicker, setShowPicker] = useState(false); const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState(''); const [error, setError] = useState('');
 
-  useEffect(() => { if (data) setForm(data); }, [data]);
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void reload().catch(() => undefined);
-    });
-    return () => subscription.remove();
-  }, [reload]);
+  useEffect(() => { let active = true; void notificationService.getSettings().then((v) => { if (active) setSettings(v); }).catch((e) => { if (active) setError(e instanceof Error ? e.message : '알림 설정을 불러오지 못했어요.'); }); return () => { active = false; }; }, []);
 
-  const timeValue = useMemo(() => {
-    const date = new Date();
-    const [hour, minute] = (form?.reminderTime ?? '21:30').split(':').map(Number);
-    date.setHours(hour, minute, 0, 0);
-    return date;
-  }, [form?.reminderTime]);
-  const set = <K extends keyof NotificationSettings>(key: K, value: NotificationSettings[K]) => setForm((current) => current ? { ...current, [key]: value } : current);
-  const dirty = Boolean(data && form && JSON.stringify(data) !== JSON.stringify(form));
-
-  const requestPermission = async () => {
-    if (!form) return;
-    if (form.osPermission === 'denied') {
-      Alert.alert('기기 설정에서 알림을 허용해 주세요', '알림 권한이 차단되어 앱에서 다시 요청할 수 없어요.', [
-        { text: '취소', style: 'cancel' },
-        { text: '설정 열기', onPress: () => void Linking.openSettings() },
-      ]);
-      return;
-    }
-    const permission = await notificationService.requestPermission();
-    set('osPermission', permission);
-    if (permission === 'denied') setSaveError('기기에서 알림이 허용되지 않았어요. 설정에서 변경할 수 있어요.');
+  const persist = async (next: NotificationSettings) => {
+    setSettings(next); setBusy(true); setError('');
+    try { await notificationService.saveSettings(next); setSettings(await notificationService.getSettings()); }
+    catch (e) { setError(e instanceof Error ? e.message : '알림 설정을 저장하지 못했어요.'); }
+    finally { setBusy(false); }
   };
-
-  const save = async () => {
-    if (!form) return;
-    setSaving(true);
-    setSaved(false);
-    setSaveError('');
-    try {
-      let permission = form.osPermission;
-      if (form.enabled && permission !== 'granted') permission = await notificationService.requestPermission();
-      const next = { ...form, osPermission: permission };
-      setForm(next);
-      if (next.enabled && permission !== 'granted') {
-        setSaveError('알림을 사용하려면 기기 알림 권한을 허용해 주세요.');
-        return;
-      }
-      await notificationService.saveSettings(next);
-      await reload();
-      setSaved(true);
-    } catch {
-      setSaveError('알림을 예약하지 못했어요. 잠시 후 다시 시도해 주세요.');
-    } finally {
-      setSaving(false);
-    }
+  const toggleMaster = async () => {
+    if (!settings || busy) return;
+    if (!settings.enabled) {
+      const permission = await notificationService.requestPermission();
+      if (permission !== 'granted') { setSettings({ ...settings, osPermission: permission }); setError('알림 권한이 필요해요. 기기 설정에서 허용해 주세요.'); return; }
+      await persist({ ...settings, enabled: true, osPermission: permission });
+    } else await persist({ ...settings, enabled: false });
   };
-
-  const testNotification = async () => {
-    setTesting(true);
-    setTestStatus('');
-    setSaveError('');
-    try {
-      await notificationService.scheduleTestNotification();
-      set('osPermission', 'granted');
-      setTestStatus('3초 후 테스트 알림이 도착해요. 앱을 닫거나 다른 화면으로 이동해 보세요.');
-    } catch {
-      setSaveError('테스트 알림을 예약하지 못했어요. 기기 알림 권한을 확인해 주세요.');
-    } finally {
-      setTesting(false);
-    }
+  const toggleRow = async (id: keyof typeof FIELD_BY_ID) => { if (settings && !busy) { const field = FIELD_BY_ID[id]; await persist({ ...settings, [field]: !settings[field] }); } };
+  const onTimeChange = async (_event: unknown, selected?: Date) => {
+    if (Platform.OS !== 'ios') setShowPicker(false); if (!selected || !settings) return;
+    const reminderTime = `${String(selected.getHours()).padStart(2, '0')}:${String(selected.getMinutes()).padStart(2, '0')}`;
+    await persist({ ...settings, reminderTime });
   };
+  const sendTest = async () => { setBusy(true); setMessage(''); setError(''); try { await notificationService.scheduleTestNotification(); setMessage('3초 뒤 테스트 알림을 보낼게요.'); setSettings(await notificationService.getSettings()); } catch (e) { setError(e instanceof Error ? e.message : '테스트 알림을 보내지 못했어요.'); } finally { setBusy(false); } };
+  const permissionLabel = settings?.osPermission === 'granted' ? '알림 권한 허용됨' : settings?.osPermission === 'denied' ? '알림 권한 거부됨' : '알림 권한 확인 필요';
 
-  return <SafeAreaView edges={['top']} style={styles.screen}>
-    <PageHeader backLabel="마이 화면으로 돌아가기" fallbackHref="/(tabs)/me" title="알림 설정" />
-    <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}>
-      {isLoading ? <Center /> : error || !form ? <StateNotice actionLabel="다시 시도" description="알림 설정을 불러오지 못했어요." icon="!" onAction={() => void reload().catch(() => undefined)} title="불러오기 실패" tone="error" /> : <>
-        <View style={styles.master}>
-          <View style={styles.rowCopy}><Text style={styles.masterTitle}>기기 알림 권한</Text><Text style={styles.masterDescription}>{permissionLabel(form.osPermission)}</Text></View>
-          <Pressable accessibilityRole="button" onPress={() => void requestPermission()} style={({ pressed }) => [styles.permissionButton, pressed && styles.pressed]}><Text style={styles.permissionButtonText}>{form.osPermission === 'denied' ? '설정 열기' : form.osPermission === 'granted' ? '허용됨' : '권한 허용'}</Text></Pressable>
-        </View>
-        <View style={styles.appMaster}>
-          <View style={styles.rowCopy}><Text style={styles.masterTitle}>알림 사용</Text><Text style={styles.masterDescription}>필요한 웰니스 알림만 선택해서 받아요</Text></View>
-          <Switch accessibilityLabel="앱 알림 사용" onValueChange={(value) => set('enabled', value)} trackColor={{ false: colors.border, true: colors.primaryBorder }} thumbColor={form.enabled ? colors.primary : colors.white} value={form.enabled} />
-        </View>
-        <View style={!form.enabled && styles.dim}>
-          <Text style={styles.sectionTitle}>알림 종류</Text>
-          <View style={styles.group}>
-            <Toggle disabled={!form.enabled} label="오늘 상태 기록" description="매일 설정한 시간에 기기에서 알림" value={form.dailyCheck} onChange={(value) => set('dailyCheck', value)} />
-            <Toggle disabled={!form.enabled} label="추천 루틴" description="오늘의 루틴이 준비되면 알림" value={form.routine} onChange={(value) => set('routine', value)} />
-            <Toggle disabled={!form.enabled} label="주간 기록 요약" description="매주 일요일에 변화 요약" value={form.weeklyReport} onChange={(value) => set('weeklyReport', value)} />
-            <Toggle disabled={!form.enabled} label="다음 날 효과 확인" description="완료한 루틴의 변화를 확인" value={form.nextDayEffect} onChange={(value) => set('nextDayEffect', value)} />
-            <Toggle disabled={!form.enabled} label="증상 지속 확인" description="같은 불편이 반복되면 확인" value={form.persistentSignal} onChange={(value) => set('persistentSignal', value)} />
-          </View>
-          <Text style={styles.sectionTitle}>기록 알림 시간</Text>
-          <Pressable accessibilityLabel={`기록 알림 시간 ${form.reminderTime}`} accessibilityRole="button" disabled={!form.enabled || !form.dailyCheck} onPress={() => setShowTimePicker(true)} style={({ pressed }) => [styles.timePickerButton, pressed && styles.pressed]}>
-            <View><Text style={styles.timePickerValue}>{form.reminderTime}</Text><Text style={styles.timePickerHint}>눌러서 시간을 선택하세요</Text></View><Text style={styles.timePickerAction}>변경</Text>
-          </Pressable>
-          {showTimePicker ? <View style={styles.timePickerPanel}><DateTimePicker display={Platform.OS === 'ios' ? 'spinner' : 'default'} locale="ko-KR" mode="time" onChange={(_, value) => {
-            if (value) set('reminderTime', `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`);
-            if (Platform.OS !== 'ios') setShowTimePicker(false);
-          }} value={timeValue} />{Platform.OS === 'ios' ? <Pressable accessibilityRole="button" onPress={() => setShowTimePicker(false)} style={styles.pickerDone}><Text style={styles.pickerDoneText}>시간 선택 완료</Text></Pressable> : null}</View> : null}
-        </View>
-        {saved ? <Text accessibilityLiveRegion="polite" style={styles.saved}>알림 설정과 예약을 저장했어요.</Text> : null}
-        {saveError ? <Text accessibilityLiveRegion="polite" style={styles.inlineError}>{saveError}</Text> : null}
-        <View style={styles.testSection}><View style={styles.testCopy}><Text style={styles.testTitle}>알림 수신 확인</Text><Text style={styles.testDescription}>권한과 기기 표시 설정이 정상인지 바로 확인해 보세요.</Text></View><Pressable accessibilityRole="button" accessibilityState={{ busy: testing, disabled: testing }} disabled={testing} onPress={() => void testNotification()} style={({ pressed }) => [styles.testButton, testing && styles.disabledPrimary, pressed && styles.pressed]}>{testing ? <ActivityIndicator color={colors.primary} /> : <Text style={styles.testButtonText}>테스트 알림 보내기</Text>}</Pressable></View>
-        {testStatus ? <Text accessibilityLiveRegion="polite" style={styles.testStatus}>{testStatus}</Text> : null}
-        <View style={styles.info}><Text style={styles.infoText}>오늘 상태 기록은 이 기기에 직접 예약돼요. 추천 루틴과 지속 신호 등 기록 결과에 따라 달라지는 알림은 서버 연결 후 발송됩니다.</Text></View>
-      </>}
-    </ScrollView>
-    {form ? <View style={[styles.action, { paddingBottom: Math.max(insets.bottom, 12) }]}><Pressable accessibilityRole="button" accessibilityState={{ busy: saving, disabled: saving || !dirty }} disabled={saving || !dirty} onPress={() => void save()} style={({ pressed }) => [styles.primary, (saving || !dirty) && styles.disabledPrimary, pressed && styles.pressed]}>{saving ? <ActivityIndicator color={colors.primaryText} /> : <Text style={styles.primaryText}>{dirty ? '설정 저장하기' : '저장됨'}</Text>}</Pressable></View> : null}
-  </SafeAreaView>;
+  return <SafeAreaView edges={['top']} style={[s.screen,{backgroundColor:c.bg}]}><SubScreenHeader backLabel="마이 화면으로 돌아가기" fallback={()=>router.replace('/(tabs)/me')} title="알림 설정"/><ScrollView contentContainerStyle={{paddingBottom:insets.bottom+20}} showsVerticalScrollIndicator={false}>
+    <View style={[s.section,{backgroundColor:c.card}]}><View style={[s.osBanner,{backgroundColor:c.g100}]}><View style={[s.dot,{backgroundColor:settings?.osPermission==='granted'?c.pri:c.g400}]}/><Text style={[text({size:12.5,leading:1.6}),s.flex1,{color:c.g700}]}>{permissionLabel}</Text>{settings?.osPermission==='denied'?<Pressable accessibilityRole="button" onPress={()=>void Linking.openSettings()} style={[s.osBtn,{borderColor:c.g300,backgroundColor:c.card}]}><Text style={[text({size:11.5,weight:700}),{color:c.g700}]}>설정 열기</Text></Pressable>:null}</View>
+      <View style={s.masterRow}><View style={s.flex1}><Text style={[text({size:15,weight:700}),{color:c.g900}]}>전체 알림</Text><Text style={[text({size:11.5}),s.sub,{color:c.g500}]}>끄면 예약된 기록 알림도 취소돼요.</Text></View><Switch active={Boolean(settings?.enabled)} c={c} disabled={!settings||busy} label="전체 알림" onPress={()=>void toggleMaster()}/></View></View>
+    <View style={[s.section,s.rowsSection,{backgroundColor:c.card,opacity:settings?.enabled?1:.5}]}><Text style={[text({size:12.5,weight:700}),{color:c.g500}]}>받을 알림</Text>{NOTIFY_ROWS.map((row,i)=>{const field=FIELD_BY_ID[row.id as keyof typeof FIELD_BY_ID];const active=Boolean(settings?.[field]);return <View key={row.id} style={[s.row,i<NOTIFY_ROWS.length-1&&{borderBottomWidth:1,borderBottomColor:c.g200}]}><View style={s.flex1}><Text style={[text({size:14.5,weight:600}),{color:c.g900}]}>{row.k}</Text><Text style={[text({size:11.5,leading:1.55}),s.sub,{color:c.g500}]}>{row.sub}</Text></View><Switch active={active} c={c} disabled={!settings?.enabled||busy} label={row.k} onPress={()=>void toggleRow(row.id as keyof typeof FIELD_BY_ID)}/></View>;})}</View>
+    <View style={[s.section,s.timeSection,{backgroundColor:c.card,opacity:settings?.enabled&&settings.dailyCheck?1:.5}]}><Text style={[text({size:12.5,weight:700}),{color:c.g500}]}>기록 알림 시간</Text><Pressable accessibilityRole="button" disabled={!settings?.enabled||!settings.dailyCheck||busy} onPress={()=>setShowPicker(true)} style={[s.timeButton,{backgroundColor:c.g100,borderColor:c.g200}]}><Text style={[text({size:24,weight:700,tabular:true}),{color:c.g900}]}>{settings?formatTime(settings.reminderTime):'—'}</Text><Text style={[text({size:12,weight:700}),{color:c.priDk}]}>시간 변경</Text></Pressable>
+      {showPicker&&settings?<View style={[s.picker,{backgroundColor:c.card,borderColor:c.g200}]}><DateTimePicker display={Platform.OS==='ios'?'spinner':'default'} mode="time" onChange={(e,d)=>void onTimeChange(e,d)} textColor={c.g900} themeVariant={scheme} value={dateForTime(settings.reminderTime)}/>{Platform.OS==='ios'?<Pressable onPress={()=>setShowPicker(false)} style={[s.done,{borderTopColor:c.g200}]}><Text style={[text({size:14,weight:700}),{color:c.priDk}]}>완료</Text></Pressable>:null}</View>:null}
+      <Pressable accessibilityRole="button" disabled={busy} onPress={()=>void sendTest()} style={[s.test,{borderColor:c.g300}]}><Text style={[text({size:13.5,weight:700}),{color:c.g800}]}>테스트 알림 보내기</Text></Pressable>{message?<Text accessibilityLiveRegion="polite" style={[s.result,{color:c.priDk}]}>{message}</Text>:null}{error?<Text accessibilityLiveRegion="polite" style={[s.result,{color:c.dangerDk}]}>{error}</Text>:null}</View>
+  </ScrollView></SafeAreaView>;
 }
 
-function permissionLabel(permission: NotificationSettings['osPermission']) {
-  if (permission === 'granted') return '기기에서 허용됨';
-  if (permission === 'denied') return '기기 설정에서 차단됨';
-  return '아직 요청하지 않음';
-}
+function Switch({active,c,disabled,label,onPress}:{active:boolean;c:ReturnType<typeof usePalette>;disabled:boolean;label:string;onPress:()=>void}){return <Pressable accessibilityLabel={label} accessibilityRole="switch" accessibilityState={{checked:active,disabled}} disabled={disabled} onPress={onPress} style={[s.track,{backgroundColor:active?c.pri:c.g300}]}><View style={[s.knob,{left:active?22:3}]}/></Pressable>;}
+function dateForTime(value:string){const [h,m]=value.split(':').map(Number);const d=new Date();d.setHours(h||0,m||0,0,0);return d;}
+function formatTime(value:string){return new Intl.DateTimeFormat('ko-KR',{hour:'numeric',minute:'2-digit'}).format(dateForTime(value));}
 
-function Toggle({ description, disabled, label, onChange, value }: { description: string; disabled: boolean; label: string; onChange: (value: boolean) => void; value: boolean }) {
-  return <View style={styles.row}><View style={styles.rowCopy}><Text style={styles.rowLabel}>{label}</Text><Text style={styles.rowDescription}>{description}</Text></View><Switch accessibilityLabel={label} disabled={disabled} onValueChange={onChange} trackColor={{ false: colors.border, true: colors.primaryBorder }} thumbColor={value ? colors.primary : colors.white} value={value} /></View>;
-}
-
-function Center() { return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>; }
+const s=StyleSheet.create({screen:{flex:1},flex1:{flex:1,minWidth:0},section:{padding:16,paddingHorizontal:20},osBanner:{flexDirection:'row',alignItems:'center',gap:11,padding:14,paddingHorizontal:16,borderRadius:16},dot:{width:7,height:7,borderRadius:4},osBtn:{minHeight:34,paddingHorizontal:12,borderWidth:1,borderRadius:18,alignItems:'center',justifyContent:'center'},masterRow:{minHeight:68,marginTop:10,flexDirection:'row',alignItems:'center',gap:14},rowsSection:{marginTop:10,paddingBottom:10},row:{minHeight:66,flexDirection:'row',alignItems:'center',gap:14},sub:{marginTop:3},track:{width:50,height:31,borderRadius:16,position:'relative'},knob:{position:'absolute',top:3,width:25,height:25,borderRadius:13,backgroundColor:'#fff'},timeSection:{marginTop:10,paddingBottom:22},timeButton:{minHeight:72,marginTop:14,paddingHorizontal:18,borderWidth:1,borderRadius:18,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},picker:{marginTop:10,borderWidth:1,borderRadius:18,overflow:'hidden'},done:{minHeight:44,borderTopWidth:StyleSheet.hairlineWidth,alignItems:'center',justifyContent:'center'},test:{minHeight:48,marginTop:14,borderWidth:1,borderRadius:24,alignItems:'center',justifyContent:'center'},result:{marginTop:10,fontSize:12,lineHeight:18,fontWeight:'600',textAlign:'center'}});

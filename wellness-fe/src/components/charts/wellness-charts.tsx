@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import Svg, { Circle, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
-import Animated, { Easing, useAnimatedProps, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
+import Animated, { cancelAnimation, Easing, useAnimatedProps, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { colors } from '@/theme/tokens';
 
 type ChartPoint = { x: number; y: number; value: number };
@@ -70,10 +71,11 @@ export function WellnessLineChart({ labels, values, color = colors.primary, seco
 function DrawingPath({ color, delay = 0, line, strokeWidth }: { color: string; delay?: number; line: ReturnType<typeof mkLine>; strokeWidth: number }) {
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(reduceMotion ? 1 : 0);
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     progress.value = reduceMotion ? 1 : 0;
-    if (!reduceMotion) progress.value = withDelay(delay, withTiming(1, { duration: DRAW_DURATION, easing: EASE_OUT }));
-  }, [delay, line.path, progress, reduceMotion]);
+    if (!reduceMotion) progress.value = withDelay(120 + delay, withTiming(1, { duration: DRAW_DURATION, easing: EASE_OUT }));
+    return () => cancelAnimation(progress);
+  }, [delay, progress, reduceMotion]));
   const animatedProps = useAnimatedProps(() => ({ strokeDashoffset: line.length * (1 - progress.value) }));
   return <AnimatedPath animatedProps={animatedProps} d={line.path} fill="none" stroke={color} strokeDasharray={`${line.length} ${line.length}`} strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} />;
 }
@@ -81,10 +83,11 @@ function DrawingPath({ color, delay = 0, line, strokeWidth }: { color: string; d
 function AppearingPoint({ color, delay, point }: { color: string; delay: number; point: ChartPoint }) {
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(reduceMotion ? 1 : 0);
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     progress.value = reduceMotion ? 1 : 0;
-    if (!reduceMotion) progress.value = withDelay(delay, withTiming(1, { duration: 260, easing: EASE_OUT }));
-  }, [delay, progress, reduceMotion]);
+    if (!reduceMotion) progress.value = withDelay(120 + delay, withTiming(1, { duration: 260, easing: EASE_OUT }));
+    return () => cancelAnimation(progress);
+  }, [delay, progress, reduceMotion]));
   const animatedProps = useAnimatedProps(() => ({ opacity: progress.value, r: 3.5 * progress.value }));
   return <AnimatedCircle animatedProps={animatedProps} cx={point.x} cy={point.y} fill={colors.white} stroke={color} strokeWidth={2} />;
 }
@@ -107,10 +110,11 @@ function RisingBar({ bar, color, delay }: { bar: ChartBar; color: string; delay:
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(reduceMotion ? 1 : 0);
   const baseline = bar.y + bar.height;
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     progress.value = reduceMotion ? 1 : 0;
-    if (!reduceMotion) progress.value = withDelay(delay, withTiming(1, { duration: 620, easing: EASE_OUT }));
-  }, [bar.height, delay, progress, reduceMotion]);
+    if (!reduceMotion) progress.value = withDelay(120 + delay, withTiming(1, { duration: 620, easing: EASE_OUT }));
+    return () => cancelAnimation(progress);
+  }, [delay, progress, reduceMotion]));
   const animatedProps = useAnimatedProps(() => ({ height: bar.height * progress.value, y: baseline - bar.height * progress.value }));
   return <AnimatedRect animatedProps={animatedProps} fill={color} rx={4} width={bar.width} x={bar.x} />;
 }

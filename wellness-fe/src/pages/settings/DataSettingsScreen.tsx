@@ -1,44 +1,86 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Share, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppIcon } from '@/components/app-icon';
-import { PageHeader } from '@/components/ui/page-header';
-import StateNotice from '@/components/state-notice';
-import type { DataConsentSettings } from '@/domain/wellness';
-import { useAsyncData } from '@/hooks/use-async-data';
-import { wellnessApi } from '@/services/wellness-api';
-import { colors } from '@/theme/tokens';
-import { styles } from './settings.styles';
 
+import { MonthNextGlyph } from '@/components/glyphs';
+import { SubScreenHeader } from '@/components/ui/sub-screen-header';
+import { text } from '@/theme/typography';
+import { usePalette } from '@/theme/use-palette';
+import { CONSENT_ROWS, DELETE_ROWS } from '@/pages/me/me.data';
+
+const DOCUMENT_BY_LABEL = { '이용약관': 'terms', '개인정보 처리방침': 'privacy', '건강정보 처리 동의': 'sensitive-health', '마케팅 정보 수신': 'optional-data' } as const;
+
+/**
+ * `Momgirok v8.dc.html` → `isSubConsent` 를 그대로 옮긴 것.
+ * "위험한 삭제 재확인 모달"은 README 의 "미구현 — 추가 작업 필요" 항목이라
+ * 프로토타입에도 없다 — 여기서도 실제 삭제 동작은 붙이지 않는다.
+ */
 export default function DataSettingsScreen() {
+  const c = usePalette();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { data, error, isLoading, reload } = useAsyncData<DataConsentSettings | null>(wellnessApi.getDataConsentSettings, null);
-  const [form, setForm] = useState<DataConsentSettings | null>(null);
-  const [busy, setBusy] = useState(false);
-  useEffect(() => { if (data) setForm(data); }, [data]);
 
-  const updateMarketing = async () => {
-    if (!form || busy) return;
-    const next = { ...form, marketing: !form.marketing };
-    setForm(next); setBusy(true);
-    try { await wellnessApi.saveDataConsentSettings(next); } finally { setBusy(false); }
-  };
-  const remove = async () => {
-    setBusy(true);
-    try { await wellnessApi.deleteAllUserData(); Alert.alert('삭제 완료', '저장된 사용자 데이터를 삭제했어요.', [{ text: '확인', onPress: () => router.dismissTo('/(tabs)/me') }]); }
-    catch { Alert.alert('삭제 실패', '잠시 후 다시 시도해 주세요.'); }
-    finally { setBusy(false); }
-  };
-  const confirmDelete = () => Alert.alert('모든 데이터를 삭제할까요?', '기록, 피부 사진, 루틴, 연결 정보가 삭제되며 복구할 수 없어요.', [{ text: '취소', style: 'cancel' }, { text: '모두 삭제', style: 'destructive', onPress: () => void remove() }]);
-  const confirmScoped = (title: string, description: string) => Alert.alert(title, `${description}\n\n선택한 데이터는 복구할 수 없습니다.`, [{ text: '취소', style: 'cancel' }, { text: '삭제', style: 'destructive' }]);
+  return (
+    <SafeAreaView edges={['top']} style={[s.screen, { backgroundColor: c.bg }]}>
+      <SubScreenHeader backLabel="마이 화면으로 돌아가기" fallback={() => router.replace('/(tabs)/me')} title="동의·데이터 관리" />
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 20 }} showsVerticalScrollIndicator={false}>
+        <View style={[s.section, { backgroundColor: c.card }]}>
+          <Text style={[text({ size: 12.5, weight: 700 }), { color: c.g500 }]}>동의 상태</Text>
+          {CONSENT_ROWS.map((row, i) => (
+            <View key={row.key} style={[s.consentRow, i < CONSENT_ROWS.length - 1 && { borderBottomWidth: 1, borderBottomColor: c.g200 }]}>
+              <View style={s.flex1}>
+                <View style={s.consentTitleRow}>
+                  <View style={[s.reqBadge, { backgroundColor: row.req === '필수' ? c.priLightest : c.g100 }]}>
+                    <Text style={[text({ size: 10, weight: 700 }), { color: row.req === '필수' ? c.priDk : c.g500 }]}>{row.req}</Text>
+                  </View>
+                  <Text style={[text({ size: 14.5, weight: 600, tracking: -0.025 }), { color: c.g900 }]}>{row.label}</Text>
+                </View>
+                <Text style={[text({ size: 11.5 }), s.consentDate, { color: c.g500 }]}>{row.date}</Text>
+              </View>
+              <Pressable accessibilityRole="button" onPress={() => router.push(`/settings/legal/${DOCUMENT_BY_LABEL[row.label as keyof typeof DOCUMENT_BY_LABEL]}` as Href)} style={s.viewBtn}>
+                <Text style={[text({ size: 12.5, weight: 700 }), { color: c.g500 }]}>전문 보기</Text>
+              </Pressable>
+            </View>
+          ))}
+        </View>
 
-  return <SafeAreaView edges={['top']} style={styles.screen}><PageHeader backLabel="마이 화면으로 돌아가기" fallbackHref="/(tabs)/me" title="동의·데이터 관리"/><ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}>{isLoading ? <View style={styles.center}><ActivityIndicator color={colors.primary}/></View> : error || !form ? <StateNotice actionLabel="다시 시도" description="동의 정보를 불러오지 못했어요." icon="!" onAction={() => void reload().catch(() => undefined)} title="불러오기 실패" tone="error"/> : <>
-    <Text style={styles.sectionTitle}>동의 상태</Text><View style={styles.group}><ConsentDocument label="이용약관" date={form.consentedAtLabel} required/><ConsentDocument label="개인정보 처리방침" date={form.consentedAtLabel} required/><ConsentDocument label="건강정보 처리 동의" date={form.consentedAtLabel} required/><ConsentDocument label="마케팅 정보 수신" date={form.marketing ? form.consentedAtLabel : '동의하지 않음'} onPress={() => void updateMarketing()}/></View>
-    <View style={styles.dataSection}><Text style={styles.sectionTitle}>내 데이터</Text><DataMenu label="데이터 내려받기" description="전체 기록을 파일로 받아요" onPress={() => void Share.share({ title: '내 몸기록 데이터', message: '내 데이터 내려받기는 백엔드 내보내기 API 연결 후 제공됩니다.' })}/><DataMenu label="기간별 기록 삭제" description="날짜 범위를 골라 삭제해요" onPress={() => confirmScoped('최근 30일 기록을 삭제할까요?', '최근 30일 기록을 삭제 범위로 선택했습니다.')}/><DataMenu label="피부 사진만 삭제" description="기록은 남기고 사진만 지워요" onPress={() => confirmScoped('피부 사진을 삭제할까요?', '기록의 피부 상태 텍스트는 유지됩니다.')}/><DataMenu danger label="전체 데이터 삭제" description="모든 기록이 지워져요" onPress={confirmDelete}/><Text style={styles.dataCaution}>삭제는 되돌릴 수 없어요. 실행 전에 한 번 더 확인해요.</Text></View>
-  </>}</ScrollView>{busy ? <View accessibilityLiveRegion="polite" style={styles.busy}><ActivityIndicator color={colors.primary}/><Text style={styles.busyText}>변경사항을 처리하는 중</Text></View> : null}</SafeAreaView>;
+        <View style={[s.section, s.dataSection, { backgroundColor: c.card }]}>
+          <Text style={[text({ size: 12.5, weight: 700 }), { color: c.g500 }]}>내 데이터</Text>
+          <View style={[s.dataRow, { borderBottomColor: c.g200 }]}>
+            <View>
+              <Text style={[text({ size: 14.5, weight: 600, tracking: -0.025 }), { color: c.g900 }]}>데이터 내려받기</Text>
+              <Text style={[text({ size: 11.5 }), s.dataSub, { color: c.g500 }]}>전체 기록을 파일로 받아요</Text>
+            </View>
+            <MonthNextGlyph color={c.g400} size={17} />
+          </View>
+          {DELETE_ROWS.map((row, i) => (
+            <Pressable key={row.key} accessibilityRole="button" style={[s.dataRow, i < DELETE_ROWS.length - 1 && { borderBottomColor: c.g200, borderBottomWidth: 1 }]}>
+              <View>
+                <Text style={[text({ size: 14.5, weight: 600, tracking: -0.025 }), { color: row.danger ? c.dangerDk : c.g900 }]}>{row.label}</Text>
+                <Text style={[text({ size: 11.5 }), s.dataSub, { color: c.g500 }]}>{row.sub}</Text>
+              </View>
+              <MonthNextGlyph color={c.g400} size={17} />
+            </Pressable>
+          ))}
+          <Text style={[text({ size: 11.5, leading: 1.7 }), s.caution, { color: c.g400 }]}>삭제는 되돌릴 수 없어요. 실행 전에 한 번 더 확인해요.</Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
 
-function ConsentDocument({ date, label, onPress, required = false }: { date: string; label: string; onPress?: () => void; required?: boolean }) { return <Pressable accessibilityRole={onPress ? 'button' : 'text'} disabled={!onPress} onPress={onPress} style={styles.consentDocument}><View style={styles.consentCopy}><View style={styles.consentTitleRow}><Text style={required ? styles.requiredBadge : styles.optionalBadge}>{required ? '필수' : '선택'}</Text><Text style={styles.consentTitle}>{label}</Text></View><Text style={styles.consentDate}>{date}</Text></View><Text style={styles.consentView}>전문 보기</Text></Pressable>; }
-function DataMenu({ danger = false, description, label, onPress }: { danger?: boolean; description: string; label: string; onPress: () => void }) { return <Pressable accessibilityRole="button" onPress={onPress} style={styles.dataMenu}><View><Text style={[styles.dataMenuText, danger && styles.dataMenuDanger]}>{label}</Text><Text style={styles.dataMenuDescription}>{description}</Text></View><AppIcon color={colors.textMuted} name="chevron-right" size={18}/></Pressable>; }
+const s = StyleSheet.create({
+  screen: { flex: 1 },
+  flex1: { flex: 1, minWidth: 0 },
+  section: { paddingTop: 16, paddingHorizontal: 20, paddingBottom: 10 },
+  consentRow: { minHeight: 66, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  consentTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  reqBadge: { paddingVertical: 3, paddingHorizontal: 7, borderRadius: 6, height: 20, alignItems: 'center', justifyContent: 'center' },
+  consentDate: { marginTop: 4 },
+  viewBtn: { minHeight: 36, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
+
+  dataSection: { marginTop: 10 },
+  dataRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  dataSub: { marginTop: 3 },
+  caution: { paddingTop: 16, paddingBottom: 8 },
+});

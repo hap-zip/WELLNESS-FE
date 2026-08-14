@@ -3,7 +3,7 @@ import { colors, layout, motion, radius, spacing, typography } from '@/theme/tok
 
 export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surface },
-  topBar: { width: '100%', maxWidth: layout.maxContentWidth, minHeight: 64, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xs },
+  topBar: { width: '100%', maxWidth: layout.maxContentWidth, minHeight: 64, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.xs, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider },
   progressWrap: { flex: 1, paddingHorizontal: spacing.md },
   topSpacer: { width: layout.minTouch },
   scrollContent: { width: '100%', maxWidth: layout.maxContentWidth, alignSelf: 'center', paddingBottom: spacing.xl },

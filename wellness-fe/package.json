@@ -42,6 +42,7 @@
     "@types/react": "~19.1.10",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~10.0.0",
+    "playwright": "^1.62.1",
     "typescript": "~5.9.2"
   },
   "scripts": {
@@ -50,7 +51,12 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "fonts": "node scripts/download-fonts.mjs",
+    "shot": "node scripts/shoot.mjs",
+    "proto": "node scripts/proto.mjs",
+    "cmp": "node scripts/compare.mjs",
+    "measure": "node scripts/measure-el.mjs"
   },
   "private": true
 }

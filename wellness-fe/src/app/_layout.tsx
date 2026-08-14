@@ -1,31 +1,57 @@
 import { Stack, type ErrorBoundaryProps, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
+import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppState, Platform, StyleSheet } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppState, Platform, StyleSheet, View } from 'react-native';
 
 import { DailyCheckProvider } from '@/context/daily-check-context';
 import { AuthProvider, useAuth } from '@/context/auth-context';
+import { ThemeProvider } from '@/context/theme-context';
+import { NotificationsProvider } from '@/context/notifications-context';
 import StateNotice from '@/components/state-notice';
 import { colors, layout } from '@/theme/tokens';
+import { fontAssets } from '@/theme/typography';
 import { healthSyncService } from '@/services/health-sync-service';
 import { wellnessApi } from '@/services/wellness-api';
+import { useAppColorScheme } from '@/hooks/use-app-color-scheme';
+import { usePalette } from '@/theme/use-palette';
 
 void SplashScreen.preventAutoHideAsync();
 SplashScreen.setOptions({ duration: 280, fade: true });
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <DailyCheckProvider>
-        <StatusBar style="dark" />
-        <HealthSyncBootstrap />
-        <RootNavigator />
-      </DailyCheckProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <DailyCheckProvider>
+          <NotificationsProvider>
+            <View style={styles.app}>
+              <AppStatusBar />
+              <HealthSyncBootstrap />
+              <RootNavigator />
+              <GlobalTopSafeArea />
+            </View>
+          </NotificationsProvider>
+        </DailyCheckProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
+}
+
+function AppStatusBar() {
+  const scheme = useAppColorScheme();
+  const c = usePalette();
+  return <StatusBar backgroundColor={c.card} style={scheme === 'dark' ? 'light' : 'dark'} translucent={false} />;
+}
+
+function GlobalTopSafeArea() {
+  const insets = useSafeAreaInsets();
+  const c = usePalette();
+  if (insets.top <= 0) return null;
+  return <View pointerEvents="none" style={[styles.topSafeArea, { height: insets.top, backgroundColor: c.card }]} />;
 }
 
 function HealthSyncBootstrap() {
@@ -75,10 +101,13 @@ function RootNavigator() {
   const router = useRouter();
   const segments = useSegments();
   const { isRestoring, session } = useAuth();
+  // Pretendard 가 붙기 전에 그리면 시스템 폰트로 한 프레임 나갔다가 글자폭이 바뀐다.
+  const [fontsLoaded, fontError] = useFonts(fontAssets);
+  const fontsReady = fontsLoaded || Boolean(fontError);
 
   useEffect(() => {
-    if (!isRestoring) void SplashScreen.hideAsync();
-  }, [isRestoring]);
+    if (!isRestoring && fontsReady) void SplashScreen.hideAsync();
+  }, [isRestoring, fontsReady]);
 
   useEffect(() => {
     const firstSegment = segments[0];
@@ -95,8 +124,8 @@ function RootNavigator() {
     if (Platform.OS === 'web') return;
     const openNotification = (notification: Notifications.Notification) => {
       const url = notification.request.content.data?.url;
-      if (url === '/check/auto') router.push('/check/auto');
-      if (url === '/settings/notifications') router.push('/settings/notifications');
+      if (url === '/check/auto') router.navigate('/check/auto');
+      if (url === '/notifications') router.navigate('/notifications');
     };
     const initialResponse = Notifications.getLastNotificationResponse();
     if (initialResponse?.notification) openNotification(initialResponse.notification);
@@ -104,7 +133,7 @@ function RootNavigator() {
     return () => subscription.remove();
   }, [router]);
 
-  if (isRestoring) return null;
+  if (isRestoring || !fontsReady) return null;
   return <Stack screenOptions={{ headerShown: false }} />;
 }
 
@@ -112,4 +141,8 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   return <SafeAreaView edges={['top','bottom']} style={styles.errorScreen}><StateNotice actionLabel="화면 다시 열기" description="작성 중인 내용은 가능한 한 유지됩니다. 같은 문제가 반복되면 앱을 다시 실행해 주세요." icon="!" onAction={()=>void retry()} title="화면을 표시하지 못했어요" tone="error"/></SafeAreaView>;
 }
 
-const styles=StyleSheet.create({errorScreen:{flex:1,justifyContent:'center',paddingHorizontal:layout.horizontalPadding,backgroundColor:colors.canvas}});
+const styles=StyleSheet.create({
+  app:{flex:1},
+  topSafeArea:{position:'absolute',top:0,right:0,left:0,zIndex:10000},
+  errorScreen:{flex:1,justifyContent:'center',paddingHorizontal:layout.horizontalPadding,backgroundColor:colors.canvas},
+});
