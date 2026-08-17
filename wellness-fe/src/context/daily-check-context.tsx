@@ -19,6 +19,8 @@ export type DailyCheckDraft = {
   targetDate: string | null;
   mode: 'create' | 'edit';
   step: number;
+  /** 진행바가 이어서 채워지도록, 이번 단계로 넘어오기 직전 단계를 든다. 최초 진입은 -1(빈 진행바). */
+  prevStep: number;
   hk: HkState;
   hkAuto: HkManual;
   hkManual: HkManual;
@@ -50,6 +52,7 @@ const initialDraft: DailyCheckDraft = {
   targetDate: null,
   mode: 'create',
   step: 0,
+  prevStep: -1,
   hk: 'ok',
   hkAuto: { sleep: null, steps: null, energy: null },
   hkManual: { sleep: null, steps: null, energy: null },

@@ -7,7 +7,7 @@
  */
 
 export type Palette = {
-  bg: string; card: string;
+  bg: string; card: string; chatBg: string;
   g100: string; g200: string; g300: string; g400: string; g500: string;
   g600: string; g700: string; g800: string; g900: string;
   pri: string; priDk: string; priLightest: string;
@@ -16,14 +16,14 @@ export type Palette = {
 };
 
 export const lightPalette: Palette = {
-  bg: '#F1F3F5', card: '#FFFFFF', g100: '#F7F8F9', g200: '#EFF1F3', g300: '#D5DAE0', g400: '#B3BAC3',
+  bg: '#F1F3F5', card: '#FFFFFF', chatBg: '#EDEFF2', g100: '#F7F8F9', g200: '#EFF1F3', g300: '#D5DAE0', g400: '#B3BAC3',
   g500: '#8B939D', g600: '#6B7480', g700: '#4A525C', g800: '#2A2F36', g900: '#16191D',
   pri: '#93C90F', priDk: '#7FAF0C', priLightest: '#F2F9E2', danger: '#FF3B3B', dangerBg: '#FFEBEB', dangerDk: '#D91F1F',
   info: '#0A84FF', figFill: '#FFFFFF', figLine: '#C7CDD4',
 };
 
 export const darkPalette: Palette = {
-  bg: '#0F1113', card: '#1A1D21', g100: '#1A1D21', g200: '#262A2F', g300: '#343941', g400: '#5C636C',
+  bg: '#0F1113', card: '#1A1D21', chatBg: '#141619', g100: '#1A1D21', g200: '#262A2F', g300: '#343941', g400: '#5C636C',
   g500: '#8B939D', g600: '#A7AEB7', g700: '#C4C9D0', g800: '#E1E4E8', g900: '#F2F4F6',
   pri: '#93C90F', priDk: '#A3D91F', priLightest: '#1F2A10', danger: '#FF6B6B', dangerBg: '#33201F', dangerDk: '#FF8A8A',
   info: '#4DA3FF', figFill: '#262A2F', figLine: '#454B54',

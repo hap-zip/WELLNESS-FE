@@ -199,9 +199,6 @@ function EmptyHero({ c, onStart }: { c: Palette; onStart: () => void }) {
           오늘 몸 상태를{'\n'}아직 남기지 않았어요
         </Text>
         <View style={s.emptyMap}>
-          <View style={s.emptyMapSilhouette}>
-            <BodyMap height={185} variant="dashed" width={120} />
-          </View>
           <Image accessible={false} resizeMode="contain" source={CHEKI.welcome} style={s.emptyMascot} />
         </View>
         <Pressable accessibilityRole="button" onPress={onStart} style={({ pressed }) => [s.emptyCta, pressed && s.pressed]}>
@@ -564,9 +561,8 @@ const s = StyleSheet.create({
   // 기록 전 히어로 — section padding:4px 20px 22px / hero padding:24px 20px 20px
   emptySection: { paddingTop: 4, paddingHorizontal: 20, paddingBottom: 22 },
   emptyHero: { paddingTop: 24, paddingHorizontal: 20, paddingBottom: 20, borderRadius: 24 },
-  emptyMap: { marginTop: 6, height: 206, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center' },
-  emptyMapSilhouette: { position: 'absolute', left: 10, bottom: 2 },
-  emptyMascot: { width: 200, height: 200, marginRight: -12 },
+  emptyMap: { marginTop: 6, height: 206, alignItems: 'center', justifyContent: 'center' },
+  emptyMascot: { width: 200, height: 200 },
   emptyTitle: { marginTop: 11 },
   emptyCta: { marginTop: 18, height: 54, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 28, backgroundColor: '#1E2D05' },
   emptyCaption: { marginTop: 11, textAlign: 'center' },

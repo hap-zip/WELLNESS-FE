@@ -208,7 +208,7 @@ export function CopyGlyph({ size = 15, color }: IconProps) {
 /** 챗 입력창 — 보내기 화살표 */
 export function SendArrowGlyph({ size = 17, color }: IconProps) {
   return (
-    <Svg fill="none" height={size} stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.3} viewBox="0 0 24 24" width={size}>
+    <Svg fill="none" height={size} stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} viewBox="0 0 24 24" width={size}>
       <Path d="M12 19V5" />
       <Path d="m6 11 6-6 6 6" />
     </Svg>
@@ -303,13 +303,24 @@ export function CloseGlyph({ size = 19, color }: IconProps) {
   return <Svg fill="none" height={size} stroke={color} strokeLinecap="round" strokeWidth={2.1} viewBox="0 0 24 24" width={size}><Path d="M5 5 19 19M19 5 5 19" /></Svg>;
 }
 
+/** 웰니스 챗 — 근거 카드 헤더의 문서 아이콘 */
+export function DocGlyph({ size = 13, color }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M13.5 3.5H7a1.6 1.6 0 0 0-1.6 1.6v13.8A1.6 1.6 0 0 0 7 20.5h10a1.6 1.6 0 0 0 1.6-1.6V8.1Z" />
+      <Path d="M13.5 3.5v4.6h4.6" />
+      <Path d="M8.6 13h6.8M8.6 16.4h6.8" />
+    </Svg>
+  );
+}
+
 /** 웰니스 챗 헤더 — 더보기(세로 점 3개) */
 export function MoreDotsGlyph({ size = 19, color }: IconProps) {
   return (
     <Svg fill={color} height={size} viewBox="0 0 24 24" width={size}>
-      <Circle cx={12} cy={5.5} r={1.8} />
+      <Circle cx={12} cy={5} r={1.8} />
       <Circle cx={12} cy={12} r={1.8} />
-      <Circle cx={12} cy={18.5} r={1.8} />
+      <Circle cx={12} cy={19} r={1.8} />
     </Svg>
   );
 }

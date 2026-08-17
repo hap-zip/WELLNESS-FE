@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View, type ViewStyle } from 'react-native';
+import { Alert, Animated, Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View, type ViewStyle } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 import type { Href } from 'expo-router';
 
@@ -9,7 +9,7 @@ import { BodyMap } from '@/components/body-map';
 import {
   CameraGlyph, ChipRemoveGlyph, HkGlyph, RetryGlyph, SmallCloseGlyph,
 } from '@/components/glyphs';
-import { useDailyCheck, type CheckPhoto } from '@/context/daily-check-context';
+import { useDailyCheck, type CheckPhoto, type DailyCheckDraft } from '@/context/daily-check-context';
 import { wellnessApi } from '@/services/wellness-api';
 import { text } from '@/theme/typography';
 import { usePalette } from '@/theme/use-palette';
@@ -44,8 +44,16 @@ export default function CheckFlowScreen({ initialStep }: { initialStep: number }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialStep]);
 
-  const goHome = () => router.dismissTo('/(tabs)/home');
-  const goStep = (n: number) => { updateDraft({ step: n }); router.replace(STEP_ROUTES[n]); };
+  const leaveHome = () => router.dismissTo('/(tabs)/home');
+  /** B-12 — 입력한 내용이 있는데 닫으려 하면 먼저 확인받는다. 그냥 두면(context가 살아있는 한) 이어서 쓸 수 있으니 "임시 저장"에 해당한다. */
+  const goHome = () => {
+    if (!hasDraftInput(draft)) { leaveHome(); return; }
+    Alert.alert('임시 저장할까요?', '지금 나가면 입력한 내용을 임시로 저장해 둘게요.', [
+      { text: '계속 작성', style: 'cancel' },
+      { text: '나가기', onPress: leaveHome },
+    ]);
+  };
+  const goStep = (n: number) => { updateDraft({ step: n, prevStep: step }); router.replace(STEP_ROUTES[n]); };
 
   const onBack = () => {
     if (step === 0) { goHome(); return; }
@@ -56,6 +64,7 @@ export default function CheckFlowScreen({ initialStep }: { initialStep: number }
     goStep(step + 1);
   };
 
+  /** B-12 — 저장 실패 시 토스트 대신 이 앱 관례(Alert)로 안내하고 재시도할 수 있게 둔다. 입력값은 그대로 남는다. */
   const submitAndFinish = async () => {
     setSaving(true);
     try {
@@ -65,6 +74,8 @@ export default function CheckFlowScreen({ initialStep }: { initialStep: number }
       const dateId = draft.targetDate ?? new Date().toISOString().slice(0, 10);
       await submitDailyCheckRequest(dateId, request);
       router.replace('/check/complete');
+    } catch {
+      Alert.alert('저장하지 못했어요', '다시 시도해 주세요. 입력한 내용은 남아 있어요.');
     } finally {
       setSaving(false);
     }
@@ -73,9 +84,10 @@ export default function CheckFlowScreen({ initialStep }: { initialStep: number }
   const cta = step === 4 ? (saving ? '저장하는 중…' : '기록 저장하기')
     : step === 1 && noParts ? '불편 없이 넘어가기'
     : '다음';
+  const character = step === 1 ? CHEKI.painCheck : step === 2 ? CHEKI.sleep : step === 4 ? CHEKI.recording : undefined;
 
   return (
-    <CheckFlowShell cta={cta} ctaDisabled={saving} onBack={onBack} onClose={goHome} onNext={onNext} step={step}>
+    <CheckFlowShell character={character} cta={cta} ctaDisabled={saving} onBack={onBack} onClose={goHome} onNext={onNext} previousStep={draft.prevStep} step={step}>
       {step === 0 && <StepAuto />}
       {step === 1 && <StepDiscomfort />}
       {step === 2 && <StepSleep />}
@@ -93,6 +105,29 @@ function ToggleSwitch({ c, on, onToggle, label }: { c: Palette; on: boolean; onT
       <View style={[s.switchKnob, { left: on ? 23 : 3 }]} />
     </Pressable>
   );
+}
+
+/** B-12 — 닫기 전에 확인이 필요할 만큼 뭔가 입력했는지 훑어본다. */
+function hasDraftInput(draft: DailyCheckDraft) {
+  return draft.condition !== null || draft.conditionTags.length > 0 || draft.parts.length > 0
+    || draft.hkManual.sleep !== null || draft.hkManual.steps !== null || draft.hkManual.energy !== null
+    || draft.sleepQ !== null || draft.pose !== null || draft.pillow !== null || draft.sit !== null
+    || draft.skin.length > 0 || draft.trouble || draft.headache || draft.memo.trim().length > 0
+    || draft.photos.length > 0;
+}
+
+/** B-4 동기화 중 상태 — 값 자리에 0이나 "· · ·" 텍스트 대신 스켈레톤을 보여준다. */
+function ValueSkeleton({ c }: { c: Palette }) {
+  const opacity = useRef(new Animated.Value(0.5)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0.5, duration: 700, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+  return <Animated.View style={[s.hkSkeleton, { backgroundColor: c.g200, opacity }]} />;
 }
 
 /* ── 1단계 — 자동 수집 + 오늘 컨디션 ──────────────────────────── */
@@ -182,10 +217,12 @@ function StepAuto() {
                   <HkGlyph color={iconColor} id={row.icon} />
                 </View>
                 <View style={s.flex1}>
-                  <Text style={[text({ size: 14.5, weight: 700, tracking: -0.025 }), { color: c.g900 }]}>{row.label}</Text>
-                  <Text style={[text({ size: 11, weight: 600 }), s.hkSrc, { color: srcColor }]}>{row.source}</Text>
+                  <Text style={[text({ size: 14.5, weight: 700 }), { color: c.g900 }]}>{row.label}</Text>
+                  <Text style={[text({ size: 11.5 }), s.hkSrc, { color: srcColor }]}>{row.source}</Text>
                 </View>
-                <Text style={[text({ size: row.value.length > 6 ? 16 : 18, weight: 700, tracking: -0.04, tabular: true }), { color: valueColor }]}>{row.value}</Text>
+                {draft.hk === 'sync' ? <ValueSkeleton c={c} /> : (
+                  <Text style={[text({ size: row.value.length > 6 ? 16 : 18, weight: 700, tracking: -0.04, tabular: true }), { color: valueColor }]}>{row.value}</Text>
+                )}
               </View>
               {row.actions ? (
                 <View style={[s.hkActions, { borderTopColor: c.g200 }]}>
@@ -297,7 +334,6 @@ function StepDiscomfort() {
 
   return (
     <>
-      <Image accessibilityIgnoresInvertColors resizeMode="contain" source={CHEKI.painCheck} style={s.stepMascot} />
       <View style={s.bodyViewRow}>
         {(['front', 'back'] as const).map((v) => {
           const active = draft.view === v;
@@ -358,28 +394,28 @@ function StepDiscomfort() {
               <View key={id} style={[s.partForm, { borderColor: c.g200 }]}>
                 <View style={s.partFormHead}>
                   <View style={[s.partDot, { backgroundColor: c.danger }]} />
-                  <Text style={[text({ size: 15.5, weight: 700, tracking: -0.03 }), s.flex1, { color: c.g900 }]}>{ZONE_LABELS[id] ?? id}</Text>
-                  <Text style={[text({ size: 13, weight: 700 }), { color: c.dangerDk }]}>{lv}단계</Text>
+                  <Text style={[text({ size: 15, weight: 700 }), s.flex1, { color: c.g900 }]}>{ZONE_LABELS[id] ?? id}</Text>
+                  <Text style={[text({ size: 13, weight: 700 }), { color: c.danger }]}>{lv}단계</Text>
                 </View>
 
-                <Text style={[text({ size: 11.5, weight: 700 }), s.partFormSubLabel, { color: c.g500 }]}>강도</Text>
+                <Text style={[text({ size: 12.5, weight: 600 }), s.partFormSubLabel, { color: c.g600 }]}>강도</Text>
                 <View style={s.levelRow}>
                   {[1, 2, 3, 4, 5].map((v) => {
                     const sel = lv === v;
                     return (
-                      <Pressable key={v} accessibilityLabel={`강도 ${v}단계`} accessibilityRole="button" accessibilityState={{ selected: sel }} onPress={() => setLevel(id, v)} style={[s.levelBtn, { borderColor: sel ? c.danger : c.g200, backgroundColor: sel ? c.dangerBg : 'transparent' }]}>
-                        <Text style={[text({ size: 14, weight: 700, tabular: true }), { color: sel ? c.dangerDk : c.g400 }]}>{v}</Text>
+                      <Pressable key={v} accessibilityLabel={`강도 ${v}단계`} accessibilityRole="button" accessibilityState={{ selected: sel }} onPress={() => setLevel(id, v)} style={[s.levelBtn, { borderColor: sel ? c.danger : c.g200, backgroundColor: sel ? c.dangerBg : c.card }]}>
+                        <Text style={[text({ size: 15, weight: 700, tabular: true }), { color: sel ? c.dangerDk : c.g500 }]}>{v}</Text>
                       </Pressable>
                     );
                   })}
                 </View>
 
-                <Text style={[text({ size: 11.5, weight: 700 }), s.partFormSubLabel2, { color: c.g500 }]}>느낌 · 여러 개 선택 가능</Text>
+                <Text style={[text({ size: 12.5, weight: 600 }), s.partFormSubLabel2, { color: c.g600 }]}>느낌 · 여러 개 선택 가능</Text>
                 <View style={s.feelRow}>
                   {FEELS.map((fl) => {
                     const on = fs.includes(fl);
                     return (
-                      <Pressable key={fl} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => toggleFeel(id, fl)} style={[s.feelChip, { borderColor: on ? c.g900 : c.g200, backgroundColor: on ? c.g900 : 'transparent' }]}>
+                      <Pressable key={fl} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => toggleFeel(id, fl)} style={[s.feelChip, { borderColor: on ? c.g900 : c.g200, backgroundColor: on ? c.g900 : c.card }]}>
                         <Text style={[text({ size: 12.5, weight: on ? 700 : 500 }), { color: on ? c.card : c.g600 }]}>{fl}</Text>
                       </Pressable>
                     );
@@ -392,11 +428,17 @@ function StepDiscomfort() {
       ) : null}
 
       <View style={[s.toggleRow, { borderColor: c.g200 }]}>
-        <View style={s.flex1}>
-          <Text style={[text({ size: 14.5, weight: 700, tracking: -0.03 }), { color: c.g900 }]}>두통이 있었나요?</Text>
-          <Text style={[text({ size: 11.5 }), s.toggleSub, { color: c.g500 }]}>부위와 별도로 기록돼요</Text>
+        <Text style={[text({ size: 14.5, weight: 700, tracking: -0.03 }), { color: c.g900 }]}>두통이 있었나요?</Text>
+        <View style={s.headacheRow}>
+          {[{ v: true, label: '예' }, { v: false, label: '아니오' }].map((opt) => {
+            const sel = draft.headache === opt.v;
+            return (
+              <Pressable key={opt.label} accessibilityRole="button" accessibilityState={{ selected: sel }} onPress={() => updateDraft({ headache: opt.v })} style={[s.headachePill, { borderColor: sel ? c.pri : c.g200, backgroundColor: sel ? c.priLightest : c.card }]}>
+                <Text style={[text({ size: 13.5, weight: sel ? 700 : 500 }), { color: sel ? c.priDk : c.g600 }]}>{opt.label}</Text>
+              </Pressable>
+            );
+          })}
         </View>
-        <ToggleSwitch c={c} label="두통 여부" on={draft.headache} onToggle={() => updateDraft({ headache: !draft.headache })} />
       </View>
     </>
   );
@@ -441,7 +483,6 @@ function StepSleep() {
 
   return (
     <>
-      <Image accessibilityIgnoresInvertColors resizeMode="contain" source={CHEKI.sleep} style={s.stepMascot} />
       <View style={[s.sleepSummary, { backgroundColor: c.g100 }]}>
         <Text style={[text({ size: 11.5, weight: 700 }), { color: c.g500 }]}>수면 시간</Text>
         <Text style={[text({ size: 28, weight: 700, tracking: -0.05, tabular: true }), s.sleepSummaryValue, { color: c.g900 }]}>{fmtSleep(sleepMin)}</Text>
@@ -613,35 +654,34 @@ function StepReview({ onEdit }: { onEdit: (step: number) => void }) {
   const c = usePalette();
   const { draft } = useDailyCheck();
   const hkRows = hkRowsFor(draft.hk, draft.hkManual, draft.hkAuto);
-  const stepsWalk = hkRows.find((r) => r.key === '걸음 수')?.value ?? '미입력';
+  const stepsWalk = hkRows.find((r) => r.key === '걸음 수')?.value ?? '입력 안 함';
 
   const groups: { key: string; title: string; icon: 'health' | 'ache' | 'sleep' | 'skin'; tone?: boolean; step: number; rows: { k: string; v: string; tone?: boolean }[] }[] = [
     { key: 'auto', title: '오늘의 시작', icon: 'health', step: 0, rows: [
       { k: '수면 시간', v: fmtSleep(resolvedSleepMin(draft.hk, draft.hkManual, draft.hkAuto)) }, { k: '걸음 수', v: stepsWalk },
-      { k: '컨디션', v: draft.condition ? CONDITION_OPTIONS.find((o) => o.id === draft.condition)?.label ?? '미입력' : '미입력' },
+      { k: '컨디션', v: draft.condition ? CONDITION_OPTIONS.find((o) => o.id === draft.condition)?.label ?? '입력 안 함' : '입력 안 함' },
       { k: '해당 상태', v: draft.conditionTags.length ? draft.conditionTags.join(', ') : '없음' },
     ] },
     { key: 'ache', title: '불편', icon: 'ache', tone: true, step: 1, rows: draft.parts.length ? [
       { k: '부위', v: draft.parts.map((p) => ZONE_LABELS[p] ?? p).join(', '), tone: true },
       { k: '강도', v: draft.parts.map((p) => `${draft.levels[p] ?? 2}단계`).join(' · '), tone: true },
-      { k: '느낌', v: draft.parts.map((p) => (draft.feels[p]?.length ? draft.feels[p].join('·') : '미입력')).join(' / ') },
+      { k: '느낌', v: draft.parts.map((p) => (draft.feels[p]?.length ? draft.feels[p].join('·') : '입력 안 함')).join(' / ') },
       { k: '두통', v: draft.headache ? '있음' : '없음' },
     ] : [{ k: '부위', v: '없음' }] },
     { key: 'sleep', title: '수면', icon: 'sleep', step: 2, rows: [
-      { k: '만족도', v: draft.sleepQ !== null ? SLEEP_QUALITY_LABELS[draft.sleepQ] : '미입력' },
-      { k: '자세', v: draft.pose ? SLEEP_POSES.find((p) => p.id === draft.pose)?.label ?? '미입력' : '미입력' },
-      { k: '베개 높이', v: draft.pillow !== null ? PILLOW_LABELS[draft.pillow] : '미입력' },
+      { k: '만족도', v: draft.sleepQ !== null ? SLEEP_QUALITY_LABELS[draft.sleepQ] : '입력 안 함' },
+      { k: '자세', v: draft.pose ? SLEEP_POSES.find((p) => p.id === draft.pose)?.label ?? '입력 안 함' : '입력 안 함' },
+      { k: '베개 높이', v: draft.pillow !== null ? PILLOW_LABELS[draft.pillow] : '입력 안 함' },
     ] },
     { key: 'act', title: '활동·피부', icon: 'skin', step: 3, rows: [
-      { k: '앉아 있던 시간', v: draft.sit !== null ? SIT_LABELS_LONG[draft.sit] : '미입력' },
-      { k: '피부', v: draft.skin.length ? draft.skin.join(', ') : '미입력' },
-      { k: '트러블', v: draft.trouble ? `${draft.spots.length ? draft.spots.join('·') : '부위 미입력'} · 사진 ${draft.photos.filter((p) => p.status === 'done').length}장` : '없음' },
+      { k: '앉아 있던 시간', v: draft.sit !== null ? SIT_LABELS_LONG[draft.sit] : '입력 안 함' },
+      { k: '피부', v: draft.skin.length ? draft.skin.join(', ') : '입력 안 함' },
+      { k: '트러블', v: draft.trouble ? `${draft.spots.length ? draft.spots.join('·') : '부위 입력 안 함'} · 사진 ${draft.photos.filter((p) => p.status === 'done').length}장` : '없음' },
     ] },
   ];
 
   return (
     <>
-      <Image accessibilityIgnoresInvertColors resizeMode="contain" source={CHEKI.recording} style={s.stepMascot} />
       <View style={s.reviewList}>
         {groups.map((g) => (
           <View key={g.key} style={[s.reviewGroup, { borderColor: c.g200 }]}>
@@ -650,16 +690,16 @@ function StepReview({ onEdit }: { onEdit: (step: number) => void }) {
                 <View style={[s.reviewIconWrap, { backgroundColor: g.tone ? c.dangerBg : c.priLightest }]}>
                   <HkGlyph color={g.tone ? c.dangerDk : c.priDk} id={g.icon} size={15} />
                 </View>
-                <Text style={[text({ size: 14, weight: 700, tracking: -0.03 }), { color: c.g900 }]}>{g.title}</Text>
+                <Text style={[text({ size: 14.5, weight: 700 }), { color: c.g900 }]}>{g.title}</Text>
               </View>
-              <Pressable accessibilityRole="button" onPress={() => onEdit(g.step)} style={s.reviewEditBtn}>
-                <Text style={[text({ size: 12.5, weight: 700 }), { color: c.priDk }]}>수정</Text>
+              <Pressable accessibilityRole="button" onPress={() => onEdit(g.step)} style={[s.reviewEditBtn, { borderColor: c.g300 }]}>
+                <Text style={[text({ size: 12, weight: 700 }), { color: c.g700 }]}>수정</Text>
               </Pressable>
             </View>
             {g.rows.map((r) => (
               <View key={r.k} style={[s.reviewRow, { borderTopColor: c.g200 }]}>
-                <Text style={[text({ size: 12.5 }), s.reviewRowKey, { color: c.g600 }]}>{r.k}</Text>
-                <Text style={[text({ size: 13, weight: 700, tracking: -0.025, leading: 1.5 }), s.flex1, { color: r.v === '미입력' || r.v === '부위 미입력' ? c.g400 : r.tone ? c.danger : c.g900, textAlign: 'right' }]}>{r.v}</Text>
+                <Text style={[text({ size: 13 }), s.reviewRowKey, { color: c.g600 }]}>{r.k}</Text>
+                <Text style={[text({ size: 13.5, weight: 700 }), s.flex1, { color: r.v === '입력 안 함' || r.v === '부위 입력 안 함' ? c.g400 : r.tone ? c.danger : c.g900, textAlign: 'right' }]}>{r.v}</Text>
               </View>
             ))}
           </View>
@@ -688,21 +728,21 @@ function hexA(hex: string, a: number) {
 const s = StyleSheet.create({
   flex1: { flex: 1, minWidth: 0 },
 
-  stepMascot: { width: 48, height: 48, marginBottom: 4 },
   conditionRow: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   conditionBtn: { minHeight: 46, paddingHorizontal: 16, borderWidth: 1.5, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
 
-  hkRows: { marginTop: 20, gap: 10 },
-  hkCard: { padding: 16, borderWidth: 1.5, borderRadius: 18 },
+  hkRows: { marginTop: 24, gap: 10 },
+  hkCard: { padding: 16, borderWidth: 1, borderRadius: 16 },
   hkCardRow: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   hkIconWrap: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   hkSrc: { marginTop: 3 },
+  hkSkeleton: { width: 52, height: 20, borderRadius: 6 },
   hkActions: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, flexDirection: 'row', gap: 7 },
   hkActionBtn: { flex: 1, minHeight: 38, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   hkNote: { marginTop: 14, padding: 14, paddingHorizontal: 15, borderRadius: 14 },
 
   bodyViewRow: { marginTop: 20, flexDirection: 'row', gap: 7 },
-  bodyViewPill: { height: 38, paddingHorizontal: 18, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  bodyViewPill: { minHeight: 38, paddingHorizontal: 18, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   mapWrap: { marginTop: 16, paddingVertical: 12, borderRadius: 20, alignItems: 'center' },
   mapInner: { width: 212, height: 328, position: 'relative' },
   zoneBtn: { position: 'absolute', borderRadius: 16 },
@@ -712,20 +752,22 @@ const s = StyleSheet.create({
   zoneChipRemove: { width: 18, height: 18, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   blockLabel26: { marginTop: 26 },
 
-  partFormList: { marginTop: 22, gap: 12 },
-  partForm: { padding: 16, borderWidth: 1.5, borderRadius: 18 },
+  partFormList: { marginTop: 14, gap: 14 },
+  partForm: { padding: 16, borderWidth: 1, borderRadius: 16 },
   partFormHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   partDot: { width: 8, height: 8, borderRadius: 5 },
-  partFormSubLabel: { marginTop: 14 },
+  partFormSubLabel: { marginTop: 16 },
   partFormSubLabel2: { marginTop: 16 },
-  levelRow: { marginTop: 8, flexDirection: 'row', gap: 5 },
-  levelBtn: { flex: 1, minHeight: 46, borderWidth: 1.5, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  feelRow: { marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  feelChip: { minHeight: 38, paddingHorizontal: 14, borderWidth: 1.5, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  levelRow: { marginTop: 8, flexDirection: 'row', gap: 6 },
+  levelBtn: { flex: 1, minHeight: 46, borderWidth: 1.5, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  feelRow: { marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  feelChip: { minHeight: 40, paddingHorizontal: 15, borderWidth: 1.5, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
 
   toggleRow: { marginTop: 16, padding: 16, paddingVertical: 14, borderWidth: 1.5, borderRadius: 18 },
   toggleRowInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   toggleSub: { marginTop: 3 },
+  headacheRow: { marginTop: 10, flexDirection: 'row', gap: 8 },
+  headachePill: { flex: 1, minHeight: 46, paddingHorizontal: 16, borderWidth: 1.5, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   switchTrack: { width: 52, height: 32, borderRadius: 17 },
   switchKnob: { position: 'absolute', top: 3, width: 26, height: 26, borderRadius: 14, backgroundColor: '#fff' },
 
@@ -742,8 +784,8 @@ const s = StyleSheet.create({
   modalBtnRow: { marginTop: 18, flexDirection: 'row', gap: 8 },
   modalBtn: { flex: 1, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   qualityRow: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  qualityBtn: { minHeight: 46, paddingHorizontal: 16, borderWidth: 1.5, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-  poseGrid: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  qualityBtn: { minHeight: 48, paddingHorizontal: 16, borderWidth: 1.5, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
+  poseGrid: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   poseBtn: { width: '23.5%', paddingTop: 9, paddingHorizontal: 4, paddingBottom: 10, borderWidth: 1.5, borderRadius: 16, alignItems: 'center', gap: 3 },
   poseIconSlot: { height: 44, alignItems: 'center', justifyContent: 'center' },
   poseIllustration: { width: 34, height: 34 },
@@ -757,7 +799,7 @@ const s = StyleSheet.create({
   sitRow: { marginTop: 10, flexDirection: 'row', gap: 6 },
   sitBtn: { flex: 1, minHeight: 44, borderWidth: 1.5, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
   skinGrid: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  skinBtn: { width: '23.5%', minHeight: 46, borderWidth: 1.5, borderRadius: 24, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
+  skinBtn: { width: '23.5%', minHeight: 44, borderWidth: 1.5, borderRadius: 23, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
   troubleCard: { marginTop: 20 },
   troubleOpen: { marginTop: 14, paddingTop: 14, borderTopWidth: 1 },
   spotRow: { marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
@@ -772,16 +814,16 @@ const s = StyleSheet.create({
   photoBarFill: { height: '100%', backgroundColor: '#fff', borderRadius: 2 },
   photoFail: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(217,31,31,.82)', alignItems: 'center', justifyContent: 'center', gap: 4 },
   photoRemove: { position: 'absolute', top: 5, right: 5, width: 22, height: 22, borderRadius: 12, backgroundColor: 'rgba(22,25,29,.62)', alignItems: 'center', justifyContent: 'center' },
-  memoHead: { marginTop: 26, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  memoInput: { marginTop: 10, minHeight: 96, paddingVertical: 14, paddingHorizontal: 16, borderWidth: 1, borderRadius: 16, fontSize: 14, lineHeight: 24 },
+  memoHead: { marginTop: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  memoInput: { marginTop: 10, minHeight: 104, paddingVertical: 14, paddingHorizontal: 16, borderWidth: 1, borderRadius: 16, fontSize: 14, lineHeight: 23.8 },
 
-  reviewList: { marginTop: 22, gap: 10 },
-  reviewGroup: { paddingTop: 4, paddingHorizontal: 16, paddingBottom: 6, borderWidth: 1.5, borderRadius: 18 },
+  reviewList: { marginTop: 22, gap: 16 },
+  reviewGroup: { paddingTop: 4, paddingHorizontal: 16, paddingBottom: 6, borderWidth: 1, borderRadius: 16 },
   reviewHead: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   reviewHeadLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   reviewIconWrap: { width: 26, height: 26, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  reviewEditBtn: { minHeight: 36, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
-  reviewRow: { minHeight: 40, paddingVertical: 6, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, borderTopWidth: 1 },
+  reviewEditBtn: { minHeight: 32, paddingHorizontal: 12, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  reviewRow: { minHeight: 46, paddingVertical: 6, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, borderTopWidth: 1 },
   reviewRowKey: { flexShrink: 0 },
   reviewNote: { marginTop: 16, padding: 14, paddingHorizontal: 16, borderRadius: 16 },
 });

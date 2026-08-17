@@ -57,9 +57,9 @@ export function hkRowsFor(state: HkState, manual: HkManual = { sleep: null, step
     return mv !== null ? { key, field, label: key, value: mv, source: '직접 입력', tone: 'ok', icon } : { key, field, label: key, value, source, tone, icon, actions };
   };
   if (state === 'sync') return [
-    mk('sleep', 'sleep', '· · ·', '가져오는 중', 'muted'),
-    mk('steps', 'steps', '· · ·', '가져오는 중', 'muted'),
-    mk('energy', 'flame', '· · ·', '가져오는 중', 'muted'),
+    mk('sleep', 'sleep', '· · ·', '동기화 중', 'muted'),
+    mk('steps', 'steps', '· · ·', '동기화 중', 'muted'),
+    mk('energy', 'flame', '· · ·', '동기화 중', 'muted'),
   ];
   if (state === 'perm') return [
     mk('sleep', 'sleep', '연결 필요', 'Apple 건강 연결 상태를 확인해 주세요', 'warn', ['설정에서 허용', '직접 입력']),
@@ -142,17 +142,12 @@ export const CONDITION_OPTIONS: { id: ConditionId; label: string }[] = [
 ];
 export const CONDITION_TAGS = ['피곤함', '스트레스', '활기참', '집중 잘됨', '편안함', '예민함'];
 
-/**
- * title 원본에는 `\n` 이 들어 있지만, 프로토타입은 일반 텍스트 보간이라
- * 브라우저가 공백으로 접어서 렌더한다(강제 줄바꿈이 아니라 자연 줄바꿈).
- * RN Text 는 `\n` 을 진짜 개행으로 살리므로, 여기서는 공백으로 바꿔 같은
- * 자연 줄바꿈 결과가 나오게 한다.
- */
+/** 제목의 `\n` 은 강제 줄바꿈이다 — 2줄 고정으로 화면 높이를 안정시킨다(B-1). */
 export const STEP_META = [
-  { label: '1 / 5 오늘의 시작', title: '어젯밤 데이터를 가져왔어요', desc: '자동으로 가져온 값을 확인하고, 오늘 컨디션도 함께 남겨요.' },
-  { label: '2 / 5 불편한 곳', title: '불편한 부위가 있나요?', desc: '부위를 고르면 바로 아래에서 강도와 느낌을 남길 수 있어요. 없다면 건너뛰어도 괜찮아요.' },
-  { label: '3 / 5 수면', title: '어젯밤 잠은 어땠나요?', desc: '시간과 만족도, 자세와 베개 높이를 함께 남겨요.' },
-  { label: '4 / 5 활동·피부', title: '오늘 하루는 어땠나요?', desc: '앉아 있던 시간과 피부 상태를 골라주세요.' },
+  { label: '1 / 5 오늘의 시작', title: '어젯밤 데이터를\n가져왔어요', desc: '자동으로 가져온 값을 확인하고, 오늘 컨디션도 함께 남겨요.' },
+  { label: '2 / 5 불편한 곳', title: '불편한 부위가\n있나요?', desc: '부위를 고르면 바로 아래에서 강도와 느낌을 남길 수 있어요. 없다면 건너뛰어도 괜찮아요.' },
+  { label: '3 / 5 수면', title: '어젯밤 잠은\n어땠나요?', desc: '시간과 만족도, 자세와 베개 높이를 함께 남겨요.' },
+  { label: '4 / 5 활동·피부', title: '오늘 하루는\n어땠나요?', desc: '앉아 있던 시간과 피부 상태를 골라주세요.' },
   { label: '5 / 5 검토', title: '이렇게 저장할까요?', desc: '수정할 항목은 오른쪽 수정을 눌러 해당 단계로 돌아가요.' },
 ];
 
