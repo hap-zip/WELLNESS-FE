@@ -7,6 +7,8 @@ node_modules/
 .expo/
 dist/
 web-build/
+dist-v8-audit/
+dist-build-check/
 expo-env.d.ts
 
 # Native
@@ -43,6 +45,3 @@ example
 # generated native folders
 /ios
 /android
-
-# 디자인 프로토타입 참조본과 대조용 스크린샷 (design 프로젝트에서 다시 받을 수 있음)
-.design-ref/

@@ -15,7 +15,7 @@ export type Weight = 400 | 500 | 600 | 700;
 
 /**
  * iOS 는 fontWeight 숫자만으로 웨이트별 파일을 고르지 못한다. 파일명을 직접 준다.
- * 키는 `scripts/download-fonts.mjs` 가 받는 파일명과 일치해야 한다.
+ * 키는 `assets/fonts`에 포함된 Pretendard 파일명과 일치해야 한다.
  */
 export const fontFamilyFor: Record<Weight, string> = {
   400: 'Pretendard-Regular',
