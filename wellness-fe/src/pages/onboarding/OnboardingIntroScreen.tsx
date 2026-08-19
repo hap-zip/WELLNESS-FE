@@ -22,7 +22,7 @@ export default function OnboardingIntroScreen() {
   const [page, setPage] = useState(0);
   const lastPage = page === ONBOARD_PAGES.length - 1;
   const isPreview = preview === '1';
-  const continueSetup = () => isPreview ? router.dismissTo('/(tabs)/me') : router.replace('/(onboarding)/baseline');
+  const continueSetup = () => isPreview ? router.dismissTo('/(tabs)/me') : router.replace('/(onboarding)/health-connect');
   const next = () => lastPage ? continueSetup() : setPage((current) => current + 1);
   const content = ONBOARD_PAGES[page];
   const feature = FEATURES[page];

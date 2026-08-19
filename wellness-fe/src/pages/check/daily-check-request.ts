@@ -1,4 +1,5 @@
 import type { DailyCheckDraft } from '@/context/daily-check-context';
+import { saveDailyCheck as backendSaveDailyCheck, updateDailyCheck as backendUpdateDailyCheck } from '@/services/backend/daily-check';
 import { hkAutoNumeric, PILLOW_BACKEND, resolvedSleepMin, SIT_LABELS_LONG, SLEEP_POSES, SLEEP_QUALITY_LABELS, type ConditionId } from './check.data';
 
 /** 백엔드가 준 DailyCheckRequest 계약. bedtime 만 String 대신 `string | null` 로 뒀다 —
@@ -82,16 +83,9 @@ export function buildDailyCheckRequest(
   };
 }
 
-/**
- * 실제 백엔드 엔드포인트가 아직 없어서, 요청 모양이 맞는지 확인할 수 있게 로컬에
- * 저장만 해둔다 — 나중에 진짜 URL이 생기면 이 함수 안만 fetch 호출로 바꾸면 된다.
- */
-const submittedChecks = new Map<string, DailyCheckRequest>();
-export async function submitDailyCheckRequest(dateId: string, request: DailyCheckRequest): Promise<{ recordId: string }> {
-  await new Promise((r) => setTimeout(r, 400));
-  submittedChecks.set(dateId, request);
-  return { recordId: dateId };
-}
-export function getSubmittedDailyCheck(dateId: string): DailyCheckRequest | undefined {
-  return submittedChecks.get(dateId);
+export async function submitDailyCheckRequest(dateId: string, request: DailyCheckRequest, mode: 'create' | 'edit' = 'create'): Promise<{ recordId: string }> {
+  const payload = { ...request, autoRecords: { ...request.autoRecords, bedtime: request.autoRecords.bedtime ?? undefined } };
+  // 이미 있는 날짜를 고치는 거면 PATCH(수정)를, 새로 남기는 거면 POST(생성)를 쓴다.
+  const response = mode === 'edit' ? await backendUpdateDailyCheck(dateId, payload) : await backendSaveDailyCheck(payload, dateId);
+  return { recordId: response.id !== undefined ? String(response.id) : dateId };
 }

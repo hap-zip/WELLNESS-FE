@@ -72,7 +72,7 @@ export default function CheckFlowScreen({ initialStep }: { initialStep: number }
       const provider = settings.provider === 'health-connect' ? 'health-connect' : 'apple-health';
       const request = buildDailyCheckRequest(draft, provider);
       const dateId = draft.targetDate ?? new Date().toISOString().slice(0, 10);
-      await submitDailyCheckRequest(dateId, request);
+      await submitDailyCheckRequest(dateId, request, draft.mode);
       router.replace('/check/complete');
     } catch {
       Alert.alert('저장하지 못했어요', '다시 시도해 주세요. 입력한 내용은 남아 있어요.');

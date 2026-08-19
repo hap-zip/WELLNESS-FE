@@ -12,7 +12,7 @@ import type { Palette } from '@/theme/palette';
 import { wellnessApi } from '@/services/wellness-api';
 import type { AutoHealthRecord } from '@/domain/wellness';
 import { useDailyCheck } from '@/context/daily-check-context';
-import { DAY_MEMO, DAY_ROWS, DAY_TONE, FILTERS, LEGEND, ROUTINE_DONE_DAYS, TODAY, WEEKDAYS, type DayTone, type RecordFilter } from './records.data';
+import { FILTERS, LEGEND, loadDayRecord, loadMonthTones, loadRoutineDoneDays, TODAY, WEEKDAYS, type DayRecordView, type DayTone, type RecordFilter } from './records.data';
 
 /**
  * `Momgirok v8.dc.html` → `<sc-if value="{{ isRecords }}">` 블록을 그대로 옮긴 것.
@@ -37,6 +37,9 @@ export default function RecordsCalendarScreen() {
   const [healthRecord, setHealthRecord] = useState<AutoHealthRecord | null>(null);
   const [healthLoading, setHealthLoading] = useState(false);
   const [healthMessage, setHealthMessage] = useState('');
+  const [dayRecord, setDayRecord] = useState<DayRecordView | null>(null);
+  const [monthTones, setMonthTones] = useState<Record<number, DayTone>>({});
+  const [routineDoneDays, setRoutineDoneDays] = useState<number[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
   const { elevated, onScroll } = useScrollElevation();
 
@@ -46,7 +49,6 @@ export default function RecordsCalendarScreen() {
     setRefreshing(false);
   };
 
-  const isTodayMonth = year === TODAY.year && month === TODAY.month;
   const canGoNext = year < TODAY.year || (year === TODAY.year && month < TODAY.month);
 
   const goPrevMonth = () => {
@@ -59,15 +61,22 @@ export default function RecordsCalendarScreen() {
     setYear(d.getFullYear()); setMonth(d.getMonth() + 1); setSelDay(1);
   };
 
-  const cells = useMemo(() => buildCells({ year, month, selDay, today: TODAY, isTodayMonth, filter }), [year, month, selDay, isTodayMonth, filter]);
+  useEffect(() => {
+    let active = true;
+    void loadMonthTones(year, month).then((tones) => { if (active) setMonthTones(tones); });
+    void loadRoutineDoneDays(year, month).then((days) => { if (active) setRoutineDoneDays(days); });
+    return () => { active = false; };
+  }, [year, month, reloadKey]);
 
-  const dayTone = isTodayMonth ? DAY_TONE[selDay] : undefined;
+  const cells = useMemo(() => buildCells({ year, month, selDay, today: TODAY, tones: monthTones, routineDoneDays, filter }), [year, month, selDay, monthTones, routineDoneDays, filter]);
+
   const selectedDateId = `${year}-${String(month).padStart(2, '0')}-${String(selDay).padStart(2, '0')}`;
+  const dayTone = dayRecord?.tone;
   const hasHealthData = healthRecord ? [healthRecord.sleepDuration, healthRecord.steps, healthRecord.activityEnergy].some((value) => value !== '기록 없음') : false;
-  const hasRecord = Boolean(dayTone) || hasHealthData;
+  const hasRecord = Boolean(dayRecord) || hasHealthData;
   const selWeekday = WEEKDAYS[new Date(year, month - 1, selDay).getDay()];
   const selTagLabel = hasRecord ? (dayTone === 'ok' ? '불편 없음' : dayTone === 'mid' ? '가벼운 불편' : '뚜렷한 불편') : '미기록';
-  const tagTone = hasRecord ? (dayTone as DayTone) : null;
+  const tagTone = hasRecord ? (dayTone ?? null) : null;
 
   const startCheckForDate = (dateId: string) => {
     startDraft(dateId, 'create');
@@ -87,7 +96,7 @@ export default function RecordsCalendarScreen() {
 
   useEffect(() => {
     let active = true;
-    setHealthLoading(true); setHealthRecord(null); setHealthMessage('');
+    setHealthLoading(true); setHealthRecord(null); setHealthMessage(''); setDayRecord(null);
     void wellnessApi.getAutoHealthRecord(selectedDateId).then((record) => {
       if (!active) return;
       setHealthRecord(record);
@@ -95,6 +104,7 @@ export default function RecordsCalendarScreen() {
     }).catch((reason) => {
       if (active) setHealthMessage(reason instanceof Error ? reason.message : '이 날짜의 건강 데이터를 불러오지 못했어요.');
     }).finally(() => { if (active) setHealthLoading(false); });
+    void loadDayRecord(selectedDateId).then((record) => { if (active) setDayRecord(record); });
     return () => { active = false; };
   }, [reloadKey, selectedDateId]);
 
@@ -205,21 +215,27 @@ export default function RecordsCalendarScreen() {
         {healthLoading ? <View style={[s.loadingBox, { backgroundColor: c.g100 }]}><ActivityIndicator color={c.pri}/><Text style={[text({ size: 12.5 }), { color: c.g600 }]}>이 날짜의 건강 데이터를 불러오는 중이에요</Text></View> : hasRecord ? (
           <>
             <View style={s.dayRows}>
-              {(dayTone ? DAY_ROWS : [
+              {(dayRecord ? [
+                ...dayRecord.areas.map((area) => ({ key: `area-${area.id}`, label: area.name, value: `${area.intensity}단계`, tone: area.intensity >= 3 })),
+                { key: 'sleep', label: '수면', value: dayRecord.autoRecords.sleepDuration, tone: false },
+                { key: 'steps', label: '걸음 수', value: dayRecord.autoRecords.steps, tone: false },
+                ...(dayRecord.sleepSatisfactionLabel ? [{ key: 'sleepQ', label: '수면 만족도', value: dayRecord.sleepSatisfactionLabel, tone: false }] : []),
+                ...(dayRecord.activity ? [{ key: 'activity', label: '활동', value: dayRecord.activity, tone: false }] : []),
+              ] : [
                 { key: 'sleep', label: '수면', value: healthRecord?.sleepDuration ?? '기록 없음', tone: false },
                 { key: 'bedtime', label: '취침 시각', value: healthRecord?.bedtime ?? '기록 없음', tone: false },
                 { key: 'steps', label: '걸음 수', value: healthRecord?.steps ?? '기록 없음', tone: false },
                 { key: 'energy', label: '활동 에너지', value: healthRecord?.activityEnergy ?? '기록 없음', tone: false },
               ]).map((row, i, rows) => (
-                <View key={row.key} style={[s.dayRow, i < rows.length - 1 && { borderBottomWidth: 1, borderBottomColor: c.g200 }]}> 
+                <View key={row.key} style={[s.dayRow, i < rows.length - 1 && { borderBottomWidth: 1, borderBottomColor: c.g200 }]}>
                   <Text style={[text({ size: 13.5 }), { color: c.g600 }]}>{row.label}</Text>
                   <Text style={[text({ size: 14, weight: 700, tracking: -0.03 }), { color: row.tone ? c.danger : c.g900 }]}>{row.value}</Text>
                 </View>
               ))}
             </View>
-            {dayTone ? <View style={[s.memoBox, { backgroundColor: c.g100 }]}> 
+            {dayRecord?.memo ? <View style={[s.memoBox, { backgroundColor: c.g100 }]}>
               <Text style={[text({ size: 11.5, weight: 700 }), { color: c.g500 }]}>메모</Text>
-              <Text style={[text({ size: 13.5, leading: 1.7 }), s.memoText, { color: c.g700 }]}>{DAY_MEMO}</Text>
+              <Text style={[text({ size: 13.5, leading: 1.7 }), s.memoText, { color: c.g700 }]}>{dayRecord.memo}</Text>
             </View> : null}
             <Pressable accessibilityRole="button" onPress={() => router.push(`/records/${selectedDateId}`)} style={[s.openDayBtn, { borderColor: c.g300 }]}> 
               <Text style={[text({ size: 14, weight: 700 }), { color: c.g800 }]}>이 날 기록 전체 보기</Text>
@@ -245,22 +261,23 @@ export default function RecordsCalendarScreen() {
   );
 }
 
-function buildCells({ year, month, selDay, today, isTodayMonth, filter }: {
+function buildCells({ year, month, selDay, today, tones, routineDoneDays, filter }: {
   year: number; month: number; selDay: number;
-  today: typeof TODAY; isTodayMonth: boolean; filter: RecordFilter;
+  today: typeof TODAY; tones: Record<number, DayTone>; routineDoneDays: number[]; filter: RecordFilter;
 }) {
+  const isTodayMonth = year === today.year && month === today.month;
   const first = new Date(year, month - 1, 1).getDay();
   const total = new Date(year, month, 0).getDate();
   const matchesFilter = (day: number, tone: DayTone | undefined) =>
     filter === '전체' ? true
     : filter === '불편 있음' ? tone !== undefined && tone !== 'ok'
-    : ROUTINE_DONE_DAYS.includes(day);
+    : routineDoneDays.includes(day);
   const cells: { key: string; day: number | null; dow: number; future: boolean; tone: DayTone | undefined; matched: boolean }[] = [];
   for (let i = 0; i < first; i++) cells.push({ key: `b${i}`, day: null, dow: -1, future: false, tone: undefined, matched: true });
   for (let d = 1; d <= total; d++) {
     const dow = new Date(year, month - 1, d).getDay();
     const future = isTodayMonth ? d > today.day : year > today.year || (year === today.year && month > today.month);
-    const tone = isTodayMonth ? DAY_TONE[d] : undefined;
+    const tone = tones[d];
     cells.push({ key: `d${d}`, day: d, dow, future, tone, matched: matchesFilter(d, tone) });
   }
   return cells;

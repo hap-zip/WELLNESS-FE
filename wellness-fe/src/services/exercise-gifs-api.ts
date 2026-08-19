@@ -55,3 +55,22 @@ export function matchesBodyPart(item: StretchExercise, label: string): boolean {
   const haystack = `${item.bodyPart} ${item.muscle} ${(item.secondaryMuscles ?? []).join(' ')}`.toLowerCase();
   return part.keywords.some((k) => haystack.includes(k));
 }
+
+/** 텍스트(백엔드가 준 루틴/동작 이름 등)에서 몸 부위 라벨을 찾아낸다 — "목·어깨" 처럼
+ * 라벨 자체가 "·"로 묶인 복합어라, 각 조각이 문장 어디에 들어 있는지로 판단한다. */
+function findBodyPartLabel(text: string): string | undefined {
+  return STRETCH_BODY_PARTS.find((part) => part.label.split('·').some((word) => text.includes(word)))?.label;
+}
+
+/**
+ * 실제 루틴 텍스트(동작 이름·설명, 부위)에 맞는 스트레칭 GIF를 고른다. 백엔드가 정확한
+ * slug를 주지 않아서 부위 키워드로 최선의 후보를 찾는다 — 맞는 후보가 없으면 undefined를
+ * 돌려주고, 화면은 이때만 손그림/도형으로 대체해야 한다(엉뚱한 운동을 보여주면 안 된다).
+ */
+export function pickStretchFor(exercises: StretchExercise[], text: string, seedIndex = 0): StretchExercise | undefined {
+  const label = findBodyPartLabel(text);
+  if (!label) return undefined;
+  const candidates = exercises.filter((item) => matchesBodyPart(item, label));
+  if (candidates.length === 0) return undefined;
+  return candidates[seedIndex % candidates.length];
+}

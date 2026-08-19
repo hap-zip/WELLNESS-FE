@@ -40,14 +40,6 @@ export type HomeSummary = {
   recentPattern?: { title: string; description: string };
 };
 
-export type BaselineProfile = {
-  bedtime: Date;
-  wakeTime: Date;
-  discomfortAreas: string[];
-  activityLevel: '낮음' | '보통' | '높음';
-  notificationTime: Date;
-};
-
 export type DailyCheckSubmission = {
   date: string;
   autoRecords: AutoHealthRecord;
@@ -169,7 +161,7 @@ export type RoutineCompletion = {
 export type RoutineEffect = 'better' | 'same' | 'worse' | 'unknown';
 export type RoutineFeedback = { routineId: string; effect: RoutineEffect; discomfortLevel: number; memo: string };
 export type SignalSummary = { title: string; description: string; durationLabel: string; occurrences: number; evidence: string[]; guidance: string[] };
-export type ReportPeriod = '30days' | '90days' | 'custom';
+export type ReportPeriod = '3days' | '7days' | '14days' | 'custom';
 export type ReportOptions = { period: ReportPeriod; customStartDate?: string; customEndDate?: string; includeSleep: boolean; includeActivity: boolean; includeDiscomfort: boolean; includeRoutines: boolean; hidePersonalInfo: boolean };
 export type HealthReport = { id: string; userName: string; periodLabel: string; createdAtLabel: string; headline: string; highlights: { label: string; value: string; change: string }[]; discomfortAreas: string[]; sleepPostures: string[]; routineCount: number; feedbackSummary: string; discoveredPatterns: string[]; note: string; options: ReportOptions };
 

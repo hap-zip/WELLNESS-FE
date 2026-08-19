@@ -3,12 +3,23 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 import type { NotificationSettings } from '@/domain/wellness';
-import { wellnessApi } from '@/services/wellness-api';
 import { colors } from '@/theme/tokens';
 
 const CHANNEL_ID = 'wellness-reminders';
 const SETTINGS_KEY = 'wellness.notification-settings.v1';
 const DAILY_NOTIFICATION_KEY = 'wellness.daily-notification-id.v1';
+
+// 알림 설정은 기기에만 저장되는 값이라 백엔드 엔드포인트가 없다 — 여기 기본값에서 시작해 로컬 저장값으로 덮어쓴다.
+const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+  enabled: true,
+  osPermission: 'not-determined',
+  dailyCheck: true,
+  routine: true,
+  weeklyReport: false,
+  nextDayEffect: true,
+  persistentSignal: true,
+  reminderTime: '21:30',
+};
 
 const storage = {
   async get(key: string) { if (Platform.OS === 'web') return typeof window === 'undefined' ? null : window.localStorage.getItem(key); return SecureStore.getItemAsync(key); },
@@ -101,11 +112,10 @@ export const notificationService = {
   },
 
   async getSettings(): Promise<NotificationSettings> {
-    const fallback = await wellnessApi.getNotificationSettings();
     const stored = await storage.get(SETTINGS_KEY);
-    let settings = fallback;
+    let settings = DEFAULT_NOTIFICATION_SETTINGS;
     if (stored) {
-      try { settings = { ...fallback, ...(JSON.parse(stored) as NotificationSettings) }; }
+      try { settings = { ...DEFAULT_NOTIFICATION_SETTINGS, ...(JSON.parse(stored) as NotificationSettings) }; }
       catch { await storage.remove(SETTINGS_KEY); }
     }
     return { ...settings, osPermission: await getNotificationPermission() };
@@ -117,7 +127,6 @@ export const notificationService = {
     if (next.enabled && next.dailyCheck && permission === 'granted') await scheduleDailyReminder(next.reminderTime);
     else await cancelDailyReminder();
     await storage.set(SETTINGS_KEY, JSON.stringify(next));
-    await wellnessApi.saveNotificationSettings(next);
   },
 
   async scheduleTestNotification(): Promise<void> {

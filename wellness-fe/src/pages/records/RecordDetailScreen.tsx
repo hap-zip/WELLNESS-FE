@@ -11,15 +11,59 @@ import type { Palette } from '@/theme/palette';
 import { wellnessApi } from '@/services/wellness-api';
 import type { AutoHealthRecord } from '@/domain/wellness';
 import { useDailyCheck } from '@/context/daily-check-context';
-import { DAY_GROUPS, DAY_MEMO, DAY_PARTS, DAY_TONE, TODAY, WEEKDAYS, type DayTone } from './records.data';
+import { loadDayRecord, TODAY, WEEKDAYS, type DayRecordView, type DayTone } from './records.data';
 
-/**
- * `Momgirok v8.dc.html` → `<sc-if value="{{ isDayDetail }}">` 블록을 그대로 옮긴 것.
- *
- * 프로토타입에서 `dayGroups`·부위 목록·메모는 `selDay` 값과 무관하게 고정된 시연
- * 데이터다(캘린더 화면의 `dayRows`도 마찬가지). 여기서도 헤더의 날짜·태그만
- * 실제 파라미터를 따르고, 본문 내용은 같은 고정 데이터셋을 그대로 보여준다.
- */
+/** `Momgirok v8.dc.html` → `<sc-if value="{{ isDayDetail }}">` 블록을 그대로 옮긴 것. */
+
+type Group = { key: string; title: string; src: string; icon: 'health' | 'ache' | 'sleep' | 'skin' | 'routine'; tone: boolean; photos: number; rows: { key: string; label: string; value: string; tone: boolean }[] };
+
+function buildGroups(record: DayRecordView | null, healthRecord: AutoHealthRecord | null): Group[] {
+  const groups: Group[] = [];
+  if (healthRecord) {
+    groups.push({
+      key: 'auto', title: '자동 수집', src: 'Apple 건강', icon: 'health', tone: false, photos: 0,
+      rows: [
+        { key: 'sleep', label: '수면 시간', value: healthRecord.sleepDuration, tone: false },
+        { key: 'bedtime', label: '취침 시각', value: healthRecord.bedtime, tone: false },
+        { key: 'steps', label: '걸음 수', value: healthRecord.steps, tone: false },
+        { key: 'energy', label: '활동 에너지', value: healthRecord.activityEnergy, tone: false },
+      ],
+    });
+  }
+  if (!record) return groups;
+  if (record.areas.length > 0 || record.feelings.length > 0) {
+    groups.push({
+      key: 'ache', title: '불편', src: '직접 입력', icon: 'ache', tone: true, photos: 0,
+      rows: [
+        ...record.areas.map((area) => ({ key: `area-${area.id}`, label: area.name, value: `${area.intensity}단계`, tone: true })),
+        { key: 'headache', label: '두통', value: record.feelings.includes('두통') ? '있음' : '없음', tone: record.feelings.includes('두통') },
+      ],
+    });
+  }
+  if (record.sleepSatisfactionLabel || record.posture || record.pillow) {
+    groups.push({
+      key: 'sleep', title: '수면', src: '직접 입력', icon: 'sleep', tone: false, photos: 0,
+      rows: [
+        ...(record.sleepSatisfactionLabel ? [{ key: 'quality', label: '만족도', value: record.sleepSatisfactionLabel, tone: false }] : []),
+        ...(record.posture ? [{ key: 'pose', label: '자세', value: record.posture, tone: false }] : []),
+        ...(record.pillow ? [{ key: 'pillow', label: '베개 높이', value: record.pillow, tone: false }] : []),
+      ],
+    });
+  }
+  if (record.activity || record.skinStates.length > 0) {
+    groups.push({
+      key: 'activity', title: '활동·피부', src: '직접 입력', icon: 'skin', tone: false, photos: 0,
+      rows: [
+        ...(record.activity ? [{ key: 'activity', label: '활동', value: record.activity, tone: false }] : []),
+        ...(record.skinStates.length > 0 ? [{ key: 'skin', label: '피부', value: record.skinStates.join(', '), tone: false }] : []),
+      ],
+    });
+  }
+  if (record.routineCompleted) {
+    groups.push({ key: 'routine', title: '실행한 루틴', src: '기록됨', icon: 'routine', tone: false, photos: 0, rows: [{ key: 'title', label: '오늘의 루틴', value: '완료', tone: false }] });
+  }
+  return groups;
+}
 
 function parseDateParam(raw: string | undefined) {
   if (raw) {
@@ -37,28 +81,21 @@ export default function RecordDetailScreen() {
   const { year, month, day } = parseDateParam(params.date);
   const dateId = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   const [healthRecord, setHealthRecord] = useState<AutoHealthRecord | null>(null);
+  const [dayRecord, setDayRecord] = useState<DayRecordView | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadMessage, setLoadMessage] = useState('');
 
-  const tone: DayTone | undefined = year === TODAY.year && month === TODAY.month ? DAY_TONE[day] : undefined;
+  const tone: DayTone | undefined = dayRecord?.tone;
   const weekday = WEEKDAYS[new Date(year, month - 1, day).getDay()];
   const selLabel = `${month}월 ${day}일 ${weekday}요일`;
   const tagLabel = tone ? (tone === 'ok' ? '불편 없음' : tone === 'mid' ? '가벼운 불편' : '뚜렷한 불편') : '미기록';
-  const hasHealthData = healthRecord ? [healthRecord.sleepDuration, healthRecord.steps, healthRecord.activityEnergy].some((value) => value !== '기록 없음') : false;
-  const groups = useMemo(() => {
-    const autoGroup = healthRecord ? { key: 'auto', title: '자동 수집', src: 'Apple 건강', icon: 'health' as const, tone: false, photos: 0, rows: [
-      { key: 'sleep', label: '수면 시간', value: healthRecord.sleepDuration, tone: false },
-      { key: 'bedtime', label: '취침 시각', value: healthRecord.bedtime, tone: false },
-      { key: 'steps', label: '걸음 수', value: healthRecord.steps, tone: false },
-      { key: 'energy', label: '활동 에너지', value: healthRecord.activityEnergy, tone: false },
-    ] } : null;
-    if (tone) return autoGroup ? [autoGroup, ...DAY_GROUPS.filter((group) => group.key !== 'auto')] : DAY_GROUPS;
-    return autoGroup && hasHealthData ? [autoGroup] : [];
-  }, [hasHealthData, healthRecord, tone]);
+  const groups = useMemo(() => buildGroups(dayRecord, healthRecord), [dayRecord, healthRecord]);
 
   useEffect(() => {
-    let active = true; setLoading(true); setLoadMessage('');
-    void wellnessApi.getAutoHealthRecord(dateId).then((record) => { if (active) setHealthRecord(record); }).catch((reason) => { if (active) setLoadMessage(reason instanceof Error ? reason.message : '건강 데이터를 불러오지 못했어요.'); }).finally(() => { if (active) setLoading(false); });
+    let active = true; setLoading(true); setLoadMessage(''); setDayRecord(null);
+    const healthLoad = wellnessApi.getAutoHealthRecord(dateId).then((record) => { if (active) setHealthRecord(record); }).catch((reason) => { if (active) setLoadMessage(reason instanceof Error ? reason.message : '건강 데이터를 불러오지 못했어요.'); });
+    const dayLoad = loadDayRecord(dateId).then((record) => { if (active) setDayRecord(record); });
+    void Promise.all([healthLoad, dayLoad]).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [dateId]);
 
@@ -67,9 +104,17 @@ export default function RecordDetailScreen() {
     startDraft(dateId, tone ? 'edit' : 'create');
     router.push('/check/auto');
   };
+  const deleteRecord = async () => {
+    try {
+      await wellnessApi.deleteDailyCheck(dateId);
+      goBack();
+    } catch {
+      Alert.alert('삭제하지 못했어요', '다시 시도해 주세요.');
+    }
+  };
   const remove = () => Alert.alert('이 날 기록을 삭제할까요?', '삭제한 기록은 되돌릴 수 없어요.', [
     { text: '취소', style: 'cancel' },
-    { text: '삭제', style: 'destructive', onPress: goBack },
+    { text: '삭제', style: 'destructive', onPress: () => void deleteRecord() },
   ]);
 
   return (
@@ -88,17 +133,17 @@ export default function RecordDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {loading ? <View style={[s.loading, { backgroundColor: c.card }]}><ActivityIndicator color={c.pri}/><Text style={[text({ size: 13 }), { color: c.g600 }]}>이 날짜의 데이터를 불러오는 중이에요</Text></View> : null}
         {/* 바디맵 요약 — padding:18px 20px 20px */}
-        {!loading && tone ? <View style={[s.section, { backgroundColor: c.card }]}> 
+        {!loading && tone ? <View style={[s.section, { backgroundColor: c.card }]}>
           <View style={s.bodyRow}>
             <View style={s.bodyMapSlot}>
-              <BodyMap height={145} label="이 날 기록된 불편 부위" marks={DAY_PARTS.map((p) => p.id)} width={94} />
+              <BodyMap height={145} label="이 날 기록된 불편 부위" marks={(dayRecord?.areas ?? []).map((p) => p.id)} width={94} />
             </View>
             <View style={s.flex1}>
               <View style={[s.tag, { backgroundColor: tone === 'bad' ? c.dangerBg : tone === 'ok' ? c.priLightest : c.g200 }]}>
                 <Text style={[text({ size: 12, weight: 700 }), { color: tone === 'bad' ? c.dangerDk : tone === 'ok' ? c.priDk : c.g600 }]}>{tagLabel}</Text>
               </View>
               <View style={s.partList}>
-                {DAY_PARTS.map((p) => (
+                {(dayRecord?.areas ?? []).map((p) => (
                   <View key={p.id} style={s.partRow}>
                     <View style={[s.partDot, { backgroundColor: c.danger }]} />
                     <Text numberOfLines={1} style={[text({ size: 13.5, weight: 700, tracking: -0.03 }), s.flex1, { color: c.g900 }]}>{p.name}</Text>
@@ -114,10 +159,10 @@ export default function RecordDetailScreen() {
         ))}
 
         {/* 메모 — padding:16px 20px 18px */}
-        {!loading && tone ? <View style={[s.groupSection, { backgroundColor: c.card }]}> 
+        {!loading && dayRecord?.memo ? <View style={[s.groupSection, { backgroundColor: c.card }]}>
           <Text style={[text({ size: 12.5, weight: 700 }), { color: c.g500 }]}>메모</Text>
           <View style={[s.memoBox, { backgroundColor: c.g100 }]}>
-            <Text style={[text({ size: 13.5, leading: 1.7 }), { color: c.g700 }]}>{DAY_MEMO}</Text>
+            <Text style={[text({ size: 13.5, leading: 1.7 }), { color: c.g700 }]}>{dayRecord.memo}</Text>
           </View>
         </View> : null}
 
@@ -138,7 +183,7 @@ export default function RecordDetailScreen() {
   );
 }
 
-function GroupSection({ c, group }: { c: Palette; group: (typeof DAY_GROUPS)[number] }) {
+function GroupSection({ c, group }: { c: Palette; group: Group }) {
   return (
     <View style={[s.groupSection, { backgroundColor: c.card }]}>
       <View style={s.groupHead}>

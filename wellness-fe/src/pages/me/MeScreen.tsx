@@ -4,13 +4,14 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MonthNextGlyph } from '@/components/glyphs';
+import { useAuth } from '@/context/auth-context';
 import { useThemePreference } from '@/context/theme-context';
 import { text } from '@/theme/typography';
 import { usePalette } from '@/theme/use-palette';
 import type { Palette } from '@/theme/palette';
 import { wellnessApi } from '@/services/wellness-api';
 import { notificationService } from '@/services/notification-service';
-import { ME_CARE, ME_MENU, ME_STATS } from './me.data';
+import { EMPTY_ME_STATS, loadMeStats, ME_CARE, ME_MENU, type MeStats } from './me.data';
 
 /**
  * `Momgirok v8.dc.html` → `<sc-if value="{{ isMe }}">` 를 그대로 옮긴 것.
@@ -23,18 +24,29 @@ export default function MeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { scheme } = useThemePreference();
+  const { session } = useAuth();
   const [healthConnected, setHealthConnected] = useState<boolean | null>(null);
   const [notificationLabel, setNotificationLabel] = useState('확인 중');
+  const [stats, setStats] = useState<MeStats>(EMPTY_ME_STATS);
 
   useFocusEffect(useCallback(() => {
     let active = true;
-    void Promise.all([wellnessApi.getHealthConnection(), notificationService.getSettings()]).then(([health, notifications]) => {
+    void Promise.all([wellnessApi.getHealthConnection(), notificationService.getSettings(), loadMeStats()]).then(([health, notifications, meStats]) => {
       if (!active) return;
       setHealthConnected(health.connected);
       setNotificationLabel(notifications.enabled && notifications.osPermission === 'granted' ? formatReminderTime(notifications.reminderTime) : '꺼짐');
+      setStats(meStats);
     });
     return () => { active = false; };
   }, []));
+
+  const displayName = session?.name?.trim() || session?.email || '사용자';
+  const avatarInitial = displayName.charAt(0);
+  const meStatEntries = [
+    { key: 'streak', n: `${stats.streakDays}일`, l: '연속 기록' },
+    { key: 'recorded', n: `${stats.recordedDays}일`, l: '기록한 날' },
+    { key: 'routine', n: `${stats.completedRoutines}회`, l: '완료 루틴' },
+  ];
 
   return (
     <ScrollView style={[s.screen, { backgroundColor: c.bg }]} contentContainerStyle={{ paddingTop: insets.top }} showsVerticalScrollIndicator={false}>
@@ -46,17 +58,17 @@ export default function MeScreen() {
       <View style={[s.profileSection, { backgroundColor: c.card }]}>
         <Pressable accessibilityRole="button" onPress={() => router.push('/settings/account')} style={s.profileRow}>
           <View style={[s.avatar, { backgroundColor: c.priLightest }]}>
-            <Text style={[text({ size: 19, weight: 700, tracking: -0.02 }), { color: c.priDk }]}>테</Text>
+            <Text style={[text({ size: 19, weight: 700, tracking: -0.02 }), { color: c.priDk }]}>{avatarInitial}</Text>
           </View>
           <View style={s.flex1}>
-            <Text style={[text({ size: 17, weight: 700, tracking: -0.035 }), { color: c.g900 }]}>테스트 사용자</Text>
-            <Text style={[text({ size: 12.5 }), s.profileEmail, { color: c.g500 }]}>test@naver.com</Text>
+            <Text style={[text({ size: 17, weight: 700, tracking: -0.035 }), { color: c.g900 }]}>{displayName}</Text>
+            {session?.email ? <Text style={[text({ size: 12.5 }), s.profileEmail, { color: c.g500 }]}>{session.email}</Text> : null}
           </View>
           <MonthNextGlyph color={c.g400} size={18} />
         </Pressable>
 
         <View style={[s.statsRow, { backgroundColor: c.g100 }]}>
-          {ME_STATS.map((stat, i) => (
+          {meStatEntries.map((stat, i) => (
             <View key={stat.key} style={[s.statCell, i < 2 && { borderRightWidth: 1, borderRightColor: c.g200 }]}>
               <Text style={[text({ size: 20, weight: 700, tracking: -0.04, tabular: true }), { color: c.g900 }]}>{stat.n}</Text>
               <Text style={[text({ size: 11.5 }), s.statLabel, { color: c.g500 }]}>{stat.l}</Text>

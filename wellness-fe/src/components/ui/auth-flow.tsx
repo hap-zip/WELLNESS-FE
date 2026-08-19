@@ -1,16 +1,11 @@
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 
-import { colors, spacing } from '@/theme/tokens';
+import { colors } from '@/theme/tokens';
 import { BrandHeaderLogo } from '@/components/brand-logo';
-import { AnimatedProgressFill } from './animated-progress-fill';
 
 export function BrandWordmark({ inverse: _inverse = false }: { inverse?: boolean }) {
   return <View accessibilityLabel="하음" accessible style={styles.wordmark}><BrandHeaderLogo width={126}/></View>;
-}
-
-export function SetupProgress({ current, total = 3 }: { current: number; total?: number }) {
-  return <View accessibilityLabel={`시작 설정 ${total}단계 중 ${current}단계`} accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: total, now: current }} style={styles.progress}>{Array.from({ length: total }, (_, index) => <View key={index} style={styles.progressSegment}><AnimatedProgressFill progress={index < current ? 1 : 0} style={styles.progressActive}/></View>)}</View>;
 }
 
 export type OnboardingScene = 'record' | 'connect' | 'act';
@@ -43,8 +38,5 @@ export function OnboardingSceneVisual({ scene }: { scene: OnboardingScene }) {
 
 const styles = StyleSheet.create({
   wordmark: { flexDirection: 'row', alignItems: 'center' },
-  progress: { height: 3, flexDirection: 'row', gap: spacing.xs },
-  progressSegment: { flex: 1, overflow: 'hidden', backgroundColor: colors.surfaceStrong },
-  progressActive: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.primary },
   visual: { width: '100%', aspectRatio: 320 / 230 },
 });

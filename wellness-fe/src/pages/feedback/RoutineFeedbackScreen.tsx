@@ -4,22 +4,30 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BigCheckGlyph, TrendGlyph } from '@/components/glyphs';
+import { useRoutineSession } from '@/context/routine-session-context';
 import { text } from '@/theme/typography';
 import { usePalette } from '@/theme/use-palette';
 import { FB_OPTIONS, fbNoteFor } from '@/pages/routine/routine.data';
 
+const EFFECT_FOR: Record<number, 'better' | 'same' | 'worse'> = { 0: 'better', 1: 'same', 2: 'worse' };
+
 /**
- * `Momgirok v8.dc.html` → `isFeedback` (Bottom Sheet) 을 그대로 옮긴 것.
- * 루틴 완료 다음 날 알림을 눌러 들어오는 것을 가정한 시연이라 날짜·시각은 고정 문구다.
+ * `Momgirok v8.dc.html` → `isFeedback` (Bottom Sheet) 을 실제 `/api/routine-feedbacks` 호출로 다시 짠 것.
  */
 export default function RoutineFeedbackScreen() {
   const c = usePalette();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { plan, submitFeedback, submittingFeedback, feedbackError } = useRoutineSession();
   const [picked, setPicked] = useState<number | null>(null);
   const [memo, setMemo] = useState('');
 
   const close = () => router.back();
+  const submit = async () => {
+    if (picked === null || submittingFeedback) return;
+    await submitFeedback(EFFECT_FOR[picked], memo);
+    close();
+  };
 
   return (
     <View style={s.overlay}>
@@ -28,8 +36,8 @@ export default function RoutineFeedbackScreen() {
         <View style={[s.sheet, { backgroundColor: c.card }]}>
           <View style={s.handleWrap}><View style={[s.handle, { backgroundColor: c.g300 }]} /></View>
           <View style={[s.content, { paddingBottom: 30 + insets.bottom }]}>
-            <Text style={[text({ size: 11.5, weight: 700 }), { color: c.g500 }]}>어제 오후 9:20 · 목 주변 가볍게 이완하기</Text>
-            <Text style={[text({ size: 22, weight: 700, tracking: -0.04, leading: 1.42 }), s.title, { color: c.g900 }]}>어제 루틴이{'\n'}도움이 됐나요?</Text>
+            {plan ? <Text style={[text({ size: 11.5, weight: 700 }), { color: c.g500 }]}>{plan.title}</Text> : null}
+            <Text style={[text({ size: 22, weight: 700, tracking: -0.04, leading: 1.42 }), s.title, { color: c.g900 }]}>루틴이{'\n'}도움이 됐나요?</Text>
             <Text style={[text({ size: 12.5, leading: 1.7 }), s.sub, { color: c.g600 }]}>답해주시면 다음 루틴 추천에 반영해요.</Text>
 
             <View style={s.optionList}>
@@ -72,9 +80,10 @@ export default function RoutineFeedbackScreen() {
                 <Text style={[text({ size: 12.5, leading: 1.7 }), { color: c.priDk }]}>{fbNoteFor(picked)}</Text>
               </View>
             ) : null}
+            {feedbackError ? <Text style={[text({ size: 12, weight: 600 }), s.errorText, { color: c.danger }]}>{feedbackError}</Text> : null}
 
-            <Pressable accessibilityRole="button" accessibilityState={{ disabled: picked === null }} disabled={picked === null} onPress={close} style={[s.submitBtn, { backgroundColor: picked === null ? c.g300 : c.pri }]}>
-              <Text style={[text({ size: 16, weight: 700 }), { color: '#fff' }]}>답변 보내기</Text>
+            <Pressable accessibilityRole="button" accessibilityState={{ disabled: picked === null || submittingFeedback }} disabled={picked === null || submittingFeedback} onPress={() => void submit()} style={[s.submitBtn, { backgroundColor: picked === null ? c.g300 : c.pri, opacity: submittingFeedback ? 0.6 : 1 }]}>
+              <Text style={[text({ size: 16, weight: 700 }), { color: '#fff' }]}>{submittingFeedback ? '보내는 중…' : '답변 보내기'}</Text>
             </Pressable>
           </View>
         </View>
@@ -102,5 +111,6 @@ const s = StyleSheet.create({
   memoInput: { marginTop: 9, minHeight: 72, paddingVertical: 13, paddingHorizontal: 15, borderWidth: 1, borderRadius: 16, fontSize: 13.5, lineHeight: 23 },
 
   noteBox: { marginTop: 16, padding: 13, paddingHorizontal: 15, borderRadius: 14 },
+  errorText: { marginTop: 12, textAlign: 'center' },
   submitBtn: { marginTop: 18, height: 54, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
 });

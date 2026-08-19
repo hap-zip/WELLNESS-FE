@@ -6,9 +6,11 @@ const LEGACY_SESSION_KEY = 'wellness.auth-session.v1';
 
 export type AuthSession = {
   accessToken: string;
-  userId: string;
+  userId: number;
   mode: 'authenticated' | 'demo';
   onboardingComplete?: boolean;
+  email?: string;
+  name?: string;
 };
 
 const storage = {
@@ -38,7 +40,7 @@ export const sessionStore = {
         await storage.remove(SESSION_KEY);
         return null;
       }
-      if (!session.userId || !session.mode || (session.mode === 'authenticated' && !session.accessToken)) {
+      if (typeof session.userId !== 'number' || !session.mode || (session.mode === 'authenticated' && !session.accessToken)) {
         await storage.remove(SESSION_KEY);
         return null;
       }

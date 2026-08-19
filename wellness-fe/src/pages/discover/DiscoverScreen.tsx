@@ -6,24 +6,22 @@ import Svg, { Circle, ClipPath, Defs, Line, Polyline, Rect } from 'react-native-
 import Animated, { cancelAnimation, Easing, useAnimatedProps, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 
 import { CHEKI } from '@/lib/cheki';
-import { HeroChevronGlyph, HkGlyph, LockGlyph } from '@/components/glyphs';
+import { HeroChevronGlyph, LockGlyph } from '@/components/glyphs';
 import { headerShadow, useScrollElevation } from '@/hooks/use-scroll-header';
-import { wellnessApi } from '@/services/wellness-api';
 import { text } from '@/theme/typography';
 import { usePalette } from '@/theme/use-palette';
 import {
-  CHART_LABELS, CRITERIA, DEFAULT_CRITERIA, DEFAULT_GATE_DAYS, GATE_GAPS,
-  HERO_MATCH_COUNT, HERO_TITLE, INSIGHTS, MAX_CRITERIA, PERIODS, pointCount,
-  type CriterionId, type Period,
+  CRITERIA_META, DEFAULT_CRITERIA, loadConnectionSeries, loadPatterns, loadRecordedDayCount,
+  MAX_CRITERIA, PERIODS, type ConnectionSeries, type CriterionId, type DiscoverPatternView, type Period,
 } from './discover.data';
 
 /**
  * `Momgirok v8.dc.html` → `<sc-if value="{{ isDiscover }}">` 블록을 그대로 옮긴 것.
  *
  * 차트는 기록이 있는 만큼 항상 그린다 — 게이트가 걸리는 건 "해석"(히어로 카드)뿐이다.
- * `gateDays` 는 실제로 기록된 날 수(`wellnessApi.getUserProfile().recordDays`)를 따른다.
- * 프로토타입의 "30일 도달 상태로 미리보기" 버튼은 디자인 QA 용 치트였을 뿐이라 이식하지
- * 않았다 — 실제 사용자가 자기 게이트를 스스로 앞당길 수 있으면 안 된다.
+ * `gateDays`는 실제로 기록된 날 수를 따른다. 프로토타입의 "30일 도달 상태로 미리보기"
+ * 버튼은 디자인 QA 용 치트였을 뿐이라 이식하지 않았다 — 실제 사용자가 자기 게이트를
+ * 스스로 앞당길 수 있으면 안 된다.
  */
 
 const CHART_W = 320;
@@ -81,36 +79,51 @@ export default function DiscoverScreen() {
 
   const [period, setPeriod] = useState<Period>('30일');
   const [crit, setCrit] = useState<CriterionId[]>(DEFAULT_CRITERIA);
-  const [gateDays, setGateDays] = useState(DEFAULT_GATE_DAYS);
+  const [gateDays, setGateDays] = useState(0);
+  const [connectionSeries, setConnectionSeries] = useState<ConnectionSeries | null>(null);
+  const [patterns, setPatterns] = useState<DiscoverPatternView[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const { elevated, onScroll } = useScrollElevation();
 
+  const loadAll = useCallback(async (nextPeriod: Period, isActive: () => boolean) => {
+    const [days, connections, patternList] = await Promise.all([
+      loadRecordedDayCount(),
+      loadConnectionSeries(nextPeriod),
+      loadPatterns(),
+    ]);
+    if (!isActive()) return;
+    setGateDays(days);
+    setConnectionSeries(connections);
+    setPatterns(patternList);
+  }, []);
+
   useEffect(() => {
     let active = true;
-    void wellnessApi.getUserProfile().then((profile) => { if (active) setGateDays(profile.recordDays); });
+    void loadAll(period, () => active).catch(() => undefined);
     return () => { active = false; };
-  }, []);
+  }, [loadAll, period]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    const [profile] = await Promise.all([wellnessApi.getUserProfile(), new Promise((r) => setTimeout(r, 500))]);
-    setGateDays(profile.recordDays);
+    await loadAll(period, () => true).catch(() => undefined);
     setRefreshing(false);
   };
 
   const gateOpen = gateDays >= 30;
   const gateLeft = Math.max(0, 30 - gateDays);
-  const n = pointCount(period);
-  const px = (i: number) => (i / (n - 1)) * CHART_W;
+  const heroPattern = patterns[0];
+  const otherPatterns = patterns.slice(1);
+  const n = connectionSeries?.dates.length ?? 0;
+  const px = (i: number) => (n <= 1 ? 0 : (i / (n - 1)) * CHART_W);
 
-  const selected = useMemo(() => crit.map((id) => CRITERIA.find((x) => x.id === id)!), [crit]);
+  const selected = useMemo(() => crit.map((id) => CRITERIA_META.find((x) => x.id === id)!), [crit]);
   const chartTitle = selected.length === 0 ? '기준을 골라주세요' : selected.map((cr) => cr.label).join(' · ');
-  const chartStats = selected.slice(0, 2);
+  const chartStats = selected.slice(0, 2).map((cr) => ({ ...cr, ...(connectionSeries?.stats[cr.id] ?? { stat: '기록 없음', statLabel: '' }) }));
   // 각 기준을 자기 값 범위 안에서 세로로 정규화한다 — 고정된 base/scale 을 쓰면 기준마다
   // 실제 값 폭이 달라 차트 밖으로 선이 넘칠 수 있다(불편 강도가 특히 그랬다). 항상
   // CHART_TOP~CHART_BOTTOM 안에 들어오게 해서 옆 텍스트와 겹치거나 잘리지 않게 한다.
-  const series = selected.map((cr, i) => {
-    const slice = cr.vals.slice(0, n);
+  const series = connectionSeries ? selected.map((cr, i) => {
+    const slice = connectionSeries.criteria[cr.id];
     const min = Math.min(...slice);
     const max = Math.max(...slice);
     const span = max - min || 1;
@@ -122,7 +135,7 @@ export default function DiscoverScreen() {
       pts: slice.map((v, j) => `${px(j).toFixed(1)},${yOf(v).toFixed(1)}`).join(' '),
       yLast: yOf(slice[slice.length - 1]),
     };
-  });
+  }) : [];
   const hasMark = series.length > 0;
 
   const toggleCriterion = (id: CriterionId) => {
@@ -172,7 +185,7 @@ export default function DiscoverScreen() {
         </Svg>
 
         <View style={s.chartLabels}>
-          {CHART_LABELS[period].map((l) => <Text key={l} style={[text({ size: 10.5, weight: 600 }), { color: c.g500 }]}>{l}</Text>)}
+          {(connectionSeries?.labels ?? []).map((l, i) => <Text key={`${l}-${i}`} style={[text({ size: 10.5, weight: 600 }), { color: c.g500 }]}>{l}</Text>)}
         </View>
 
         <View style={[s.legend, { borderTopColor: c.g200 }]}>
@@ -206,7 +219,7 @@ export default function DiscoverScreen() {
           <Text style={[text({ size: 12, weight: 700, tabular: true }), { color: crit.length >= MAX_CRITERIA ? c.priDk : c.g500 }]}>{crit.length} / {MAX_CRITERIA}</Text>
         </View>
         <View style={s.criteriaWrap}>
-          {CRITERIA.map((cr) => {
+          {CRITERIA_META.map((cr) => {
             const on = crit.includes(cr.id);
             const full = crit.length >= MAX_CRITERIA && !on;
             return (
@@ -226,24 +239,31 @@ export default function DiscoverScreen() {
       </View>
 
       {gateOpen ? (
-        <View style={[s.section, { backgroundColor: c.card }]}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push('/discover/pattern/a')}
-            style={({ pressed }) => [s.hero, { backgroundColor: c.priDk, experimental_backgroundImage: `linear-gradient(140deg, ${c.pri}, ${c.priDk})` }, pressed && s.heroPressed]}>
-            <View style={s.heroBadge}>
-              <Text style={[text({ size: 11, weight: 700 }), { color: '#fff' }]}>가장 뚜렷한 연결</Text>
-            </View>
-            <Text style={[text({ size: 22, weight: 700, tracking: -0.04, leading: 1.45 }), s.heroTitle, { color: '#fff' }]}>{HERO_TITLE}</Text>
-            <View style={s.heroFoot}>
-              <Text style={[text({ size: 12.5, weight: 600 }), { color: 'rgba(255,255,255,.92)' }]}>최근 {period} 중 {HERO_MATCH_COUNT} 함께</Text>
-              <View style={s.heroLink}>
-                <Text style={[text({ size: 12.5, weight: 700 }), { color: '#fff' }]}>자세히</Text>
-                <HeroChevronGlyph color="#fff" />
+        heroPattern ? (
+          <View style={[s.section, { backgroundColor: c.card }]}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push(`/discover/pattern/${heroPattern.id}`)}
+              style={({ pressed }) => [s.hero, { backgroundColor: c.priDk, experimental_backgroundImage: `linear-gradient(140deg, ${c.pri}, ${c.priDk})` }, pressed && s.heroPressed]}>
+              <View style={s.heroBadge}>
+                <Text style={[text({ size: 11, weight: 700 }), { color: '#fff' }]}>가장 뚜렷한 연결</Text>
               </View>
-            </View>
-          </Pressable>
-        </View>
+              <Text style={[text({ size: 22, weight: 700, tracking: -0.04, leading: 1.45 }), s.heroTitle, { color: '#fff' }]}>{heroPattern.title}</Text>
+              <View style={s.heroFoot}>
+                <Text style={[text({ size: 12.5, weight: 600 }), { color: 'rgba(255,255,255,.92)' }]}>{heroPattern.subtitle || heroPattern.periodLabel}</Text>
+                <View style={s.heroLink}>
+                  <Text style={[text({ size: 12.5, weight: 700 }), { color: '#fff' }]}>자세히</Text>
+                  <HeroChevronGlyph color="#fff" />
+                </View>
+              </View>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={[s.section, { backgroundColor: c.card }]}>
+            <Text style={[text({ size: 14, weight: 700 }), { color: c.g700 }]}>아직 발견된 패턴이 없어요</Text>
+            <Text style={[text({ size: 12.5, leading: 1.7 }), { marginTop: 6, color: c.g500 }]}>기록이 쌓이면 반복되는 흐름을 찾아 알려드릴게요.</Text>
+          </View>
+        )
       ) : (
         <View style={[s.section, { backgroundColor: c.card }]}>
           <View style={[s.gateCard, { backgroundColor: c.g100 }]}>
@@ -263,40 +283,22 @@ export default function DiscoverScreen() {
             <View style={[s.gateTrack, { backgroundColor: c.g200 }]}>
               <View style={[s.gateFill, { width: `${Math.min(100, (gateDays / 30) * 100)}%`, backgroundColor: c.pri }]} />
             </View>
-
-            <View style={[s.gateGaps, { borderTopColor: c.g200 }]}>
-              <Text style={[text({ size: 11.5, weight: 700 }), { color: c.g500 }]}>이 항목을 더 남기면 해석이 정확해져요</Text>
-              <View style={s.gateGapsList}>
-                {GATE_GAPS.map((g) => (
-                  <View key={g.key} style={s.gateGapRow}>
-                    <View style={[s.gateGapIcon, { backgroundColor: c.card }]}>
-                      <HkGlyph color={c.g600} id={g.icon} size={16} />
-                    </View>
-                    <Text style={[text({ size: 13, weight: 600 }), s.flex1, { color: c.g800 }]}>{g.label}</Text>
-                    <Text style={[text({ size: 12, weight: 700, tabular: true }), { color: c.g500 }]}>{g.count}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
           </View>
         </View>
       )}
 
-      {gateOpen ? (
+      {gateOpen && otherPatterns.length > 0 ? (
         <View style={[s.section, s.insightsSection, { backgroundColor: c.card }]}>
           <View style={s.insightsHead}>
             <Image accessibilityIgnoresInvertColors resizeMode="contain" source={CHEKI.insight} style={s.insightsMascot} />
             <Text style={[text({ size: 18, weight: 700, tracking: -0.035 }), { color: c.g900 }]}>그 밖의 흐름</Text>
           </View>
           <View style={s.insightsList}>
-            {INSIGHTS.map((it) => (
-              <Pressable key={it.key} accessibilityRole="button" onPress={() => router.push(`/discover/pattern/${it.key}`)} style={[s.insightRow, { borderColor: c.g200, backgroundColor: c.card }]}>
-                <View style={[s.insightCount, { backgroundColor: it.tone === 'bad' ? c.dangerBg : c.priLightest }]}>
-                  <Text style={[text({ size: 13.5, weight: 700 }), { color: it.tone === 'bad' ? c.dangerDk : c.priDk }]}>{it.count}</Text>
-                </View>
+            {otherPatterns.map((it) => (
+              <Pressable key={it.id} accessibilityRole="button" onPress={() => router.push(`/discover/pattern/${it.id}`)} style={[s.insightRow, { borderColor: c.g200, backgroundColor: c.card }]}>
                 <View style={s.flex1}>
                   <Text style={[text({ size: 14, weight: 700, tracking: -0.03, leading: 1.5 }), { color: c.g900 }]}>{it.title}</Text>
-                  <Text style={[text({ size: 11.5 }), s.insightDates, { color: c.g500 }]}>{it.dates}</Text>
+                  <Text style={[text({ size: 11.5 }), s.insightDates, { color: c.g500 }]}>{it.subtitle || it.periodLabel}</Text>
                 </View>
               </Pressable>
             ))}
@@ -349,10 +351,6 @@ const s = StyleSheet.create({
   gateProgressHead: { marginTop: 18, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   gateTrack: { position: 'relative', marginTop: 9, height: 8, borderRadius: 5, overflow: 'hidden' },
   gateFill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 5 },
-  gateGaps: { marginTop: 18, paddingTop: 16, borderTopWidth: 1 },
-  gateGapsList: { marginTop: 10, gap: 8 },
-  gateGapRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  gateGapIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
 
   chartHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   chartStats: { marginTop: 14, flexDirection: 'row' },
@@ -368,7 +366,6 @@ const s = StyleSheet.create({
   insightsMascot: { width: 32, height: 32 },
   insightsList: { marginTop: 12, gap: 8 },
   insightRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderWidth: 1, borderRadius: 16 },
-  insightCount: { width: 46, height: 46, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   insightDates: { marginTop: 5 },
   insightsFootnote: { marginTop: 16 },
 });

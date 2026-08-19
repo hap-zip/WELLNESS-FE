@@ -1,20 +1,50 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ClockGlyph } from '@/components/glyphs';
+import { useRoutineSession } from '@/context/routine-session-context';
+import { getCompletionsByPeriod } from '@/services/backend/routine-completion';
 import { CHEKI } from '@/lib/cheki';
+import { addDays, toLocalDateId } from '@/utils/date';
 import { text } from '@/theme/typography';
 import { usePalette } from '@/theme/use-palette';
-import type { Palette } from '@/theme/palette';
-import { AFTER_FEEL_LABELS, DONE_ROWS } from './routine.data';
 
-/** `Momgirok v8.dc.html` → `isRoutineDone` 을 그대로 옮긴 것. */
+function formatElapsed(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m > 0 ? `${m}분 ${s}초` : `${s}초`;
+}
+
+/** 이번 주(월요일~오늘)에 실제로 완료한 루틴 횟수 — 배지에 쓴다. */
+async function loadWeeklyCompletionCount(): Promise<number> {
+  const todayId = toLocalDateId();
+  const dow = new Date().getDay();
+  const daysSinceMonday = dow === 0 ? 6 : dow - 1;
+  const start = addDays(todayId, -daysSinceMonday);
+  try {
+    const completions = await getCompletionsByPeriod(start, todayId);
+    return completions.length;
+  } catch {
+    return 0;
+  }
+}
+
+/** `Momgirok v8.dc.html` → `isRoutineDone` 을 실제 완료 결과로 다시 짠 것. */
 export default function RoutineCompleteScreen() {
   const c = usePalette();
   const router = useRouter();
-  const [after, setAfter] = useState<number | null>(null);
+  const { plan, completion, completeError } = useRoutineSession();
+  const [weeklyCount, setWeeklyCount] = useState<number | null>(null);
+
+  useEffect(() => { void loadWeeklyCompletionCount().then(setWeeklyCount); }, []);
+
+  const doneRows = plan && completion ? [
+    { key: '실행 시간', k: '실행 시간', v: formatElapsed(completion.completedSeconds) },
+    { key: '완료한 동작', k: '완료한 동작', v: `${completion.completedSteps} / ${plan.steps.length}` },
+    { key: '적용 부위', k: '적용 부위', v: plan.targetArea || '전신' },
+  ] : [];
 
   return (
     <SafeAreaView edges={['top']} style={[s.screen, { backgroundColor: c.card }]}>
@@ -25,32 +55,26 @@ export default function RoutineCompleteScreen() {
         </View>
 
         <View style={s.headCopy}>
-          <View style={[s.badge, { backgroundColor: c.priLightest }]}>
-            <Text style={[text({ size: 12, weight: 700 }), { color: c.priDk }]}>이번 주 3번째 루틴</Text>
-          </View>
+          {weeklyCount ? (
+            <View style={[s.badge, { backgroundColor: c.priLightest }]}>
+              <Text style={[text({ size: 12, weight: 700 }), { color: c.priDk }]}>이번 주 {weeklyCount}번째 루틴</Text>
+            </View>
+          ) : null}
           <Text style={[text({ size: 25, weight: 700, tracking: -0.04, leading: 1.4 }), s.title, { color: c.g900 }]}>루틴을 마쳤어요</Text>
         </View>
 
-        <View style={[s.summaryCard, { borderColor: c.g200 }]}>
-          {DONE_ROWS.map((row, i) => (
-            <View key={row.key} style={[s.summaryRow, i < DONE_ROWS.length - 1 && { borderBottomWidth: 1, borderBottomColor: c.g200 }]}>
-              <Text style={[text({ size: 13.5 }), { color: c.g600 }]}>{row.k}</Text>
-              <Text style={[text({ size: 14, weight: 700, tracking: -0.03, tabular: true }), { color: c.g900 }]}>{row.v}</Text>
-            </View>
-          ))}
-        </View>
+        {completeError ? <Text style={[text({ size: 12.5, weight: 600 }), s.errorText, { color: c.danger }]}>{completeError}</Text> : null}
 
-        <Text style={[text({ size: 13.5, weight: 700 }), s.feelLabel, { color: c.g700 }]}>지금 몸은 어떤가요?</Text>
-        <View style={s.feelRow}>
-          {AFTER_FEEL_LABELS.map((l, i) => {
-            const on = after === i;
-            return (
-              <Pressable key={l} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => setAfter(i)} style={[s.feelBtn, { borderColor: on ? c.pri : c.g200, backgroundColor: on ? c.priLightest : 'transparent' }]}>
-                <Text style={[text({ size: 12.5, weight: on ? 700 : 500 }), { color: on ? c.priDk : c.g600 }]}>{l}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {doneRows.length > 0 ? (
+          <View style={[s.summaryCard, { borderColor: c.g200 }]}>
+            {doneRows.map((row, i) => (
+              <View key={row.key} style={[s.summaryRow, i < doneRows.length - 1 && { borderBottomWidth: 1, borderBottomColor: c.g200 }]}>
+                <Text style={[text({ size: 13.5 }), { color: c.g600 }]}>{row.k}</Text>
+                <Text style={[text({ size: 14, weight: 700, tracking: -0.03, tabular: true }), { color: c.g900 }]}>{row.v}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         <NoteCard c={c} />
       </ScrollView>
@@ -67,11 +91,11 @@ export default function RoutineCompleteScreen() {
   );
 }
 
-function NoteCard({ c }: { c: Palette }) {
+function NoteCard({ c }: { c: ReturnType<typeof usePalette> }) {
   return (
     <View style={[s.noteCard, { backgroundColor: c.g100 }]}>
       <ClockGlyph color={c.g500} size={17} />
-      <Text style={[text({ size: 12.5, leading: 1.7 }), s.flex1, { color: c.g600 }]}>내일 아침에 "어제 루틴이 도움이 됐나요?"라고 한 번 더 물어볼게요. 답을 모아 다음 추천에 반영해요.</Text>
+      <Text style={[text({ size: 12.5, leading: 1.7 }), s.flex1, { color: c.g600 }]}>내일 아침에 &quot;어제 루틴이 도움이 됐나요?&quot;라고 한 번 더 물어볼게요. 답을 모아 다음 추천에 반영해요.</Text>
     </View>
   );
 }
@@ -88,13 +112,10 @@ const s = StyleSheet.create({
   headCopy: { marginTop: 18, alignItems: 'center' },
   badge: { height: 28, paddingHorizontal: 12, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   title: { marginTop: 14 },
+  errorText: { marginTop: 14, textAlign: 'center' },
 
   summaryCard: { marginTop: 22, paddingHorizontal: 16, borderWidth: 1, borderRadius: 18 },
   summaryRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-
-  feelLabel: { marginTop: 20 },
-  feelRow: { marginTop: 10, flexDirection: 'row', gap: 8 },
-  feelBtn: { flex: 1, minHeight: 48, borderWidth: 1.5, borderRadius: 25, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
 
   noteCard: { marginTop: 20, padding: 14, paddingHorizontal: 16, borderRadius: 16, flexDirection: 'row', gap: 10 },
 

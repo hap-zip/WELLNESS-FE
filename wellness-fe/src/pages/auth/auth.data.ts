@@ -1,10 +1,12 @@
 /** `Momgirok v8.dc.html` → 인증·시작 6화면의 시연 데이터를 그대로 옮긴 것. */
 
-export const PW_RULES = [
-  { key: '8자 이상', label: '8자 이상', ok: true },
-  { key: '영문 포함', label: '영문 포함', ok: true },
-  { key: '숫자 포함', label: '숫자 포함', ok: false },
-];
+export function passwordRules(password: string) {
+  return [
+    { key: '8자 이상', label: '8자 이상', ok: password.length >= 8 },
+    { key: '영문 포함', label: '영문 포함', ok: /[A-Za-z]/.test(password) },
+    { key: '숫자 포함', label: '숫자 포함', ok: /\d/.test(password) },
+  ];
+}
 
 export type AgreeItem = { id: string; k: string; req: '필수' | '선택' };
 export const AGREE: AgreeItem[] = [

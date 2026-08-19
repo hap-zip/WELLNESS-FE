@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CHEKI } from '@/lib/cheki';
@@ -14,21 +14,22 @@ import {
 import { useDailyCheck } from '@/context/daily-check-context';
 import { useNotifications } from '@/context/notifications-context';
 import { headerShadow, useScrollElevation } from '@/hooks/use-scroll-header';
-import { useStretchMap } from '@/hooks/use-stretch-map';
+import { useStretchList } from '@/hooks/use-stretch-map';
 import { toCurrentKoreanDateLabel } from '@/utils/date';
-import { ROUTINE_MOVES } from '@/pages/routine/routine.data';
+import { pickStretchFor } from '@/services/exercise-gifs-api';
 import { wellnessApi } from '@/services/wellness-api';
 import { text } from '@/theme/typography';
 import { usePalette } from '@/theme/use-palette';
 import type { Palette } from '@/theme/palette';
-import { homeView, WEEK_LABELS, type HomeState, type HomeView } from './home.data';
+import { EMPTY_HOME_VIEW, loadHomeView, WEEK_LABELS, type HomeState, type HomeView } from './home.data';
 
 /**
  * `Momgirok v8.dc.html` → `<sc-if value="{{ isHome }}">` 블록을 그대로 옮긴 것.
- * 수치는 전부 프로토타입 인라인 style 에서 읽었다. 새로 만든 값은 없다.
+ * `state`/`view`를 넘기면(dev 전용 `?state=` 오버라이드) 그 값을 그대로 쓰고,
+ * 넘기지 않으면 백엔드에서 조합한 실제 데이터를 불러온다.
  */
 
-export default function HomeScreen({ state = 'done', view = homeView }: { state?: HomeState; view?: HomeView }) {
+export default function HomeScreen({ state: stateOverride, view: viewOverride }: { state?: HomeState; view?: HomeView }) {
   const c = usePalette();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -38,6 +39,27 @@ export default function HomeScreen({ state = 'done', view = homeView }: { state?
   const { elevated, onScroll } = useScrollElevation();
   const [partSheet, setPartSheet] = useState<HomeView['parts'][number] | null>(null);
   const [healthValues, setHealthValues] = useState<{ sleep: string; steps: string; source: string }>({ sleep: '불러오는 중…', steps: '불러오는 중…', source: '건강 데이터' });
+  const [loadedView, setLoadedView] = useState<HomeView>(EMPTY_HOME_VIEW);
+  const [loadedState, setLoadedState] = useState<HomeState>('empty');
+  const [loading, setLoading] = useState(true);
+
+  const reloadHome = useCallback(async () => {
+    try {
+      const { view: nextView, state: nextState } = await loadHomeView();
+      setLoadedView(nextView);
+      setLoadedState(nextState);
+    } catch {
+      setLoadedView(EMPTY_HOME_VIEW);
+      setLoadedState('empty');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void reloadHome(); }, [reloadHome]);
+
+  const view = viewOverride ?? loadedView;
+  const state = stateOverride ?? loadedState;
 
   useEffect(() => {
     let active = true;
@@ -60,7 +82,7 @@ export default function HomeScreen({ state = 'done', view = homeView }: { state?
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await new Promise((r) => setTimeout(r, 600));
+    await reloadHome();
     setRefreshing(false);
   };
 
@@ -105,6 +127,9 @@ export default function HomeScreen({ state = 'done', view = homeView }: { state?
         </View>
       </View>
 
+      {loading && !viewOverride ? (
+        <View style={s.loadingWrap}><ActivityIndicator color={c.pri} /></View>
+      ) : (
       <ScrollView
         onScroll={onScroll}
         refreshControl={<RefreshControl onRefresh={() => void onRefresh()} refreshing={refreshing} tintColor={c.pri} />}
@@ -113,14 +138,14 @@ export default function HomeScreen({ state = 'done', view = homeView }: { state?
         style={s.body}>
 
       {state === 'syncing' && <SyncingBanner c={c} />}
-      {state === 'error' && <ErrorBanner c={c} onRetry={() => undefined} onManual={() => router.push('/check/auto')} />}
+      {state === 'error' && <ErrorBanner c={c} onRetry={() => void reloadHome()} onManual={() => router.push('/check/auto')} />}
 
       <View style={[s.dateBar, { backgroundColor: c.bg, borderBottomColor: c.g200 }]}>
         <Text style={[text({ size: 12, weight: 600 }), { color: c.g500 }]}>{todayLabel}</Text>
       </View>
 
       {state === 'empty'
-        ? <EmptyHero c={c} onStart={() => router.push('/check/auto')} />
+        ? <EmptyHero c={c} onStart={() => router.push('/check/auto')} streakDaysBeforeToday={view.streakDaysBeforeToday} />
         : <>
             <WeekSection c={c} week={view.week} />
             <TodayBodySection c={c} facts={facts} onEdit={() => router.push('/check/auto')} onOpenPart={setPartSheet} parts={view.parts} />
@@ -133,6 +158,7 @@ export default function HomeScreen({ state = 'done', view = homeView }: { state?
       {/* 탭바에 가리지 않기 위한 여백 — <div style="height:112px"> */}
       <View style={{ height: 112 }} />
       </ScrollView>
+      )}
 
       <PartDetailSheet
         c={c}
@@ -190,7 +216,8 @@ function ErrorBanner({ c, onRetry, onManual }: { c: Palette; onRetry: () => void
 
 /* ── 기록 전 히어로 ────────────────────────────────────────── */
 
-function EmptyHero({ c, onStart }: { c: Palette; onStart: () => void }) {
+function EmptyHero({ c, onStart, streakDaysBeforeToday }: { c: Palette; onStart: () => void; streakDaysBeforeToday: number }) {
+  const caption = streakDaysBeforeToday > 0 ? `3분이면 끝나요 · 어제까지 ${streakDaysBeforeToday}일 연속` : '3분이면 끝나요';
   return (
     <View style={[s.emptySection, { backgroundColor: c.card }]}>
       <View style={[s.emptyHero, { backgroundColor: c.pri }]}>
@@ -205,7 +232,7 @@ function EmptyHero({ c, onStart }: { c: Palette; onStart: () => void }) {
           <Text style={[text({ size: 16, weight: 700, tracking: -0.025 }), { color: '#fff' }]}>오늘 기록하기</Text>
           <ArrowRightGlyph color="#fff" />
         </Pressable>
-        <Text style={[text({ size: 12, weight: 600 }), s.emptyCaption, { color: '#3A5209' }]}>3분이면 끝나요 · 어제까지 6일 연속</Text>
+        <Text style={[text({ size: 12, weight: 600 }), s.emptyCaption, { color: '#3A5209' }]}>{caption}</Text>
       </View>
     </View>
   );
@@ -233,7 +260,7 @@ function WeekSection({ c, week }: { c: Palette; week: HomeView['week'] }) {
             key={i}
             style={[
               s.weekDot,
-              { left: `${(i / 6) * 100}%`, backgroundColor: i < week.recorded ? 'rgba(255,255,255,.75)' : c.g300 },
+              { left: `${(i / 6) * 100}%`, backgroundColor: week.recordedByDay[i] ? 'rgba(255,255,255,.75)' : c.g300 },
             ]}
           />
         ))}
@@ -416,52 +443,63 @@ function ChangesSection({ c, gateDays, locked, onOpen }: { c: Palette; gateDays:
 /* ── 오늘의 루틴 ───────────────────────────────────────────── */
 
 function RoutineSection({ c, routine, onStart }: { c: Palette; routine: HomeView['routine']; onStart: () => void }) {
-  const stretches = useStretchMap();
-  const previewGif = stretches[ROUTINE_MOVES[0]?.stretchSlug ?? ''];
+  const stretches = useStretchList();
+  const hasRoutine = routine.moves.length > 0;
+  const gif = hasRoutine && stretches.length > 0 ? pickStretchFor(stretches, `${routine.targetArea} ${routine.title}`) : undefined;
 
   return (
     <View style={[s.section, { backgroundColor: c.card }]}>
       <View style={s.rowBetween}>
         <Text style={[text({ size: 18, weight: 700, tracking: -0.035 }), { color: c.g900 }]}>오늘의 루틴</Text>
-        <View style={[s.routineBadge, { backgroundColor: c.priLightest }]}>
-          <Text style={[text({ size: 11, weight: 700 }), { color: c.priDk }]}>{routine.badge}</Text>
-        </View>
+        {hasRoutine ? (
+          <View style={[s.routineBadge, { backgroundColor: c.priLightest }]}>
+            <Text style={[text({ size: 11, weight: 700 }), { color: c.priDk }]}>{routine.badge}</Text>
+          </View>
+        ) : null}
       </View>
 
-      <View style={[s.routineCard, { backgroundColor: c.g100 }]}>
-        <View style={s.routineTop}>
-          <View style={[s.routineArt, { backgroundColor: c.card }]}>
-            {previewGif ? <Image source={{ uri: previewGif.gifUrl }} style={s.routineGif} /> : <RoutineFigureGlyph accent={c.pri} ink={c.g800} />}
-          </View>
-          <View style={s.flex1}>
-            <Text style={[text({ size: 16.5, weight: 700, tracking: -0.035 }), { color: c.g900 }]}>{routine.title}</Text>
-            <View style={s.routineMetaRow}>
-              {routine.meta.map((m) => (
-                <View key={m} style={[s.routineChip, { backgroundColor: c.card }]}>
-                  <Text style={[text({ size: 11, weight: 700 }), { color: c.g600 }]}>{m}</Text>
+      {hasRoutine ? (
+        <>
+          <View style={[s.routineCard, { backgroundColor: c.g100 }]}>
+            <View style={s.routineTop}>
+              <View style={[s.routineArt, { backgroundColor: c.card }]}>
+                {gif ? <Image source={{ uri: gif.gifUrl }} style={s.routineGif} /> : <RoutineFigureGlyph accent={c.pri} ink={c.g800} />}
+              </View>
+              <View style={s.flex1}>
+                <Text style={[text({ size: 16.5, weight: 700, tracking: -0.035 }), { color: c.g900 }]}>{routine.title}</Text>
+                <View style={s.routineMetaRow}>
+                  {routine.meta.map((m) => (
+                    <View key={m} style={[s.routineChip, { backgroundColor: c.card }]}>
+                      <Text style={[text({ size: 11, weight: 700 }), { color: c.g600 }]}>{m}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+
+            <View style={[s.routineMoves, { borderTopColor: c.g200 }]}>
+              {routine.moves.map((m) => (
+                <View key={m.n} style={s.moveRow}>
+                  <View style={[s.moveNum, { backgroundColor: c.card }]}>
+                    <Text style={[text({ size: 10, weight: 700 }), { color: c.g600 }]}>{m.n}</Text>
+                  </View>
+                  <Text numberOfLines={1} style={[text({ size: 13, weight: 600 }), s.flex1, { color: c.g800 }]}>{m.name}</Text>
+                  <Text style={[text({ size: 11.5, weight: 600, tabular: true }), { color: c.g500 }]}>{m.sec}</Text>
                 </View>
               ))}
             </View>
           </View>
-        </View>
 
-        <View style={[s.routineMoves, { borderTopColor: c.g200 }]}>
-          {routine.moves.map((m) => (
-            <View key={m.n} style={s.moveRow}>
-              <View style={[s.moveNum, { backgroundColor: c.card }]}>
-                <Text style={[text({ size: 10, weight: 700 }), { color: c.g600 }]}>{m.n}</Text>
-              </View>
-              <Text numberOfLines={1} style={[text({ size: 13, weight: 600 }), s.flex1, { color: c.g800 }]}>{m.name}</Text>
-              <Text style={[text({ size: 11.5, weight: 600, tabular: true }), { color: c.g500 }]}>{m.sec}</Text>
-            </View>
-          ))}
+          <Pressable accessibilityRole="button" onPress={onStart} style={({ pressed }) => [s.routineCta, { backgroundColor: c.pri }, pressed && s.pressed]}>
+            <PlayGlyph color="#fff" />
+            <Text style={[text({ size: 15.5, weight: 700, tracking: -0.025 }), { color: '#fff' }]}>루틴 시작</Text>
+          </Pressable>
+        </>
+      ) : (
+        <View style={[s.routineEmpty, { backgroundColor: c.g100 }]}>
+          <Text style={[text({ size: 13.5, weight: 600 }), { color: c.g600 }]}>{routine.title}</Text>
         </View>
-      </View>
-
-      <Pressable accessibilityRole="button" onPress={onStart} style={({ pressed }) => [s.routineCta, { backgroundColor: c.pri }, pressed && s.pressed]}>
-        <PlayGlyph color="#fff" />
-        <Text style={[text({ size: 15.5, weight: 700, tracking: -0.025 }), { color: '#fff' }]}>루틴 시작</Text>
-      </Pressable>
+      )}
     </View>
   );
 }
@@ -533,6 +571,7 @@ function RecentSection({ c, recent, onOpen }: { c: Palette; recent: HomeView['re
 const s = StyleSheet.create({
   screen: { flex: 1 },
   body: { flex: 1 },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   flex1: { flex: 1, minWidth: 0 },
   pressed: { transform: [{ scale: 0.975 }] },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -612,6 +651,7 @@ const s = StyleSheet.create({
 
   routineBadge: { height: 24, paddingHorizontal: 10, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   routineCard: { marginTop: 14, padding: 16, borderRadius: 20 },
+  routineEmpty: { marginTop: 14, padding: 20, borderRadius: 20, alignItems: 'center' },
   routineTop: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   routineArt: { width: 84, height: 84, borderRadius: 18, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   routineGif: { width: '100%', height: '100%' },

@@ -1,12 +1,6 @@
-/**
- * `Momgirok v8.dc.html` → `isMe` / `isSub*` 블록의 시연 데이터를 그대로 옮긴 것.
- */
-
-export const ME_STATS = [
-  { key: '연속 기록', n: '7일', l: '연속 기록' },
-  { key: '기록한 날', n: '23일', l: '기록한 날' },
-  { key: '완료 루틴', n: '9회', l: '완료 루틴' },
-];
+import { getCompletionsByPeriod } from '@/services/backend/routine-completion';
+import { wellnessApi } from '@/services/wellness-api';
+import { addDays, toLocalDateId } from '@/utils/date';
 
 export const ME_CARE = [
   { key: 'health', label: '건강 데이터', value: '', to: '/settings/health' },
@@ -15,6 +9,7 @@ export const ME_CARE = [
 
 export const ME_MENU = [
   { key: 'summary', label: '기록 요약 만들기', to: '/reports/setup' },
+  { key: 'cards', label: '내가 만든 카드', to: '/reports/cards' },
   { key: 'consent', label: '동의·데이터 관리', to: '/settings/data' },
   { key: 'account', label: '계정 관리', to: '/settings/account' },
   { key: 'support', label: '서비스 정보·문의', to: '/settings/info' },
@@ -52,23 +47,47 @@ export const CONSENT_ROWS: ConsentRow[] = [
   { key: '마케팅 정보 수신', label: '마케팅 정보 수신', req: '선택', date: '동의하지 않음' },
 ];
 
-export const DELETE_ROWS = [
-  { key: '기간별 기록 삭제', label: '기간별 기록 삭제', sub: '날짜 범위를 골라 삭제해요', danger: false },
-  { key: '피부 사진만 삭제', label: '피부 사진만 삭제', sub: '기록은 남기고 사진만 지워요', danger: false },
-  { key: '전체 데이터 삭제', label: '전체 데이터 삭제', sub: '모든 기록이 지워져요', danger: true },
-];
+/** 백엔드 ExpertCardRequest.period는 '3days'|'7days'|'14days'|'custom'만 받는다 (ReportPeriod.java 기준). */
+export const SUM_PERIODS = ['최근 3일', '최근 7일', '최근 14일'] as const;
+/** 백엔드가 받는 항목은 수면·활동·불편·루틴 4가지뿐이라 자세·베개, 피부·사진은 뺐다. */
+export const SUM_FIELDS = ['수면', '불편 부위', '활동', '루틴'];
+export const DEFAULT_SUM_SELECTION = ['수면', '불편 부위'];
 
-export const SUM_PERIODS = ['최근 30일', '최근 90일', '직접 선택'] as const;
-export const SUM_FIELDS = ['수면', '불편 부위', '강도·느낌', '자세·베개', '활동', '피부·사진', '루틴'];
-export const DEFAULT_SUM_SELECTION = ['수면', '불편 부위', '강도·느낌'];
+export type MeStats = { streakDays: number; recordedDays: number; completedRoutines: number };
 
-export function sumRangeFor(period: string) {
-  return period === '최근 90일' ? '2026.05.16 – 08.13' : '2026.07.15 – 08.13';
+export const EMPTY_ME_STATS: MeStats = { streakDays: 0, recordedDays: 0, completedRoutines: 0 };
+
+async function loadMonthRecordDates(year: number, month: number): Promise<Set<string>> {
+  try {
+    const response = await wellnessApi.getRecordsMonth(year, month);
+    return new Set(response.records.map((record) => record.date));
+  } catch {
+    return new Set();
+  }
 }
 
-export const SUM_PREVIEW_ROWS = [
-  { key: '기록한 날', k: '기록한 날', v: '27 / 30일' },
-  { key: '가장 많이 기록된 부위', k: '가장 많이 기록된 부위', v: '어깨 앞 (14일)' },
-  { key: '평균 수면', k: '평균 수면', v: '6시간 22분' },
-  { key: '불편 2단계 이상', k: '불편 2단계 이상', v: '9일' },
-];
+/** 마이 화면 상단 통계 — 전체 기록 이력을 한 번에 주는 엔드포인트가 없어서
+ * 이번 달·지난달 기록과 최근 30일 루틴 완료 기록을 조합해 계산한다. */
+export async function loadMeStats(): Promise<MeStats> {
+  const todayId = toLocalDateId();
+  const today = new Date();
+  const previousMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const [current, previous, completions] = await Promise.all([
+    loadMonthRecordDates(today.getFullYear(), today.getMonth() + 1),
+    loadMonthRecordDates(previousMonth.getFullYear(), previousMonth.getMonth() + 1),
+    getCompletionsByPeriod(addDays(todayId, -29), todayId).catch(() => []),
+  ]);
+  const dates = new Set([...current, ...previous]);
+
+  let streakDays = 0;
+  let cursor = dates.has(todayId) ? todayId : addDays(todayId, -1);
+  while (dates.has(cursor)) {
+    streakDays += 1;
+    cursor = addDays(cursor, -1);
+  }
+
+  const last30 = Array.from({ length: 30 }, (_, i) => addDays(todayId, -i));
+  const recordedDays = last30.filter((id) => dates.has(id)).length;
+
+  return { streakDays, recordedDays, completedRoutines: completions.length };
+}

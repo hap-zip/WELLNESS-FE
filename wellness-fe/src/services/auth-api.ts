@@ -1,38 +1,41 @@
 import { ApiError } from '@/services/api-error';
+import { login, signup, withdraw } from '@/services/backend/auth';
 
 export type AuthCredentials = { email: string; password: string };
 export type SignUpCredentials = AuthCredentials & { nickname: string };
-export type AuthResult = { accessToken: string; userId: string };
+export type AuthResult = { accessToken: string; userId: number; email?: string; name?: string };
 
 export interface AuthApi {
   signIn(credentials: AuthCredentials): Promise<AuthResult>;
   signUp(credentials: SignUpCredentials): Promise<AuthResult>;
   requestPasswordReset(email: string): Promise<void>;
+  withdraw(credentials: AuthCredentials): Promise<void>;
 }
 
-export const TEMPORARY_TEST_ACCOUNT = {
-  email: 'test@navr.com',
-  password: 'qwer1234',
-} as const;
-
-class TemporaryAuthApi implements AuthApi {
-  async signIn(credentials: AuthCredentials) {
+class HttpAuthApi implements AuthApi {
+  async signIn(credentials: AuthCredentials): Promise<AuthResult> {
     const email = credentials.email.trim().toLowerCase();
-    if (email !== TEMPORARY_TEST_ACCOUNT.email || credentials.password !== TEMPORARY_TEST_ACCOUNT.password) {
-      throw new ApiError('테스트 계정의 이메일과 비밀번호를 확인해 주세요.', 401, 'INVALID_TEST_ACCOUNT');
+    const response = await login({ email, password: credentials.password });
+    if (!response.accessToken || typeof response.userId !== 'number') {
+      throw new ApiError('로그인에 실패했어요. 다시 시도해 주세요.', undefined, 'NO_ACCESS_TOKEN');
     }
-    return { accessToken: 'temporary-health-test-token', userId: 'health-test-user' };
+    return { accessToken: response.accessToken, userId: response.userId, email: response.email, name: response.name };
   }
-  async signUp(): Promise<AuthResult> {
-    throw new ApiError('현재는 지정된 테스트 계정으로만 로그인할 수 있어요.', 503, 'TEST_ACCOUNT_ONLY');
+
+  async signUp(credentials: SignUpCredentials): Promise<AuthResult> {
+    const email = credentials.email.trim().toLowerCase();
+    await signup({ email, password: credentials.password, name: credentials.nickname });
+    return this.signIn(credentials);
   }
-  async requestPasswordReset(email: string) {
-    if (email.trim().toLowerCase() !== TEMPORARY_TEST_ACCOUNT.email) {
-      throw new ApiError('테스트 계정 이메일을 확인해 주세요.', 404, 'TEST_ACCOUNT_NOT_FOUND');
-    }
+
+  async requestPasswordReset(): Promise<void> {
+    // 백엔드에 비밀번호 재설정 엔드포인트가 아직 없다.
+    throw new ApiError('아직 지원하지 않는 기능이에요.', undefined, 'NOT_IMPLEMENTED');
+  }
+
+  async withdraw(credentials: AuthCredentials): Promise<void> {
+    await withdraw({ email: credentials.email.trim().toLowerCase(), password: credentials.password });
   }
 }
 
-// 백엔드 인증 연결 전 HealthKit 실기기 검증에만 사용하는 임시 인증 구현이다.
-// 실제 인증 API가 준비되면 이 인스턴스만 원격 구현으로 교체한다.
-export const authApi: AuthApi = new TemporaryAuthApi();
+export const authApi: AuthApi = new HttpAuthApi();

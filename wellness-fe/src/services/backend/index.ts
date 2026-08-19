@@ -1,0 +1,12 @@
+export * as authBackend from './auth';
+export * as healthConnectionBackend from './health-connection';
+export * as healthDataBackend from './health-data';
+export * as expertCardBackend from './expert-card';
+export * as dailyCheckBackend from './daily-check';
+export * as routineBackend from './routine';
+export * as routineCompletionBackend from './routine-completion';
+export * as routineFeedbackBackend from './routine-feedback';
+export * as patternBackend from './pattern';
+export * as connectionBackend from './connection';
+export * as persistentSignalBackend from './persistent-signal';
+export * as chatBackend from './chat';
