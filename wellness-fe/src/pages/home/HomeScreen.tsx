@@ -16,7 +16,7 @@ import { useNotifications } from '@/context/notifications-context';
 import { headerShadow, useScrollElevation } from '@/hooks/use-scroll-header';
 import { useStretchList } from '@/hooks/use-stretch-map';
 import { toCurrentKoreanDateLabel } from '@/utils/date';
-import { pickStretchFor } from '@/services/exercise-gifs-api';
+import { pickStretchFor, stableSeed } from '@/services/exercise-gifs-api';
 import { wellnessApi } from '@/services/wellness-api';
 import { text } from '@/theme/typography';
 import { usePalette } from '@/theme/use-palette';
@@ -445,7 +445,8 @@ function ChangesSection({ c, gateDays, locked, onOpen }: { c: Palette; gateDays:
 function RoutineSection({ c, routine, onStart }: { c: Palette; routine: HomeView['routine']; onStart: () => void }) {
   const stretches = useStretchList();
   const hasRoutine = routine.moves.length > 0;
-  const gif = hasRoutine && stretches.length > 0 ? pickStretchFor(stretches, `${routine.targetArea} ${routine.title}`) : undefined;
+  // 상세·실행 화면과 같은 seed 규칙(targetArea 기준)을 써서, 같은 루틴이면 홈 카드도 같은 GIF를 보여준다.
+  const gif = hasRoutine && stretches.length > 0 ? pickStretchFor(stretches, `${routine.targetArea} ${routine.title}`, stableSeed(routine.targetArea)) : undefined;
 
   return (
     <View style={[s.section, { backgroundColor: c.card }]}>

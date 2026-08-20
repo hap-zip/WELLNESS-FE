@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,7 +7,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { CloseGlyph } from '@/components/glyphs';
 import { useRoutineSession } from '@/context/routine-session-context';
 import { useStretchList } from '@/hooks/use-stretch-map';
-import { pickStretchFor } from '@/services/exercise-gifs-api';
+import { pickStretchFor, stableSeed } from '@/services/exercise-gifs-api';
 import { text } from '@/theme/typography';
 
 const R = 98;
@@ -25,7 +25,9 @@ export default function RoutineSessionScreen() {
   const { plan, moveIndex, goToMove, completeSession } = useRoutineSession();
   const stretches = useStretchList();
   const step = plan?.steps[moveIndex];
-  const gif = step && stretches.length > 0 ? pickStretchFor(stretches, `${plan?.targetArea ?? ''} ${step.title} ${step.instruction}`, moveIndex) : undefined;
+  // moveIndex가 아니라 루틴 기준 seed — 실행 화면을 다음 단계로 넘겨도 같은 루틴이면
+  // GIF가 계속 바뀌지 않고 유지돼야 한다(단계는 한 스트레칭의 진행 문장일 뿐이다).
+  const gif = step && plan && stretches.length > 0 ? pickStretchFor(stretches, `${plan.targetArea} ${step.title} ${step.instruction}`, stableSeed(plan.targetArea || plan.id)) : undefined;
   const moveSeconds = step?.durationSeconds ?? 0;
   const [endAt, setEndAt] = useState(() => Date.now() + moveSeconds * 1000);
   const [running, setRunning] = useState(true);
@@ -50,6 +52,24 @@ export default function RoutineSessionScreen() {
     return () => { if (tick.current) clearInterval(tick.current); };
   }, [endAt, running, remaining]);
 
+  const next = useCallback(() => {
+    if (!plan) return;
+    if (moveIndex >= plan.steps.length - 1) {
+      void completeSession(plan.steps.length);
+      router.replace('/routine/complete');
+      return;
+    }
+    goToMove(moveIndex + 1);
+  }, [completeSession, goToMove, moveIndex, plan, router]);
+
+  // 타이머가 0에 닿으면(정지 상태가 아닐 때만) 자동으로 다음 동작으로 넘어간다.
+  // remaining은 위 인터벌에서 0 밑으로 안 내려가게 clamp돼 있어서, 값이 실제로
+  // 0이 되는 순간에만 이 effect가 다시 돌아 next()가 정확히 한 번만 불린다.
+  useEffect(() => {
+    if (running && remaining <= 0 && moveSeconds > 0) next();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remaining, running]);
+
   if (!plan || !step) return null;
 
   const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
@@ -64,15 +84,6 @@ export default function RoutineSessionScreen() {
       setEndAt(Date.now() + remaining * 1000);
       setRunning(true);
     }
-  };
-
-  const next = () => {
-    if (moveIndex >= plan.steps.length - 1) {
-      void completeSession(plan.steps.length);
-      router.replace('/routine/complete');
-      return;
-    }
-    goToMove(moveIndex + 1);
   };
 
   return (

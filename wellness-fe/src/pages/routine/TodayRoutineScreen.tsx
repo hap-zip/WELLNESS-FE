@@ -7,7 +7,7 @@ import { HkGlyph, PlayGlyph } from '@/components/glyphs';
 import { SubScreenHeader } from '@/components/ui/sub-screen-header';
 import { useRoutineSession } from '@/context/routine-session-context';
 import { useStretchList } from '@/hooks/use-stretch-map';
-import { pickStretchFor } from '@/services/exercise-gifs-api';
+import { pickStretchFor, stableSeed } from '@/services/exercise-gifs-api';
 import { text } from '@/theme/typography';
 import { usePalette } from '@/theme/use-palette';
 
@@ -92,7 +92,10 @@ export default function TodayRoutineScreen() {
           </View>
           <View style={s.moveList}>
             {plan.steps.map((step, i) => {
-              const gif = stretches.length > 0 ? pickStretchFor(stretches, `${plan.targetArea} ${step.title} ${step.instruction}`, i) : undefined;
+              // 단계 번호가 아니라 루틴 기준으로 seed를 고정한다 — stepsData는 서로 다른
+              // 동작이 아니라 한 스트레칭을 설명하는 문장들이라, 단계마다 다른 GIF가
+              // 나오면 안 된다(같은 루틴이면 항상 같은 GIF).
+              const gif = stretches.length > 0 ? pickStretchFor(stretches, `${plan.targetArea} ${step.title} ${step.instruction}`, stableSeed(plan.targetArea || plan.id)) : undefined;
               return (
               <View key={step.id} style={[s.moveRow, { borderColor: c.g200 }]}>
                 <View style={[s.moveArt, { backgroundColor: c.g100 }]}>

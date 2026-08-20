@@ -74,3 +74,15 @@ export function pickStretchFor(exercises: StretchExercise[], text: string, seedI
   if (candidates.length === 0) return undefined;
   return candidates[seedIndex % candidates.length];
 }
+
+/**
+ * 문자열(보통 routineId·targetArea)에서 고정된 인덱스를 뽑아낸다. `pickStretchFor`의
+ * seedIndex를 단계 번호(i, moveIndex)로 주면 한 루틴 안에서 단계마다 서로 다른(엉뚱한)
+ * 운동 GIF가 튀어나온다 — 백엔드 stepsData는 "서로 다른 동작"이 아니라 "하나의 스트레칭을
+ * 설명하는 문장 4개"라서, 같은 루틴이면 항상 같은 GIF를 보여줘야 한다.
+ */
+export function stableSeed(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  return hash;
+}

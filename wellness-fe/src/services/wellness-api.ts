@@ -237,10 +237,13 @@ function inferReportOptions(card: ExpertCardResponse): ReportOptions {
 function toRoutineSteps(stepsData: Record<string, unknown>[] | undefined): RoutineStep[] {
   if (!stepsData) return [];
   return stepsData.map((step, index) => {
+    const order = typeof step.order === 'number' ? step.order : index + 1;
     const id = typeof step.id === 'string' || typeof step.id === 'number' ? String(step.id) : String(index);
-    const title = typeof step.title === 'string' ? step.title : typeof step.name === 'string' ? step.name : `${index + 1}단계`;
-    const instruction = typeof step.instruction === 'string' ? step.instruction : typeof step.description === 'string' ? step.description : '';
-    const durationSeconds = typeof step.durationSeconds === 'number' ? step.durationSeconds : typeof step.duration === 'number' ? step.duration : 0;
+    // 백엔드 stepsData는 {sec, text, order} 형태로 온다 — title/name, instruction/description은
+    // 실제로는 없는 필드라 이전 매핑이 항상 빈 문자열·0초로 떨어졌다. text/sec를 우선한다.
+    const title = typeof step.title === 'string' ? step.title : typeof step.name === 'string' ? step.name : `동작 ${order}`;
+    const instruction = typeof step.text === 'string' ? step.text : typeof step.instruction === 'string' ? step.instruction : typeof step.description === 'string' ? step.description : '';
+    const durationSeconds = typeof step.sec === 'number' ? step.sec : typeof step.durationSeconds === 'number' ? step.durationSeconds : typeof step.duration === 'number' ? step.duration : 0;
     const side = step.side === 'left' || step.side === 'right' || step.side === 'center' ? step.side : undefined;
     return { id, title, instruction, durationSeconds, side };
   });
@@ -407,7 +410,9 @@ class HttpWellnessApi implements WellnessApi {
   async getTodayRoutine(): Promise<RoutinePlan> {
     const today = await getTodayRoutine();
     const detail = today.routineId !== undefined ? await getRoutineDetail(today.routineId) : undefined;
-    const targetArea = detail?.targetArea ?? today.targetArea ?? '';
+    // targetArea는 백엔드가 zoneId("back-neck")를 그대로 준다 — 화면 제목·GIF 매칭에 쓰려면
+    // 한글 라벨("목 뒤")로 바꿔야 한다.
+    const targetArea = zoneLabel(detail?.targetArea ?? today.targetArea);
     const totalSeconds = (detail?.totalDurationMinutes ?? today.totalDurationMinutes ?? 0) * 60;
     return {
       id: String(today.dailyRoutineId ?? today.routineId ?? ''),
