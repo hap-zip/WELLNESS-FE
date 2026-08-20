@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(npx eslint *)",
+      "Bash(chromium-cli --help)",
+      "Bash(npm ls *)",
+      "Bash(npx --yes playwright --version)",
+      "Bash(npx --yes playwright install chromium)",
+      "Bash(node drive.js)",
+      "Bash(node drive2.js)",
+      "Bash(node drive3.js)",
+      "Bash(node drive4.js)",
+      "Bash(node drive5.js)",
+      "Bash(node drive6.js)",
+      "Bash(node drive7.js)",
+      "Bash(node drive8.js)",
+      "Bash(git checkout *)",
+      "Bash(timeout 90 bash -c 'until curl -sf http://localhost:8099 >/dev/null; do sleep 2; done')",
+      "Bash(echo \"READY:$?\")",
+      "Bash(node drive9.js)",
+      "Bash(node drive10.js)",
+      "Bash(echo \"TSC_EXIT:$?\")",
+      "Bash(echo \"LINT_EXIT:$?\")",
+      "Bash(node drive11.js)",
+      "Bash(node drive12.js)",
+      "Bash(node drive13.js)"
+    ]
+  },
+  "enabledPlugins": {
+    "expo@claude-plugins-official": true
+  }
+}

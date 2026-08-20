@@ -1,0 +1,93 @@
+{
+  "expo": {
+    "name": "하음",
+    "slug": "wellness-fe",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/logo/app_logo.png",
+    "scheme": "wellnessfe",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.dongseop.wellness",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.dongseop.wellness",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/images/logo/app_logo.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/logo/app_logo.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/logo/app_logo.png",
+          "imageWidth": 120
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "피부 상태 사진을 기록에 추가하기 위해 사진 접근이 필요합니다.",
+          "cameraPermission": "피부 상태 사진을 촬영하기 위해 카메라 접근이 필요합니다.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "기록 요약 이미지를 사진에 저장하기 위해 접근이 필요합니다.",
+          "savePhotosPermission": "기록 요약 이미지를 사진에 저장하도록 허용해 주세요.",
+          "isAccessMediaLocationEnabled": false,
+          "granularPermissions": [
+            "photo"
+          ]
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "color": "#20211F",
+          "defaultChannel": "wellness-reminders"
+        }
+      ],
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "수면 시간과 걸음 수를 자동으로 불러와 매일의 몸 상태 기록과 변화 비교에 사용합니다.",
+          "NSHealthUpdateUsageDescription": false,
+          "background": true
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "31b1d14e-0c19-41e1-92b8-e8f261943ebe"
+      }
+    },
+    "owner": "dongseop"
+  }
+}
