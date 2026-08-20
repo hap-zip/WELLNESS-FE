@@ -150,6 +150,19 @@ export const appleHealthService = {
     }
   },
 
+  /** iOS가 읽기 권한의 승인 여부를 앱에 알려주지 않아, "이미 권한을 요청한 적 있는지"로 연결 여부를 판단한다. */
+  async hasRequestedAuthorization(permissions: { sleep: boolean; steps: boolean; activityEnergy?: boolean } = { sleep: true, steps: true, activityEnergy: true }) {
+    try {
+      const healthKit = await requireAvailableHealthKit();
+      const toRead = [permissions.steps ? STEP_COUNT : null, permissions.activityEnergy !== false ? ACTIVE_ENERGY : null, permissions.sleep ? SLEEP_ANALYSIS : null].filter((value): value is typeof STEP_COUNT | typeof ACTIVE_ENERGY | typeof SLEEP_ANALYSIS => value !== null);
+      if (toRead.length === 0) return false;
+      const requestStatus = await healthKit.getRequestStatusForAuthorization({ toRead });
+      return requestStatus !== 1;
+    } catch {
+      return false;
+    }
+  },
+
   async requestReadAuthorization(permissions: { sleep: boolean; steps: boolean; activityEnergy?: boolean } = { sleep: true, steps: true, activityEnergy: true }) {
     const healthKit = await requireAvailableHealthKit();
     const toRead = [permissions.steps ? STEP_COUNT : null, permissions.activityEnergy !== false ? ACTIVE_ENERGY : null, permissions.sleep ? SLEEP_ANALYSIS : null].filter((value): value is typeof STEP_COUNT | typeof ACTIVE_ENERGY | typeof SLEEP_ANALYSIS => value !== null);

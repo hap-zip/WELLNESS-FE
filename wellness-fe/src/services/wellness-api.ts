@@ -1,4 +1,5 @@
 import { healthSyncService } from '@/services/health-sync-service';
+import { appleHealthService } from '@/services/apple-health-service';
 import { ApiError } from '@/services/api-error';
 import { getHealthConnection, saveHealthConnection } from '@/services/backend/health-connection';
 import { getHealthDataByDate, syncHealthData } from '@/services/backend/health-data';
@@ -256,17 +257,24 @@ class HttpWellnessApi implements WellnessApi {
 
   async getHealthConnection(): Promise<HealthConnectionSettings> {
     const response = await getHealthConnection();
+    const provider = response.provider === 'health-connect' ? 'health-connect' : 'apple-health';
+    const backendConnected = Boolean(response.connected);
+    // 백엔드의 연결 기록이 기기 상태와 어긋날 수 있어(예: 연동 당시 저장 실패), Apple 건강은
+    // 실제로 HealthKit 권한을 요청한 적이 있는지를 기준으로 다시 확인해 화면에 반영한다.
+    const deviceConnected = provider === 'apple-health' && !backendConnected && (await appleHealthService.hasRequestedAuthorization());
     return {
-      provider: response.provider === 'health-connect' ? 'health-connect' : 'apple-health',
-      connected: Boolean(response.connected),
+      provider,
+      connected: backendConnected || deviceConnected,
       lastSyncedLabel: response.lastSyncedAt ? new Date(response.lastSyncedAt).toLocaleString('ko-KR') : null,
-      permissions: {
-        sleep: Boolean(response.permissions?.sleep),
-        steps: Boolean(response.permissions?.steps),
-        // 백엔드에 활동 에너지 권한 필드가 따로 없어 걸음 수 권한과 함께 취급한다.
-        activityEnergy: Boolean(response.permissions?.steps),
-        heartRate: Boolean(response.permissions?.heartRate),
-      },
+      permissions: deviceConnected
+        ? { sleep: true, steps: true, activityEnergy: true, heartRate: Boolean(response.permissions?.heartRate) }
+        : {
+          sleep: Boolean(response.permissions?.sleep),
+          steps: Boolean(response.permissions?.steps),
+          // 백엔드에 활동 에너지 권한 필드가 따로 없어 걸음 수 권한과 함께 취급한다.
+          activityEnergy: Boolean(response.permissions?.steps),
+          heartRate: Boolean(response.permissions?.heartRate),
+        },
     };
   }
 
